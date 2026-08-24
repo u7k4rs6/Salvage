@@ -476,3 +476,47 @@ segment the fault was actually applied to.
   on a simulator-only database writes zero files, which is correct (the simulator does not produce
   webhook events, it produces payment entities that go straight through the normaliser) but reads
   like a failure. The command now says how many it wrote rather than printing nothing.
+
+---
+
+## 2026-08-24, M1 exit criteria
+
+Run against the shipped `sim/params.yaml` and the frozen thresholds, on a database built by
+`salvage db migrate` followed by `salvage sim run --scenario S1 --seed 1`.
+
+```
+$ uv run pytest -q
+149 passed
+
+$ uv run ruff check .
+All checks passed!
+
+$ uv run ruff format --check .
+62 files already formatted
+
+$ uv run salvage sim run --scenario S1 --seed 1
+run_id=run_S1_s1_45297c31 scenario=S1 seed=1
+attempts=96135 failures=12392 orders=96135 customers=8000
+ground_truth_rows=12392 sim window=1785522600..1786213799
+detector: 1441 windows, 1 incident(s) opened, 1 closed, 18425 segment stats
+  inc_upi_upi_handle_okhdfcbank_1786200180 on upi:upi_handle:okhdfcbank, 6 sim minutes after fault onset
+
+$ uv run salvage ledger verify
+Chain intact, 4 entries, head hash 374ac81ed952
+
+$ uv run python scripts/verify_ledger.py data/ledger.jsonl
+Chain intact, 4 entries, head hash 374ac81ed952
+```
+
+Tamper check on the same database, one instrument name changed inside one ledger payload:
+
+```
+$ uv run salvage --db tampered.db ledger verify
+Broken at sequence 3: stored hash does not match the recomputed hash
+(exit 1)
+```
+
+The five-seed calibration table and the frozen thresholds are recorded above, under M1 step 6.
+Every exit criterion is met: detection is under 15 sim minutes on S1 to S4 for every seed (worst
+11), S0 opens no incidents on the held-out seeds against a target of under 0.2 per day,
+`ledger verify` passes on a full S1 database, and a single-byte change breaks it.
