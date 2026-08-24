@@ -34,6 +34,7 @@ from salvage.decide.planner import EligibilityCounts, Plan, plan_incident, plan_
 from salvage.decide.policy import ORDER_TTL_SECONDS, Decision
 from salvage.detect.segments import ALL_KEY, parse_key
 from salvage.diagnose.reconcile import diagnose_incident, persist_diagnosis
+from salvage.eval.baselines import AGENT, EligibleOrder, PolicyProfile, eligible_orders
 from salvage.execute import channels
 from salvage.execute.workflow import (
     CaseState,
@@ -45,6 +46,7 @@ from salvage.execute.workflow import (
 from salvage.ledger import Ledger
 from salvage.sim.clock import IstCalendar
 from salvage.sim.response import ResponseModel
+from salvage.sim.rng import order_stream
 
 # How long after a nudge a customer who is going to pay actually pays. Drawn per order so it is
 # deterministic; the bounds are here rather than params.yaml because they describe the agent's
@@ -61,6 +63,12 @@ SECOND_NUDGE_DELAY_SECONDS = 6 * 3600
 # early once the incident has closed.
 SWEEP_INTERVAL_SECONDS = 15 * 60
 MAX_INCIDENT_SWEEPS = 12
+
+# A steered customer completes in the same session, so the payment lands minutes after the
+# failure rather than hours. This is not a tuning knob: it only decides which route wins the
+# attribution when a steer and an organic retry would both have recovered the same order, and the
+# steer genuinely happened first.
+STEER_PAY_SECONDS = 4 * 60
 
 
 class LinkGateway(Protocol):
@@ -138,6 +146,10 @@ class RunStats:
     recovered_cases: int = 0
     recovered_amount: int = 0
     cases: int = 0
+    steer_opportunities: int = 0
+    steer_recoveries: int = 0
+    steer_amount: int = 0
+    organic_recoveries: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return dict(self.__dict__)
@@ -165,12 +177,24 @@ class AgentRunner:
         gateway: LinkGateway | None = None,
         kill_switch: bool = False,
         calendar: IstCalendar | None = None,
+        profile: PolicyProfile = AGENT,
+        seed: int = 0,
+        world_faults: list[dict[str, Any]] | None = None,
     ) -> None:
         self._conn = conn
         self._response = response
         self._provider = provider
         self._gateway = gateway or SimulatedLinkGateway()
         self._kill_switch = kill_switch
+        self._profile = profile
+        self._seed = int(seed)
+        # World state, not agent state. Whether a customer's rail is broken at the moment a nudge
+        # reaches them is a fact about the world, and the customer response model is part of the
+        # simulator, so it is entitled to know it. No policy code path reads this: it is used only
+        # inside _apply_customer_response, and the alternative was reading it off the detector's
+        # incidents, which made a baseline's outcome depend on whether the agent had detected
+        # anything. Each entry is {"start", "end", "selector"}.
+        self._world_faults = list(world_faults or [])
         self._calendar = calendar or IstCalendar()
         self._ledger = Ledger(conn)
         self._timers: list[_Timer] = []
@@ -180,12 +204,127 @@ class AgentRunner:
 
     # -- entry point -------------------------------------------------------
 
-    def run(self, *, until: int) -> RunStats:
-        """Process every open incident, then settle every timer up to `until`."""
-        for incident in repo.list_incidents(self._conn):
-            self._handle_incident(incident)
+    def run(self, *, until: int, window_start: int = 0, window_end: int | None = None) -> RunStats:
+        """Run this policy over the world, then settle every timer up to `until`.
+
+        The agent works from incidents: it diagnoses, plans, and acts on the affected population.
+        The baselines have no incidents and no cause; they work from the eligible order set
+        directly, which is the same set the metrics are computed over. Both then run through the
+        same policy engine, the same state machine and the same channel.
+        """
+        # The organic outcome is snapshotted before anything acts. At this point every paid order
+        # was paid by a customer coming back on their own, because no policy has run yet. A link
+        # or a steer that lands earlier will take the order from it during settlement.
+        self._record_organic_routes()
+
+        if self._profile.diagnoses:
+            for incident in repo.list_incidents(self._conn):
+                self._handle_incident(incident)
+        elif self._profile.nudge_offsets:
+            self._run_fixed_schedule(window_start, window_end or until)
         self._settle(until)
         return self.stats
+
+    def _run_fixed_schedule(self, window_start: int, window_end: int) -> None:
+        """B1 and B2: a case per eligible order, nudged at fixed offsets after its failure.
+
+        No incident, no cause, no diagnosis. Every other gate the agent obeys still runs, which is
+        what Architecture section 10 means by sharing the executor and the policy engine.
+        """
+        incident = self._synthetic_incident(window_start)
+        for order in eligible_orders(self._conn, start=window_start, end=window_end):
+            # The case carries the synthetic incident id. Without it the circuit breaker counted
+            # sends (which are recorded against the incident) against recoveries (which are
+            # recorded against cases), found zero conversions no matter how many there were, and
+            # tripped a few hours into every baseline run.
+            case = self._open_case_for(
+                order, incident_id=str(incident["id"]), now=order.failed_at
+            )
+            if case is None:
+                continue
+            for offset in self._profile.nudge_offsets:
+                self._schedule(
+                    order.failed_at + offset,
+                    "fixed_nudge",
+                    case["id"],
+                    incident["id"],
+                    {"case_id": case["id"]},
+                )
+
+    def _synthetic_incident(self, now: int) -> dict[str, Any]:
+        """The incident row a baseline acts under.
+
+        A baseline does not detect anything, but the executor and the policy engine are written
+        against an incident, and inventing one here rather than threading `incident | None`
+        through every call site keeps the two paths identical everywhere it matters. Its cause is
+        never read, because a baseline's context sets apply_matrix False.
+        """
+        incident_id = f"inc_{self._profile.name}_baseline"
+        if repo.get_incident(self._conn, incident_id) is None:
+            repo.insert_incident(
+                self._conn,
+                {
+                    "id": incident_id,
+                    "segment_key": ALL_KEY,
+                    "opened_at": now,
+                    "closed_at": None,
+                    "at_risk_amount": 0,
+                    "rules_cause": None,
+                    "llm_cause": None,
+                    "root_cause": None,
+                    "confidence": None,
+                    "plan_json": None,
+                    "status": "open",
+                    "affected_scope_json": "[]",
+                },
+            )
+        return repo.get_incident(self._conn, incident_id)
+
+    def _open_case_for(
+        self, order: EligibleOrder, *, incident_id: str | None, now: int
+    ) -> dict[str, Any] | None:
+        if repo.get_case_for_order(self._conn, order.order_id) is not None:
+            return None
+        existing = repo.get_order(self._conn, order.order_id) or {}
+        if _paid_by(existing, now):
+            return None
+        case = {
+            "id": f"case_{order.order_id}",
+            "order_id": order.order_id,
+            "customer_id": order.customer_id,
+            "incident_id": incident_id,
+            "state": CaseState.DETECTED.value,
+            "attempts": 0,
+            "link_id": None,
+            "link_url": None,
+            "next_action_at": None,
+            "ttl_at": int(existing.get("created_at") or order.failed_at) + ORDER_TTL_SECONDS,
+            "outcome": None,
+            "updated_at": now,
+        }
+        repo.insert_case(self._conn, case)
+        self.stats.cases += 1
+        return case
+
+    def _record_organic_routes(self) -> None:
+        """Snapshot the organic outcome before any policy acts.
+
+        Every order paid at this moment was paid by a customer who came back unprompted, because
+        the simulator has finished and nothing else has run. Recorded with its own timestamp, so a
+        link or a steer that lands earlier takes the order later on the paid_at rule.
+        """
+        rows = self._conn.execute(
+            "SELECT id, paid_at FROM v_orders WHERE status = 'paid' AND paid_at IS NOT NULL"
+        ).fetchall()
+        for row in rows:
+            if repo.record_recovery_route(
+                self._conn,
+                order_id=str(row["id"]),
+                route="organic",
+                paid_at=int(row["paid_at"]),
+                policy=self._profile.name,
+            ):
+                self.stats.organic_recoveries += 1
 
     # -- incident ----------------------------------------------------------
 
@@ -413,6 +552,9 @@ class AgentRunner:
             incident=incident,
             now=now,
             kill_switch=self._kill_switch,
+            apply_matrix=self._profile.applies_matrix,
+            apply_defer_while_degraded=self._profile.defers_while_degraded,
+            policy_name=self._profile.name,
         )
         verdict = policy_mod.evaluate(context, self._calendar)
         if not verdict.allowed:
@@ -442,6 +584,7 @@ class AgentRunner:
             now,
         )
         self.stats.actions_executed += 1
+        self._schedule(now, "steer_sweep", "", incident_id, {"hint_from": now})
 
     def _apply_case_action(
         self,
@@ -466,12 +609,16 @@ class AgentRunner:
             segment_degraded=segment_degraded,
             segment_recovered=not segment_degraded,
             kill_switch=self._kill_switch,
+            apply_matrix=self._profile.applies_matrix,
+            apply_defer_while_degraded=self._profile.defers_while_degraded,
+            policy_name=self._profile.name,
         )
         verdict = policy_mod.evaluate(context, self._calendar)
 
         if verdict.decision == Decision.DEFER:
-            self._to_state(case, CaseState.ELIGIBLE, now)
-            self._to_state(case, CaseState.DEFERRED, now)
+            self._ensure_eligible(case, now)
+            if CaseState(case["state"]) == CaseState.ELIGIBLE:
+                self._to_state(case, CaseState.DEFERRED, now)
             release_at = int(incident.get("closed_at") or now + 3600)
             self._schedule(release_at, "release_deferred", case["id"], incident_id, params)
             self._record_action(
@@ -481,8 +628,9 @@ class AgentRunner:
             return
 
         if verdict.decision == Decision.QUEUE:
-            self._to_state(case, CaseState.ELIGIBLE, now)
-            self._to_state(case, CaseState.DEFERRED, now)
+            self._ensure_eligible(case, now)
+            if CaseState(case["state"]) == CaseState.ELIGIBLE:
+                self._to_state(case, CaseState.DEFERRED, now)
             self._schedule(
                 int(verdict.scheduled_for or now), "release_quiet", case["id"], incident_id, params
             )
@@ -498,8 +646,9 @@ class AgentRunner:
             return
 
         if action_type == ActionType.DEFER_UNTIL_RECOVERED:
-            self._to_state(case, CaseState.ELIGIBLE, now)
-            self._to_state(case, CaseState.DEFERRED, now)
+            self._ensure_eligible(case, now)
+            if CaseState(case["state"]) == CaseState.ELIGIBLE:
+                self._to_state(case, CaseState.DEFERRED, now)
             release_at = int(incident.get("closed_at") or now + 3600)
             self._schedule(release_at, "release_deferred", case["id"], incident_id, params)
             self._record_action(
@@ -522,30 +671,42 @@ class AgentRunner:
         amount = int(order["amount"])
         expire_by = int(case["ttl_at"])
 
-        hint = self._active_hint(incident_id)
-        link = self._gateway.create_link(
-            case_id=str(case["id"]),
-            amount=amount,
-            expire_by=expire_by,
-            description=f"Recovery link for order {case['order_id']}",
-            checkout_display=hint,
-        )
-        self._conn.execute(
-            "UPDATE recovery_cases SET link_id = ?, link_url = ? WHERE id = ?",
-            (link["id"], link.get("short_url"), case["id"]),
-        )
+        # One open link per order (docs/01_PRD.md section 9). A second nudge reuses the link the
+        # first one created rather than making another; the cap is on links, not on messages, and
+        # the message cap is the separate two-per-incident rule.
+        if case.get("link_id"):
+            link = {"id": case["link_id"], "short_url": case.get("link_url")}
+        else:
+            hint = self._active_hint(incident_id)
+            link = self._gateway.create_link(
+                case_id=str(case["id"]),
+                amount=amount,
+                expire_by=expire_by,
+                description=f"Recovery link for order {case['order_id']}",
+                checkout_display=hint,
+            )
+            self._conn.execute(
+                "UPDATE recovery_cases SET link_id = ?, link_url = ? WHERE id = ?",
+                (link["id"], link.get("short_url"), case["id"]),
+            )
+            self.stats.links_created += 1
         if case["state"] == CaseState.DETECTED.value or case["state"] == CaseState.DEFERRED.value:
             self._to_state(case, CaseState.ELIGIBLE, now)
-        self._to_state(case, CaseState.LINK_CREATED, now)
-        self.stats.links_created += 1
+        if case["state"] != CaseState.WAITING.value:
+            self._to_state(case, CaseState.LINK_CREATED, now)
 
+        # Only a steering policy names an alternate method. B1 and B2 send a plain link, which
+        # is what they are: docs/01_PRD.md section 12 says the baselines differ from the agent
+        # exactly in "cause-aware timing and method steering", so handing them the steer inside the
+        # message would have rigged the comparison in the baselines' favour.
+        alternate = self._alternate_offer(incident, customer, now)
         message = channels.render(
             template_id="recovery_link_v1",
             locale=str(customer.get("locale") or "en"),
             order_ref=str(case["order_id"])[-10:],
             link_url=str(link.get("short_url") or ""),
             expiry_text=self._expiry_text(expire_by),
-            alternate_method=str(customer.get("alt_method") or "") or None,
+            alternate_method=alternate,
         )
         if not message.validation.ok:
             # A message that fails the validator is never sent. The link stays, so the customer
@@ -600,10 +761,94 @@ class AgentRunner:
         )
         self.stats.actions_executed += 1
 
-        self._apply_customer_response(incident, case, nudge_number, now)
+        self._apply_customer_response(
+            incident, case, nudge_number, now, alternate_offered=bool(alternate)
+        )
+
+    def _walk_to_link(self, case: dict[str, Any], now: int) -> None:
+        """Move a case to the state a nudge is sent from, one legal transition at a time.
+
+        A first nudge comes from DETECTED or DEFERRED and passes through ELIGIBLE and
+        LINK_CREATED. A second nudge comes from WAITING, which the diagram sends straight back to
+        NUGDED, so it must not be dragged through ELIGIBLE on the way.
+        """
+        state = CaseState(case["state"])
+        if state == CaseState.WAITING:
+            return
+        if state in (CaseState.DETECTED, CaseState.DEFERRED):
+            self._to_state(case, CaseState.ELIGIBLE, now)
+        if CaseState(case["state"]) == CaseState.ELIGIBLE:
+            self._to_state(case, CaseState.LINK_CREATED, now)
+
+    def _ensure_eligible(self, case: dict[str, Any], now: int) -> None:
+        """Move a case to ELIGIBLE if the diagram allows it from where it is.
+
+        A case already waiting on a link has passed ELIGIBLE and does not go back.
+        """
+        state = CaseState(case["state"])
+        if state in (CaseState.DETECTED, CaseState.DEFERRED):
+            self._to_state(case, CaseState.ELIGIBLE, now)
+
+    def _rail_broken_at(self, order_id: str, now: int) -> bool:
+        """Whether the rail this order used was actually broken at `now`.
+
+        Read from the simulator's fault schedule, not from the detector's incidents. A baseline
+        does not detect anything, so judging it against incidents would either mark every one of
+        its nudges as landing in a broken rail (the synthetic incident it acts under never closes)
+        or make its measured outcome depend on how well the agent's detector happened to do. The
+        world decides whether the rail was up.
+        """
+        if not self._world_faults:
+            return False
+        row = self._conn.execute(
+            "SELECT method, upi_handle, card_bin, card_issuer, card_network, nb_bank "
+            "FROM v_payment_attempts WHERE order_id = ? ORDER BY created_at LIMIT 1",
+            (order_id,),
+        ).fetchone()
+        if row is None:
+            return False
+        instrument = {
+            "method": row["method"],
+            "upi_handle": row["upi_handle"],
+            "card_bin": row["card_bin"],
+            "card_issuer": row["card_issuer"],
+            "card_network": row["card_network"],
+            "nb_bank": row["nb_bank"],
+        }
+        for fault in self._world_faults:
+            if not (int(fault["start"]) <= now < int(fault["end"])):
+                continue
+            selector = fault.get("selector") or {}
+            if all(instrument.get(key) == value for key, value in selector.items()):
+                return True
+        return False
+
+    def _alternate_offer(
+        self, incident: dict[str, Any], customer: dict[str, Any], now: int
+    ) -> str | None:
+        """The alternate method this message may offer, or None.
+
+        Three things have to be true: the policy steers at all, the customer has another method,
+        and a checkout hint is actually active for this incident. A policy that does not steer
+        offers nothing, which is the whole difference the results are trying to measure.
+        """
+        if not self._profile.allows_steer:
+            return None
+        alternate = customer.get("alt_method")
+        if not alternate:
+            return None
+        if self._active_hint(str(incident["id"])) is None:
+            return None
+        return str(alternate)
 
     def _apply_customer_response(
-        self, incident: dict[str, Any], case: dict[str, Any], nudge_number: int, now: int
+        self,
+        incident: dict[str, Any],
+        case: dict[str, Any],
+        nudge_number: int,
+        now: int,
+        *,
+        alternate_offered: bool,
     ) -> None:
         """What the customer does about the nudge, from the response model.
 
@@ -612,7 +857,6 @@ class AgentRunner:
         random value: the comparison in docs/RESULTS.md is between decisions, not between luck.
         """
         order = repo.get_order(self._conn, case["order_id"]) or {}
-        customer = repo.get_customer(self._conn, case["customer_id"]) or {}
         order_index = _order_index(str(case["order_id"]))
 
         first_failure = self._conn.execute(
@@ -623,13 +867,13 @@ class AgentRunner:
         failed_at = int(first_failure["created_at"]) if first_failure else now
         reason = first_failure["error_reason"] if first_failure else None
 
-        still_failing = not self._segment_recovered(incident, now)
+        still_failing = self._rail_broken_at(str(case["order_id"]), now)
         base = self._response.base_probability(
             amount_paise=int(order.get("amount") or 0), error_reason=reason
         )
         multiplier = self._response.intervention_multiplier(
             method_still_failing=still_failing,
-            alternate_offered=bool(customer.get("alt_method")),
+            alternate_offered=alternate_offered,
             nudge_number=nudge_number,
             hours_since_failure=max(0.0, (now - failed_at) / 3600.0),
         )
@@ -658,7 +902,10 @@ class AgentRunner:
             self._schedule(now + delay, "link_paid", str(case["id"]), str(incident["id"]), {})
             return
 
-        if nudge_number < policy_mod.MAX_NUDGES_PER_INCIDENT:
+        # Only the agent decides when to try again. B1 sends once and B2 sends at 1 hour and 6
+        # hours, both fixed by Architecture section 10, so a follow-up scheduled here would give
+        # them a nudge their specification does not have.
+        if self._profile.diagnoses and nudge_number < policy_mod.MAX_NUDGES_PER_INCIDENT:
             self._schedule(
                 now + SECOND_NUDGE_DELAY_SECONDS,
                 "second_nudge",
@@ -674,6 +921,9 @@ class AgentRunner:
             timer = heapq.heappop(self._timers)
             if timer.kind == "sweep":
                 self._sweep(timer.incident_id, timer.at, timer.payload)
+                continue
+            if timer.kind == "steer_sweep":
+                self._steer_sweep(timer.incident_id, timer.at, timer.payload)
                 continue
             case = repo.get_case(self._conn, timer.case_id)
             if case is None or is_terminal(case["state"]):
@@ -693,14 +943,12 @@ class AgentRunner:
                 # The customer paid on their own before the link resolved. The link is cancelled
                 # and the case closes as PAID_ELSEWHERE, which is the honest attribution: the
                 # agent did not recover this one.
-                if case.get("link_id"):
-                    self._gateway.cancel_link(str(case["link_id"]))
-                self._to_state(case, CaseState.PAID_ELSEWHERE, now)
+                self._close_paid_elsewhere(case, now)
                 continue
 
             if timer.kind == "link_paid":
                 self._record_link_payment(case, incident, now)
-            elif timer.kind in ("release_deferred", "release_quiet"):
+            elif timer.kind in ("release_deferred", "release_quiet") or timer.kind == "fixed_nudge":
                 self._apply_case_action(
                     incident, ActionType.SEND_RECOVERY_LINK, timer.payload, case, now
                 )
@@ -716,8 +964,93 @@ class AgentRunner:
             "SELECT * FROM recovery_cases WHERE outcome IS NULL"
         ).fetchall():
             row = dict(case)
+            order = repo.get_order(self._conn, str(row["order_id"])) or {}
+            if _paid_by(order, until):
+                # The order was paid while nothing was scheduled to notice. Closing it as
+                # ABANDONED would have recorded a live link against a paid order, which is the
+                # shape of a real policy violation even though nothing wrong happened.
+                self._close_paid_elsewhere(row, int(order["paid_at"]))
+                continue
             if until > int(row["ttl_at"]):
                 self._close_out(row, until)
+
+    def _steer_sweep(self, incident_id: str, now: int, payload: dict[str, Any]) -> None:
+        """Recover orders that failed while a checkout steer was active.
+
+        Architecture section 9: "a live checkout steer during the failing session gives a fixed
+        0.55". Fixed means a probability, not a multiplier, so it replaces p_organic rather than
+        scaling it, and it applies only to a customer who actually has another method to be
+        steered onto. The draw is keyed by order, from its own stream, so a policy that never
+        steers does not shift it.
+
+        A steered recovery happens in the same session, so it is credited a few minutes after the
+        failure rather than hours later. That timing matters: it is what lets a steer beat an
+        organic retry to the same order.
+        """
+        incident = repo.get_incident(self._conn, incident_id)
+        if incident is None:
+            return
+        hint_from = int(payload.get("hint_from") or now)
+        closed_at = incident.get("closed_at")
+        window_end = int(closed_at) if closed_at is not None else hint_from + 4 * 3600
+
+        for order in self._steer_candidates(incident, hint_from, window_end):
+            customer = repo.get_customer(self._conn, order.customer_id) or {}
+            if not customer.get("alt_method"):
+                continue
+            self.stats.steer_opportunities += 1
+            existing = repo.get_order(self._conn, order.order_id) or {}
+            if _paid_by(existing, now):
+                continue
+            rng = order_stream(self._seed, "steer", _order_index(order.order_id))
+            if float(rng.random()) >= self._response.steer_multiplier():
+                continue
+            paid_at = order.failed_at + STEER_PAY_SECONDS
+            repo.mark_order_paid(self._conn, order.order_id, paid_at)
+            if repo.record_recovery_route(
+                self._conn,
+                order_id=order.order_id,
+                route="steer",
+                paid_at=paid_at,
+                policy=self._profile.name,
+            ):
+                self.stats.steer_recoveries += 1
+                self.stats.steer_amount += order.amount
+            self._ledger.append(
+                "execute.steer_recovered",
+                "order",
+                order.order_id,
+                {"incident_id": incident_id, "amount": order.amount},
+                ts=paid_at,
+            )
+
+    def _steer_candidates(
+        self, incident: dict[str, Any], start: int, end: int
+    ) -> list[EligibleOrder]:
+        """Eligible orders inside the steered segment that failed while the hint was active."""
+        segment_key = str(incident["segment_key"])
+        method, dimension, value = parse_key(segment_key)
+        candidates = []
+        for order in eligible_orders(self._conn, start=start, end=end):
+            if segment_key != ALL_KEY and order.method != method:
+                continue
+            if dimension:
+                row = self._conn.execute(
+                    "SELECT upi_handle, card_bin, card_issuer, card_network, nb_bank "
+                    "FROM v_payment_attempts WHERE order_id = ? ORDER BY created_at LIMIT 1",
+                    (order.order_id,),
+                ).fetchone()
+                column = {
+                    "upi_handle": "upi_handle",
+                    "card_bin6": "card_bin",
+                    "card_issuer": "card_issuer",
+                    "card_network": "card_network",
+                    "nb_bank": "nb_bank",
+                }.get(dimension)
+                if column and (row is None or row[column] != value):
+                    continue
+            candidates.append(order)
+        return candidates
 
     def _sweep(self, incident_id: str, now: int, payload: dict[str, Any]) -> None:
         """Open cases for orders that failed since the last sweep, and apply the same plan."""
@@ -743,14 +1076,25 @@ class AgentRunner:
         """
         current = CaseState(case["state"])
         if matrix:
-            if current == CaseState.DEFERRED:
+            if current in (CaseState.DEFERRED, CaseState.DETECTED):
                 self._to_state(case, CaseState.ELIGIBLE, now)
                 current = CaseState.ELIGIBLE
-            if current == CaseState.DETECTED:
-                self._to_state(case, CaseState.ELIGIBLE, now)
-            self._to_state(case, CaseState.ESCALATED, now)
+            if current == CaseState.ELIGIBLE:
+                self._to_state(case, CaseState.ESCALATED, now)
+                return
+            self._close_out(case, now)
             return
         self._close_out(case, now)
+
+    def _close_paid_elsewhere(self, case: dict[str, Any], now: int) -> None:
+        """The order was paid by some other route. Cancel the link and close the case."""
+        if case.get("link_id"):
+            self._gateway.cancel_link(str(case["link_id"]))
+        state = CaseState(case["state"])
+        if state in (CaseState.NUDGED,):
+            # NUDGED has no PAID_ELSEWHERE edge; the diagram sends it through WAITING first.
+            self._to_state(case, CaseState.WAITING, now)
+        self._to_state(case, CaseState.PAID_ELSEWHERE, now)
 
     def _close_out(self, case: dict[str, Any], now: int) -> None:
         """Walk a case to its terminal state, one legal transition at a time."""
@@ -766,6 +1110,14 @@ class AgentRunner:
         order = repo.get_order(self._conn, case["order_id"]) or {}
         amount = int(order.get("amount") or 0)
         repo.mark_order_paid(self._conn, str(case["order_id"]), now)
+        repo.record_recovery_route(
+            self._conn,
+            order_id=str(case["order_id"]),
+            route="link",
+            paid_at=now,
+            policy=self._profile.name,
+            case_id=str(case["id"]),
+        )
         self._to_state(case, CaseState.RECOVERED, now)
         self.stats.recovered_cases += 1
         self.stats.recovered_amount += amount
@@ -936,6 +1288,19 @@ class AgentRunner:
             {"incident_id": incident_id, "reason": reason, "proposed_action": proposed},
             ts=now,
         )
+
+
+def _paid_by(order: dict[str, Any], now: int) -> bool:
+    """Whether this order was already paid at time `now`.
+
+    Not `status == "paid"`. The agent runs over a completed simulation, so an order the customer
+    will pay at 22:30 already carries a paid status at 20:10, and a policy that read the status
+    would be reading the future: it would decline to act on exactly the customers who were about
+    to come back, and then take no credit and no blame for them. An order is unpaid until its
+    payment time arrives.
+    """
+    paid_at = order.get("paid_at")
+    return paid_at is not None and int(paid_at) <= now
 
 
 def _order_index(order_id: str) -> int:

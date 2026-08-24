@@ -10,7 +10,9 @@ the only code allowed to, and this is it.
 
 from __future__ import annotations
 
+import json
 import shutil
+from dataclasses import dataclass
 from pathlib import Path
 
 from salvage import repo
@@ -56,6 +58,134 @@ def diagnosis_sweep(
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
     return outcomes
+
+
+@dataclass(frozen=True)
+class PromptForRecording:
+    """A prompt and its hash, and deliberately nothing else.
+
+    This type is the isolation. `export_prompts` returns rows carrying the scenario, the seed and
+    the incident id, which is useful for a human reading them and is exactly what must not reach a
+    model that is being measured. `record_fixtures` takes this type instead, so the scenario label
+    is not merely unused, it is absent: there is no field to leak it from.
+    """
+
+    prompt_hash: str
+    system: str
+    user: str
+    schema_name: str
+
+
+class LabelLeak(RuntimeError):
+    """A scenario id or a seed reached a prompt that is meant to be blind."""
+
+
+# Anything that would tell a model which scenario it is looking at. Checked against every prompt
+# before it is sent, so the isolation fails loudly rather than quietly.
+_LABEL_PATTERNS = (
+    "scenario",
+    "seed",
+    "truth_cause",
+    "sim_truth",
+    "issuer_outage",
+    "auth_failure_bin",
+    "gateway_degradation",
+    "merchant_config",
+    "customer_side",
+)
+
+
+def assert_blind(prompt: PromptForRecording, *, allow_cause_names_in_system: bool = True) -> None:
+    """Refuse a prompt that carries its own answer.
+
+    The system prompt has to name the six causes, because the model is being asked to choose
+    between them; the evidence packet must not. So the user half is checked against every label
+    pattern and the system half against the ones that are not the class names.
+    """
+    lowered = prompt.user.lower()
+    for pattern in _LABEL_PATTERNS:
+        if pattern in lowered:
+            raise LabelLeak(
+                f"the evidence prompt contains {pattern!r}, which would tell the model the answer"
+            )
+    if not allow_cause_names_in_system:
+        system = prompt.system.lower()
+        for pattern in ("scenario", "seed", "truth_cause"):
+            if pattern in system:
+                raise LabelLeak(f"the system prompt contains {pattern!r}")
+
+
+def prompts_for_recording(
+    *,
+    scenarios: list[str] | None = None,
+    seeds: list[int],
+    variant: str = "peak",
+    params_path: Path | str | None = None,
+) -> list[PromptForRecording]:
+    """Every diagnosis prompt the sweep would produce, stripped to prompt and hash.
+
+    Built through `build_for_incident`, the same call the agent makes, which reads the `v_*` views
+    and so cannot reach `truth_cause` or any `sim_truth_*` table. The rules classifier is not run:
+    a recorder that had the rules verdict in hand could anchor on it, and the whole point of the
+    ablation is that the two are independent.
+    """
+    rows = export_prompts(
+        scenarios=scenarios, seeds=seeds, variant=variant, params_path=params_path
+    )
+    prompts = []
+    for row in rows:
+        prompt = PromptForRecording(
+            prompt_hash=str(row["prompt_hash"]),
+            system=str(row["system"]),
+            user=str(row["user"]),
+            schema_name="LLMDiagnosis",
+        )
+        assert_blind(prompt)
+        prompts.append(prompt)
+    return prompts
+
+
+def record_fixtures(
+    prompts: list[PromptForRecording],
+    provider,
+    *,
+    directory: Path | str | None = None,
+) -> tuple[int, list[str]]:
+    """Ask a live provider each prompt and write the answer as a fixture.
+
+    Refuses a fixture or collecting provider: recording from a fixture provider would copy
+    whatever is already on disk, and recording from the collector would write nothing.
+    """
+    from salvage.diagnose.llm import LLMDiagnosis
+    from salvage.llm.provider import FIXTURE_DIR, LLMError, write_fixture
+
+    if provider.name not in ("gemini", "ollama"):
+        raise ValueError(
+            f"fixtures must be recorded from a live provider, not {provider.name!r}. "
+            "A fixture recorded from a fixture is a copy, and one written by hand is not a "
+            "measurement."
+        )
+
+    directory = Path(directory) if directory else FIXTURE_DIR
+    written, failures = 0, []
+    for prompt in prompts:
+        assert_blind(prompt)
+        try:
+            answer = provider.complete(prompt.system, prompt.user, LLMDiagnosis)
+        except LLMError as exc:
+            failures.append(f"{prompt.prompt_hash[:12]}: {exc}")
+            continue
+        write_fixture(
+            directory,
+            key=prompt.prompt_hash,
+            system=prompt.system,
+            user=prompt.user,
+            response=json.loads(answer.model_dump_json()),
+            recorded_from=provider.name,
+            model=provider.model,
+        )
+        written += 1
+    return written, failures
 
 
 def export_prompts(

@@ -131,9 +131,29 @@ def test_never_sends_to_an_opted_out_customer(context):
 
 @given(context=contexts(action_type=_LINK, open_link_exists=True, order_paid=False))
 @_SETTINGS
-def test_never_creates_a_second_open_link_for_an_order(context):
+def test_a_case_with_a_link_reuses_it_rather_than_creating_a_second(context):
+    """One open link per order (docs/01_PRD.md section 9).
+
+    The cap is on links, not on messages: a second nudge is allowed by the two-per-incident rule
+    and reuses the link the first one created. So the gate passes and says it is reusing, and the
+    executor is what must not create a second link. That half is checked structurally by
+    test_no_case_ever_holds_two_links below and over a real run in tests/unit/test_comparability.
+    """
     verdict = policy.evaluate(context, CALENDAR)
-    assert verdict.decision == Decision.REFUSE
+    gates = {gate.rule: gate for gate in verdict.gates}
+    gate = gates.get("case.single_open_link")
+    # The matrix group runs first and short-circuits, so on a low-confidence or forbidden action
+    # the case group never runs. Where it does run, it passes and says it is reusing.
+    if gate is not None:
+        assert gate.passed
+        assert "reusing" in gate.detail
+
+
+def test_no_case_ever_holds_two_links():
+    """The executor creates a link only when the case has none."""
+    source = (REPO_ROOT / "salvage" / "execute" / "scheduler.py").read_text(encoding="utf-8")
+    assert 'if case.get("link_id"):' in source
+    assert source.count("self._gateway.create_link(") == 1
 
 
 # -- never over caps -------------------------------------------------------

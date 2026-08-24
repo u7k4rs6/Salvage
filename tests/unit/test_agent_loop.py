@@ -163,15 +163,16 @@ def _fixture_provider() -> FixtureProvider:
     return FixtureProvider(strict=True)
 
 
-def test_the_shipped_fixtures_cover_the_full_scale_s1_run():
-    """The fixtures are keyed by prompt hash, so a change to the evidence packet's shape breaks
-    them loudly rather than answering a different question. This asserts the S1 fixture is still
-    the one the shipped params produce."""
+def test_the_fixture_directory_is_empty_or_recorded_from_a_live_provider():
+    """M3 deleted the 46 self-authored fixtures and no number was taken from them.
+
+    The directory is empty until `salvage diagnose record-fixtures` refills it from a live
+    provider. Any fixture that appears must declare where it came from, and
+    tests/unit/test_llm_provider.py refuses one that names a Claude model.
+    """
     from salvage.llm.provider import FIXTURE_DIR
 
-    hashes = {path.stem for path in FIXTURE_DIR.glob("*.json")}
-    assert len(hashes) >= 20
     for path in FIXTURE_DIR.glob("*.json"):
         record = json.loads(path.read_text())
         assert record["prompt_hash"] == path.stem
-        assert "response" in record
+        assert record.get("recorded_from") in ("gemini", "ollama"), path.name

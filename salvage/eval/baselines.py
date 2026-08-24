@@ -1,162 +1,177 @@
-"""Baselines.
+"""Policies under comparison, and the order set they are all compared over.
 
-docs/01_PRD.md section 11 names three: B0 does nothing, B1 sends one link immediately to every
-consented failed order, B2 sends retry prompts at 1 hour and 6 hours. B1 and B2 need the executor
-and land with the evaluation runner in M3.
+docs/02_TECHNICAL_ARCHITECTURE.md section 10:
 
-B0 is measurable now, and it has to be, because it is the floor every other number is compared
-against. B0's recovery is exactly the organic behaviour of the response model: a customer whose
-payment failed comes back on their own, tries the same instrument again, and either the rail is
-working by then or it is not. If B0 recovers nothing, the comparison in docs/RESULTS.md is
-meaningless, so this module exists to prove it does not.
+  Baselines share the executor and the policy engine's consent and quiet-hour rules; they differ
+  only in decision logic: B0 does nothing, B1 sends one link immediately to every consented failed
+  order, B2 sends retry prompts at 1 hour and 6 hours.
 
-Nothing here reads ground truth. It reads v_orders and v_payment_attempts, the same views the
-agent uses, so the measurement is over what actually happened rather than over what was intended.
+docs/01_PRD.md section 12 says what "only in decision logic" means concretely:
+
+  Baselines respect consent and quiet hours too. They differ from the agent only in what the agent
+  is supposed to be good at: cause-aware timing and method steering.
+
+So a baseline turns off exactly two policy checks, the cause-to-action matrix and
+defer-while-degraded, and obeys every other check the agent obeys: consent, opt-out, the two
+frequency caps, the unpaid-order check, one-open-link, TTL, hard declines, quiet hours, the kill
+switch and the circuit breaker. Both skipped checks still emit a gate record naming themselves as
+skipped, so a baseline's gate_json is never quietly shorter than the agent's and nobody can read a
+missing rule as a passing one.
+
+The eligible order set is the same for every policy, by construction. That is what makes the
+headline table a comparison rather than four unrelated numbers, and a test asserts it.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
-# One row per (scenario, seed). Attempt counts are over the whole run; the fault-window columns
-# cover only orders whose first attempt failed inside a fault window, which is the population the
-# agent is supposed to be good at.
-_FIRST_ATTEMPT_SQL = """
+
+@dataclass(frozen=True)
+class PolicyProfile:
+    """One arm of the comparison."""
+
+    name: str
+    description: str
+
+    # Does this policy diagnose the incident and plan against a cause? Only the agent does.
+    diagnoses: bool = False
+    # Does the cause-to-action matrix apply? Only meaningful when there is a cause.
+    applies_matrix: bool = False
+    # Does a send into a still-degraded rail become a deferral? This is cause-aware timing.
+    defers_while_degraded: bool = False
+    # May this policy set a checkout display hint? This is method steering.
+    allows_steer: bool = False
+    # Does this policy send recovery links at all?
+    sends_links: bool = False
+    # For the fixed-schedule baselines: seconds after the order's first failure at which a nudge is
+    # attempted. Empty for the agent, whose timing comes from its plan and its gates.
+    nudge_offsets: tuple[int, ...] = ()
+
+    @property
+    def is_agent(self) -> bool:
+        return self.diagnoses
+
+
+AGENT = PolicyProfile(
+    name="agent",
+    description=(
+        "Detect, diagnose, plan against the cause-to-action matrix, gate every action, steer "
+        "away from the failing instrument and hold sends until the rail recovers."
+    ),
+    diagnoses=True,
+    applies_matrix=True,
+    defers_while_degraded=True,
+    allows_steer=True,
+    sends_links=True,
+)
+
+B0 = PolicyProfile(
+    name="B0",
+    description="Do nothing. Whatever is recovered here is what customers do on their own.",
+)
+
+B1 = PolicyProfile(
+    name="B1",
+    description=(
+        "Send one recovery link immediately to every consented failed order, whatever the cause "
+        "and whether or not the rail is still broken."
+    ),
+    sends_links=True,
+    nudge_offsets=(0,),
+)
+
+B2 = PolicyProfile(
+    name="B2",
+    description=(
+        "Send retry prompts at 1 hour and 6 hours after the failure, regardless of cause."
+    ),
+    sends_links=True,
+    nudge_offsets=(3600, 6 * 3600),
+)
+
+POLICIES: dict[str, PolicyProfile] = {
+    profile.name: profile for profile in (AGENT, B0, B1, B2)
+}
+DEFAULT_POLICY_ORDER = ("agent", "B0", "B1", "B2")
+
+
+def get_policy(name: str) -> PolicyProfile:
+    try:
+        return POLICIES[name]
+    except KeyError:
+        known = ", ".join(POLICIES)
+        raise ValueError(f"unknown policy {name!r}; known: {known}") from None
+
+
+# ---------------------------------------------------------------------------
+# The order set every policy is measured over
+# ---------------------------------------------------------------------------
+
+# One row per order whose first payment attempt failed. Computed from v_orders and
+# v_payment_attempts, so no ground truth is involved and the set does not depend on which policy
+# ran or on whether an incident was detected.
+_ELIGIBLE_SQL = """
     WITH first_attempt AS (
         SELECT a.order_id,
                a.id AS attempt_id,
                a.created_at,
                a.status,
                a.error_reason,
+               a.method,
                ROW_NUMBER() OVER (PARTITION BY a.order_id ORDER BY a.created_at, a.id) AS rn
         FROM v_payment_attempts a
     )
-    SELECT f.order_id, f.created_at, f.status, o.status AS order_status, o.amount
+    SELECT f.order_id, f.created_at AS failed_at, f.error_reason, f.method,
+           o.amount, o.customer_id
     FROM first_attempt f
     JOIN v_orders o ON o.id = f.order_id
-    WHERE f.rn = 1
+    WHERE f.rn = 1 AND f.status = 'failed'
+      AND f.created_at >= ? AND f.created_at < ?
+    ORDER BY f.created_at, f.order_id
 """
 
 
 @dataclass(frozen=True)
-class OrganicRecovery:
-    scenario: str
-    seed: int
-    variant: str
-    orders: int
-    failed_orders: int
-    recovered_orders: int
-    failed_amount: int
-    recovered_amount: int
-    fault_failed_orders: int
-    fault_recovered_orders: int
-
-    @property
-    def recovery_rate(self) -> float:
-        return self.recovered_orders / self.failed_orders if self.failed_orders else 0.0
-
-    @property
-    def amount_recovery_rate(self) -> float:
-        return self.recovered_amount / self.failed_amount if self.failed_amount else 0.0
-
-    @property
-    def fault_recovery_rate(self) -> float:
-        if not self.fault_failed_orders:
-            return 0.0
-        return self.fault_recovered_orders / self.fault_failed_orders
+class EligibleOrder:
+    order_id: str
+    customer_id: str
+    amount: int
+    failed_at: int
+    error_reason: str | None
+    method: str
 
 
-def measure_organic_recovery(
-    conn,
-    *,
-    scenario: str,
-    seed: int,
-    variant: str = "peak",
-    fault_windows: list[tuple[int, int]] | None = None,
-) -> OrganicRecovery:
-    """B0's outcome for one run: how many failed orders got paid with nobody doing anything.
+def eligible_orders(conn, *, start: int, end: int) -> list[EligibleOrder]:
+    """Every order whose first attempt failed in [start, end).
 
-    fault_windows are the (start, end) sim seconds of the run's faults. They come from the sim
-    result, not from the ground-truth tables, so this stays usable outside the evaluation runner.
+    Identical for every policy at a given scenario and seed, because it is a property of the
+    simulated world and nothing a policy does creates or removes a payment attempt. That is the
+    claim `tests/unit/test_comparability.py` checks.
     """
-    fault_windows = fault_windows or []
-    orders = failed = recovered = 0
-    failed_amount = recovered_amount = 0
-    fault_failed = fault_recovered = 0
-
-    for row in conn.execute(_FIRST_ATTEMPT_SQL):
-        orders += 1
-        if row["status"] != "failed":
-            continue
-        failed += 1
-        failed_amount += int(row["amount"])
-        in_fault = any(start <= row["created_at"] < end for start, end in fault_windows)
-        if in_fault:
-            fault_failed += 1
-        if row["order_status"] == "paid":
-            recovered += 1
-            recovered_amount += int(row["amount"])
-            if in_fault:
-                fault_recovered += 1
-
-    return OrganicRecovery(
-        scenario=scenario,
-        seed=seed,
-        variant=variant,
-        orders=orders,
-        failed_orders=failed,
-        recovered_orders=recovered,
-        failed_amount=failed_amount,
-        recovered_amount=recovered_amount,
-        fault_failed_orders=fault_failed,
-        fault_recovered_orders=fault_recovered,
-    )
-
-
-def format_organic_table(rows: list[OrganicRecovery]) -> str:
-    """The organic-only recovery table.
-
-    Two recovery columns on purpose. The first is over every failed order in the run, which is
-    mostly ordinary background failure. The second is over the orders that failed inside the fault
-    window, which is the population a recovery agent is aimed at and the one that moves when the
-    agent is good.
-    """
-    header = (
-        f"{'scenario':<10}{'seed':>5}{'failed':>9}{'recovered':>11}{'rate':>8}"
-        f"{'fault failed':>14}{'fault recovered':>17}{'fault rate':>12}"
-    )
-    lines = [header, "-" * len(header)]
-    for row in rows:
-        lines.append(
-            f"{row.scenario:<10}{row.seed:>5}{row.failed_orders:>9}{row.recovered_orders:>11}"
-            f"{row.recovery_rate:>8.3f}{row.fault_failed_orders:>14}"
-            f"{row.fault_recovered_orders:>17}{row.fault_recovery_rate:>12.3f}"
+    return [
+        EligibleOrder(
+            order_id=str(row["order_id"]),
+            customer_id=str(row["customer_id"]),
+            amount=int(row["amount"]),
+            failed_at=int(row["failed_at"]),
+            error_reason=row["error_reason"],
+            method=str(row["method"]),
         )
-
-    lines.append("")
-    by_scenario: dict[str, list[OrganicRecovery]] = {}
-    for row in rows:
-        by_scenario.setdefault(row.scenario, []).append(row)
-    lines.append("Means across seeds:")
-    for scenario in sorted(by_scenario):
-        group = by_scenario[scenario]
-        overall = sum(r.recovery_rate for r in group) / len(group)
-        in_fault = sum(r.fault_recovery_rate for r in group) / len(group)
-        fault_failed = sum(r.fault_failed_orders for r in group) / len(group)
-        lines.append(
-            f"  {scenario}: organic recovery {overall:.3f} overall, {in_fault:.3f} inside the "
-            f"fault window ({fault_failed:.0f} failed orders per run there)"
-        )
-    zero = [
-        scenario
-        for scenario in sorted(by_scenario)
-        if all(r.recovered_orders == 0 for r in by_scenario[scenario])
+        for row in conn.execute(_ELIGIBLE_SQL, (start, end))
     ]
-    if zero:
-        lines.append("")
-        lines.append(
-            "WARNING: organic recovery is zero for "
-            + ", ".join(zero)
-            + ". B0 recovers nothing there, so any comparison against it is meaningless."
-        )
-    return "\n".join(lines)
+
+
+def eligible_order_ids(conn, *, start: int, end: int) -> list[str]:
+    return [order.order_id for order in eligible_orders(conn, start=start, end=end)]
+
+
+@dataclass
+class ProfileCounters:
+    """Bookkeeping a runner fills in as it acts, for the decomposition table."""
+
+    steer_opportunities: int = 0
+    steer_recoveries: int = 0
+    steer_amount: int = 0
+    extra: dict[str, Any] = field(default_factory=dict)

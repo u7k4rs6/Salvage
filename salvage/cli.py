@@ -159,12 +159,16 @@ def cmd_sim_verify_stream(args: argparse.Namespace) -> int:
 
 
 def cmd_sim_organic(args: argparse.Namespace) -> int:
-    """Organic-only recovery, which is baseline B0. Runs each scenario into its own database."""
+    """Organic-only recovery, which is exactly the B0 policy arm.
+
+    Kept as its own command because it answers one question on its own: does anybody come back
+    unprompted. If this is zero, every comparison against B0 is meaningless.
+    """
     import shutil
 
     from salvage.detect.calibrate import make_workdir
-    from salvage.eval.baselines import format_organic_table, measure_organic_recovery
-    from salvage.sim.runner import run_scenario
+    from salvage.eval.agent_run import run_policy_scenario
+    from salvage.eval.metrics import format_metrics_table
 
     scenarios = [s.strip() for s in args.scenarios.split(",") if s.strip()]
     seeds = _parse_seeds(args.seeds)
@@ -176,23 +180,28 @@ def cmd_sim_organic(args: argparse.Namespace) -> int:
                 db_path = workdir / f"{scenario}_{seed}_{args.variant}.db"
                 conn = open_migrated(db_path)
                 try:
-                    result = run_scenario(conn, scenario=scenario, seed=seed, variant=args.variant)
-                    rows.append(
-                        measure_organic_recovery(
-                            conn,
-                            scenario=scenario,
-                            seed=seed,
-                            variant=args.variant,
-                            fault_windows=[(f.start_ts, f.end_ts) for f in result.scheduled_faults],
-                        )
+                    result = run_policy_scenario(
+                        conn,
+                        scenario=scenario,
+                        seed=seed,
+                        policy="B0",
+                        variant=args.variant,
                     )
+                    rows.append(result.metrics)
                 finally:
                     conn.close()
                     for suffix in ("", "-wal", "-shm"):
                         Path(str(db_path) + suffix).unlink(missing_ok=True)
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
-    print(format_organic_table(rows))
+    print(format_metrics_table(rows, title="Organic-only recovery (policy B0)"))
+    zero = [row.scenario for row in rows if row.recovered_orders == 0]
+    if zero:
+        print()
+        print(
+            "WARNING: organic recovery is zero for " + ", ".join(sorted(set(zero)))
+            + ". B0 recovers nothing there, so any comparison against it is meaningless."
+        )
     return 0
 
 
@@ -227,16 +236,17 @@ def _make_provider(args: argparse.Namespace):
 
 
 def cmd_agent_run(args: argparse.Namespace) -> int:
-    from salvage.eval.agent_run import run_agent_scenario
+    from salvage.eval.agent_run import run_policy_scenario
 
     provider = _make_provider(args)
 
     conn = open_migrated(_db_path(args))
     try:
-        result = run_agent_scenario(
+        result = run_policy_scenario(
             conn,
             scenario=args.scenario,
             seed=args.seed,
+            policy=args.policy,
             variant=args.variant,
             provider=provider,
             kill_switch=args.kill_switch,
@@ -245,6 +255,7 @@ def cmd_agent_run(args: argparse.Namespace) -> int:
         conn.close()
 
     stats = result.stats
+    metrics = result.metrics
     print(
         f"run_id={result.sim.run_id} scenario={args.scenario} seed={args.seed} "
         f"variant={args.variant}\n"
@@ -255,11 +266,18 @@ def cmd_agent_run(args: argparse.Namespace) -> int:
         f"deferred={stats.actions_deferred} queued={stats.actions_queued}\n"
         f"links={stats.links_created} messages sent={stats.messages_sent} "
         f"rejected by validator={stats.messages_rejected} opt-outs={stats.opt_outs}\n"
-        f"recovered by the agent: {stats.recovered_cases} case(s), "
-        f"{stats.recovered_amount} paise\n"
-        f"organic recovery (B0) in the same run: {result.organic.recovered_orders}/"
-        f"{result.organic.failed_orders} orders "
-        f"({result.organic.recovery_rate:.3f})"
+        f"eligible orders {metrics.eligible_orders} worth {metrics.eligible_amount} paise\n"
+        f"RECOVERED (all routes) {metrics.recovered_orders} order(s), "
+        f"{metrics.recovered_amount} paise, rate {metrics.recovery_rate:.3f}\n"
+        f"  by route: " + ", ".join(
+            f"{route}={metrics.by_route_orders.get(route, 0)}"
+            f"/{metrics.by_route_amount.get(route, 0)}p"
+            for route in ("link", "steer", "organic")
+        ) + "\n"
+        f"in-fault: {metrics.fault_recovered_orders}/{metrics.fault_eligible_orders} "
+        f"({metrics.fault_recovery_rate:.3f})\n"
+        f"policy violations: {metrics.policy_violations}   "
+        f"stream_digest={metrics.stream_digest[:16]}"
     )
     for incident in result.incidents:
         print(
@@ -361,6 +379,38 @@ def cmd_diagnose_import_fixtures(args: argparse.Namespace) -> int:
         written += 1
     print(f"Wrote {written} fixture(s) to {directory}")
     return 0
+
+
+def cmd_diagnose_record_fixtures(args: argparse.Namespace) -> int:
+    """Record diagnosis fixtures from a live provider, blind to the scenario labels."""
+    from salvage.eval.run import LabelLeak, prompts_for_recording, record_fixtures
+    from salvage.llm.provider import build_provider
+
+    if args.provider not in ("gemini", "ollama"):
+        print(
+            "fixtures must be recorded from a live provider: --provider gemini or ollama",
+            file=sys.stderr,
+        )
+        return 2
+
+    provider = build_provider(args.provider)
+    try:
+        prompts = prompts_for_recording(
+            scenarios=[s.strip() for s in args.scenarios.split(",") if s.strip()],
+            seeds=_parse_seeds(args.seeds),
+            variant=args.variant,
+        )
+    except LabelLeak as exc:
+        print(f"refusing to record: {exc}", file=sys.stderr)
+        return 2
+
+    written, failures = record_fixtures(prompts, provider, directory=args.out)
+    print(f"Recorded {written} fixture(s) from {provider.name} model {provider.model}")
+    for failure in failures:
+        print(f"  failed: {failure}", file=sys.stderr)
+    if failures:
+        print(f"{len(failures)} prompt(s) failed, see above", file=sys.stderr)
+    return 0 if written else 1
 
 
 # ---------------------------------------------------------------------------
@@ -491,10 +541,13 @@ def build_parser() -> argparse.ArgumentParser:
         dest="command", required=True
     )
     agent_run = agent.add_parser(
-        "run", help="simulate, detect, diagnose, plan, gate, act and settle one scenario"
+        "run", help="simulate, detect, run one policy, settle and measure one scenario"
     )
     agent_run.add_argument("--scenario", required=True)
     agent_run.add_argument("--seed", type=int, required=True)
+    agent_run.add_argument(
+        "--policy", default="agent", help="agent, B0, B1 or B2"
+    )
     agent_run.add_argument("--variant", default="peak")
     agent_run.add_argument(
         "--provider",
@@ -552,6 +605,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     fixtures.add_argument("--model", required=True, help="the model id that produced them")
     fixtures.set_defaults(func=cmd_diagnose_import_fixtures)
+
+    record = diagnose.add_parser(
+        "record-fixtures",
+        help="record diagnosis fixtures from a live provider, blind to the scenario labels",
+    )
+    record.add_argument("--scenarios", default="S1,S2,S3,S4")
+    record.add_argument("--seeds", default="0..9")
+    record.add_argument("--variant", default="peak")
+    record.add_argument("--provider", default="gemini", help="gemini or ollama")
+    record.add_argument("--out", default=None, help="defaults to salvage/llm/fixtures/")
+    record.set_defaults(func=cmd_diagnose_record_fixtures)
 
     webhooks = subparsers.add_parser("webhooks", help="webhook capture and replay").add_subparsers(
         dest="command", required=True

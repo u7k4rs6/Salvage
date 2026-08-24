@@ -10,7 +10,8 @@ from __future__ import annotations
 import pytest
 
 from salvage.db import open_migrated
-from salvage.eval.baselines import format_organic_table, measure_organic_recovery
+from salvage.eval.agent_run import run_policy_scenario
+from salvage.eval.metrics import format_metrics_table
 from salvage.sim.runner import run_scenario
 
 
@@ -100,39 +101,38 @@ def test_the_settlement_tail_is_long_enough(s1_run):
     assert result.dropped_retries == 0
 
 
-def test_organic_recovery_is_measurable_and_non_zero(s1_run):
-    result, conn = s1_run
-    measured = measure_organic_recovery(
-        conn,
-        scenario="S1",
-        seed=1,
-        fault_windows=[(f.start_ts, f.end_ts) for f in result.scheduled_faults],
-    )
-    assert measured.failed_orders > 0
-    assert measured.recovered_orders > 0
-    assert 0.0 < measured.recovery_rate < 1.0
-    assert measured.recovered_amount > 0
-    assert measured.fault_failed_orders > 0
+def test_organic_recovery_is_measurable_and_non_zero(tmp_path, small_params_path):
+    """B0's recovery is the floor every other policy is compared against."""
+    conn = open_migrated(tmp_path / "b0.db")
+    try:
+        result = run_policy_scenario(
+            conn, scenario="S1", seed=1, policy="B0", params_path=small_params_path
+        )
+    finally:
+        conn.close()
+    metrics = result.metrics
+    assert metrics.eligible_orders > 0
+    assert metrics.recovered_orders > 0
+    assert 0.0 < metrics.recovery_rate < 1.0
+    assert metrics.recovered_amount > 0
+    assert metrics.fault_eligible_orders > 0
+    # B0 does nothing, so every recovery it has is organic by definition.
+    assert metrics.by_route_orders["organic"] == metrics.recovered_orders
+    assert metrics.messages_sent == 0
 
 
-def test_the_organic_table_warns_when_a_scenario_recovers_nothing():
-    from salvage.eval.baselines import OrganicRecovery
-
-    empty = OrganicRecovery(
-        scenario="SX",
-        seed=0,
-        variant="peak",
-        orders=100,
-        failed_orders=10,
-        recovered_orders=0,
-        failed_amount=1000,
-        recovered_amount=0,
-        fault_failed_orders=5,
-        fault_recovered_orders=0,
-    )
-    table = format_organic_table([empty])
-    assert "WARNING" in table
-    assert "SX" in table
+def test_the_metrics_table_renders(tmp_path, small_params_path):
+    conn = open_migrated(tmp_path / "b0t.db")
+    try:
+        result = run_policy_scenario(
+            conn, scenario="S1", seed=1, policy="B0", params_path=small_params_path
+        )
+    finally:
+        conn.close()
+    table = format_metrics_table([result.metrics], title="Organic-only recovery (policy B0)")
+    assert "scenario" in table
+    assert "S1" in table
+    assert "organic" in table
 
 
 def test_two_runs_of_the_same_seed_produce_identical_retries(tmp_path, small_params_path):

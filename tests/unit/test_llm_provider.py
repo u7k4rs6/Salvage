@@ -311,6 +311,55 @@ def test_the_shipped_fixtures_all_declare_their_source():
         assert record["prompt_hash"] == path.stem
 
 
+def test_no_fixture_claims_a_model_that_did_not_write_it():
+    """A fixture written by the same model that is being measured is not a measurement.
+
+    M2 shipped 46 fixtures authored by Claude Opus 5 standing in for Gemini, with the scenario
+    labels visible to the author. They were deleted in M3 and nothing was ever reported from them.
+    This stops the next set arriving the same way: a fixture whose recorded_from names a Claude
+    model fails the suite.
+    """
+    from salvage.llm.provider import FIXTURE_DIR
+
+    offenders = []
+    for path in FIXTURE_DIR.glob("*.json"):
+        record = json.loads(path.read_text())
+        source = f"{record.get('recorded_from', '')} {record.get('model', '')}".lower()
+        if "claude" in source or "opus" in source or "sonnet" in source:
+            offenders.append(path.name)
+    assert offenders == [], (
+        "fixtures must be recorded from a live third-party provider: " + ", ".join(offenders)
+    )
+
+
+def test_fixtures_can_only_be_recorded_from_a_live_provider():
+    from salvage.eval.run import record_fixtures
+
+    with pytest.raises(ValueError, match="live provider"):
+        record_fixtures([], FixtureProvider(strict=True))
+
+
+def test_the_blind_recorder_refuses_a_prompt_carrying_its_own_answer():
+    from salvage.eval.run import LabelLeak, PromptForRecording, assert_blind
+
+    clean = PromptForRecording(
+        prompt_hash="h",
+        system="you classify payment failures",
+        user="segment_key: upi\nattempts: 40\nerror_source: bank=0.8",
+        schema_name="LLMDiagnosis",
+    )
+    assert_blind(clean)
+
+    for leak in ("scenario: S1", "seed: 3", "truth_cause: issuer_outage"):
+        with pytest.raises(LabelLeak):
+            assert_blind(
+                PromptForRecording(
+                    prompt_hash="h", system="s", user=f"packet\n{leak}",
+                    schema_name="LLMDiagnosis",
+                )
+            )
+
+
 def test_build_provider_rejects_an_unknown_name():
     with pytest.raises(ValueError, match="unknown LLM provider"):
         build_provider("not_a_provider")

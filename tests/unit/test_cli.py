@@ -50,6 +50,7 @@ def test_every_documented_command_is_registered():
         "accuracy",
         "export-prompts",
         "import-fixtures",
+        "record-fixtures",
     }
     assert set(groups["agent"]._subparsers._group_actions[0].choices) == {"run"}  # noqa: SLF001
 

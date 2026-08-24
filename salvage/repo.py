@@ -115,9 +115,17 @@ def get_order(conn: sqlite3.Connection, order_id: str) -> dict[str, Any] | None:
 
 
 def mark_order_paid(conn: sqlite3.Connection, order_id: str, paid_at: int) -> None:
+    """Mark an order paid. The earliest payment time wins.
+
+    Not COALESCE. A recovery link paid at 20:10 must beat an organic retry the simulator had
+    scheduled for 22:30, because in the world where the link was paid the customer never made that
+    retry. Keeping the first-written timestamp instead would have let a payment from the future
+    block one from the present, and the policy arms would only ever have picked up orders that
+    were never going to recover anyway.
+    """
     conn.execute(
-        "UPDATE orders SET status = 'paid', paid_at = COALESCE(paid_at, ?) WHERE id = ?",
-        (paid_at, order_id),
+        "UPDATE orders SET status = 'paid', paid_at = MIN(COALESCE(paid_at, ?), ?) WHERE id = ?",
+        (paid_at, paid_at, order_id),
     )
 
 
@@ -412,6 +420,40 @@ def active_checkout_hints(conn: sqlite3.Connection, now: int) -> list[dict[str, 
         (now, now),
     ).fetchall()
     return rows_to_dicts(rows)
+
+
+def record_recovery_route(
+    conn: sqlite3.Connection,
+    *,
+    order_id: str,
+    route: str,
+    paid_at: int,
+    policy: str,
+    case_id: str | None = None,
+) -> bool:
+    """Record how an order got paid. The earliest payment wins, not the first writer.
+
+    Attribution is first past the post in sim time. The organic outcome is written first, because
+    the simulator produced it before any policy ran, and a link or a steer that lands earlier then
+    takes the order from it. Writing order must not decide this, so the rule is on paid_at.
+    """
+    cursor = conn.execute(
+        "INSERT INTO recovery_routes (order_id, route, paid_at, case_id, policy) "
+        "VALUES (?, ?, ?, ?, ?) "
+        "ON CONFLICT(order_id) DO UPDATE SET "
+        "  route = excluded.route, paid_at = excluded.paid_at, "
+        "  case_id = excluded.case_id, policy = excluded.policy "
+        "WHERE excluded.paid_at < recovery_routes.paid_at",
+        (order_id, route, paid_at, case_id, policy),
+    )
+    return cursor.rowcount > 0
+
+
+def recovery_route_for(conn: sqlite3.Connection, order_id: str) -> str | None:
+    row = conn.execute(
+        "SELECT route FROM recovery_routes WHERE order_id = ?", (order_id,)
+    ).fetchone()
+    return str(row["route"]) if row else None
 
 
 # ---------------------------------------------------------------------------

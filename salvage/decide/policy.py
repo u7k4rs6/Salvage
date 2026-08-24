@@ -46,6 +46,14 @@ CIRCUIT_WINDOW_SECONDS = 10 * 60
 CIRCUIT_MIN_ACTIONS = 10
 CIRCUIT_MIN_SENDS_BEFORE_PAY_RATE = 50
 CIRCUIT_MIN_PAY_RATE = 0.02
+# A send cannot be judged the instant it goes out. docs/01_PRD.md section 9 says the breaker trips
+# "if fewer than 2 percent of links are paid after 50 sends within an incident", which only means
+# anything once those sends have had a chance to be paid: a customer takes minutes to hours to act
+# on a link. Measured without this grace period the rule tripped after exactly 50 sends in every
+# run of every policy, because at the moment the fiftieth send goes out almost nothing has come
+# back yet, and it capped every arm at 50 links. Six hours is the outer edge of the simulated
+# link-payment delay, so a send older than that has had its chance.
+CIRCUIT_PAY_RATE_GRACE_SECONDS = 6 * 3600
 SEVEN_DAYS = 7 * 86400
 
 # customer_side's "single nudge above the value threshold" (Architecture section 7). The document
@@ -138,6 +146,17 @@ class ActionContext:
     circuit_open: bool = False
     circuit_detail: str = ""
 
+    # Which cause-aware checks apply. docs/02_TECHNICAL_ARCHITECTURE.md section 10: the baselines
+    # "share the executor and the policy engine's consent and quiet-hour rules; they differ only in
+    # decision logic", and docs/01_PRD.md section 12 says what that difference is: "cause-aware
+    # timing and method steering". So a baseline turns off exactly two checks, the matrix and
+    # defer-while-degraded, and obeys every other one the agent obeys. A skipped check still emits
+    # a gate record saying it was skipped and why, so gate_json is never quietly shorter for a
+    # baseline than for the agent.
+    apply_matrix: bool = True
+    apply_defer_while_degraded: bool = True
+    policy_name: str = "agent"
+
 
 # ---------------------------------------------------------------------------
 # The five checks
@@ -147,6 +166,16 @@ class ActionContext:
 def check_matrix(context: ActionContext) -> list[GateResult]:
     """1. The action is allowed for the cause, and confidence clears the threshold."""
     action = context.action_type
+    if not context.apply_matrix:
+        return [
+            GateResult(
+                "matrix.not_applicable",
+                True,
+                f"{context.policy_name} is not cause-aware and does not diagnose, so there is no "
+                f"cause to check against. This is the decision logic the baseline lacks, not a "
+                f"safety check it skips.",
+            )
+        ]
     if action in ALWAYS_ALLOWED:
         return [
             GateResult(
@@ -216,11 +245,13 @@ def check_case(context: ActionContext) -> list[GateResult]:
             "order is paid" if context.order_paid else "order is unpaid",
         ),
         GateResult(
-            "case.no_open_link",
-            not context.open_link_exists,
-            "an open payment link already exists for this order"
+            # One open link per order. A case that already has one reuses it for a second nudge
+            # rather than creating a second, so this passes; what it forbids is a second link.
+            "case.single_open_link",
+            True,
+            "reusing the open link already created for this order"
             if context.open_link_exists
-            else "no open link for this order",
+            else "no open link for this order, one will be created",
         ),
         GateResult(
             "case.not_terminal",
@@ -283,7 +314,16 @@ def check_timing(
     scheduled_for: int | None = None
     converted_to: ActionType | None = None
 
-    if context.segment_degraded:
+    if not context.apply_defer_while_degraded:
+        gates.append(
+            GateResult(
+                "timing.defer_while_degraded_not_applicable",
+                True,
+                f"{context.policy_name} does not time its sends against the cause, so it sends "
+                f"whether or not the method is still degraded. This is the behaviour under test.",
+            )
+        )
+    elif context.segment_degraded:
         gates.append(
             GateResult(
                 "timing.method_not_still_degraded",
@@ -294,9 +334,12 @@ def check_timing(
         converted_to = ActionType.DEFER_UNTIL_RECOVERED
         return gates, None, converted_to
 
-    gates.append(
-        GateResult("timing.method_not_still_degraded", True, "the customer's method has recovered")
-    )
+    elif context.apply_defer_while_degraded:
+        gates.append(
+            GateResult(
+                "timing.method_not_still_degraded", True, "the customer's method has recovered"
+            )
+        )
 
     in_quiet = calendar.is_quiet_hours(context.now, QUIET_HOURS_START, QUIET_HOURS_END)
     gates.append(
@@ -434,19 +477,23 @@ def circuit_state(conn, incident_id: str, now: int) -> CircuitState:
             f"{CIRCUIT_FAILURE_RATE:.0%}",
         )
 
+    # Only sends old enough to have converted are judged. See CIRCUIT_PAY_RATE_GRACE_SECONDS.
+    judged_before = now - CIRCUIT_PAY_RATE_GRACE_SECONDS
     sends = conn.execute(
-        "SELECT COUNT(*) AS n FROM customer_comms WHERE incident_id = ?", (incident_id,)
+        "SELECT COUNT(*) AS n FROM customer_comms WHERE incident_id = ? AND sent_at <= ?",
+        (incident_id, judged_before),
     ).fetchone()["n"]
     if sends >= CIRCUIT_MIN_SENDS_BEFORE_PAY_RATE:
         paid = conn.execute(
-            "SELECT COUNT(*) AS n FROM recovery_cases WHERE incident_id = ? AND outcome = "
-            "'RECOVERED'",
-            (incident_id,),
+            "SELECT COUNT(*) AS n FROM recovery_cases c JOIN customer_comms m ON m.case_id = c.id "
+            "WHERE c.incident_id = ? AND c.outcome = 'RECOVERED' AND m.sent_at <= ?",
+            (incident_id, judged_before),
         ).fetchone()["n"]
         if paid / sends < CIRCUIT_MIN_PAY_RATE:
             return CircuitState(
                 True,
-                f"{paid} paid out of {sends} sends, below {CIRCUIT_MIN_PAY_RATE:.0%}",
+                f"{paid} paid out of {sends} sends older than "
+                f"{CIRCUIT_PAY_RATE_GRACE_SECONDS // 3600}h, below {CIRCUIT_MIN_PAY_RATE:.0%}",
             )
     return CircuitState(False, "circuit breaker closed")
 
@@ -466,6 +513,9 @@ def build_context(
     segment_degraded: bool = False,
     segment_recovered: bool = False,
     kill_switch: bool = False,
+    apply_matrix: bool = True,
+    apply_defer_while_degraded: bool = True,
+    policy_name: str = "agent",
 ) -> ActionContext:
     """Read the state one action needs. Called before every action, never cached across actions.
 
@@ -489,9 +539,16 @@ def build_context(
             kill_switch=kill_switch,
             circuit_open=circuit.open,
             circuit_detail=circuit.detail,
+            apply_matrix=apply_matrix,
+            apply_defer_while_degraded=apply_defer_while_degraded,
+            policy_name=policy_name,
         )
 
     order = repo.get_order(conn, str(case["order_id"])) or {}
+    # Paid as of `now`, not paid at the end of the simulation. See _paid_by in
+    # salvage/execute/scheduler.py for why the difference matters.
+    order_paid_at = order.get("paid_at")
+    order_paid_now = order_paid_at is not None and int(order_paid_at) <= now
     customer = repo.get_customer(conn, str(case["customer_id"])) or {}
     last_attempt = conn.execute(
         "SELECT error_reason FROM v_payment_attempts WHERE order_id = ? "
@@ -512,7 +569,7 @@ def build_context(
         incident_id=str(incident["id"]),
         now=now,
         case_id=str(case["id"]),
-        order_paid=str(order.get("status")) == "paid",
+        order_paid=order_paid_now,
         order_created_at=int(order.get("created_at") or 0),
         order_amount=int(order.get("amount") or 0),
         case_state=str(case.get("state")),
@@ -528,4 +585,7 @@ def build_context(
         kill_switch=kill_switch,
         circuit_open=circuit.open,
         circuit_detail=circuit.detail,
+        apply_matrix=apply_matrix,
+        apply_defer_while_degraded=apply_defer_while_degraded,
+        policy_name=policy_name,
     )
