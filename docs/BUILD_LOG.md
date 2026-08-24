@@ -101,3 +101,55 @@ en dashes anywhere in this repository, by instruction.
   security doc requires stale events to be stored, flagged and not acted on),
   `escalations.note` and `escalations.created_at`, `checkout_hints.incident_id`. Each is additive
   and named after the requirement that asked for it.
+
+---
+
+## 2026-08-24, M1 step 3: ledger
+
+### Decisions on open items
+
+- **Genesis constant.** `GENESIS_HASH = sha256(b"salvage.ledger.genesis.v1").hexdigest()` =
+  `e033221f96520f784ef136e1ba52ae6b04cba31331157e223f1c97e64ae59524`. The security doc says "a
+  fixed genesis constant" without fixing the value. A hash of a version-tagged string rather than
+  64 zeroes, so a future chain format can pick a different one and old exports cannot be replayed
+  as new ones.
+- **Pre-image encoding.** The doc writes the rule as
+  `sha256(seq || ts || kind || ref_type || ref_id || canonical_json(payload) || prev_hash)` and
+  does not say what `||` is. It is implemented as each field's UTF-8 bytes followed by a newline.
+  Reason: `canonical_json` uses `json.dumps(..., ensure_ascii=True)`, which escapes every control
+  character, so no field can contain a raw newline and no attacker can shift bytes between fields
+  to forge a matching pre-image. A bare concatenation would have been ambiguous.
+- **`payload_json` is stored, not re-serialised.** The exact canonical string that was hashed is
+  what goes in the column and the export, so a verifier never has to agree with us about float
+  formatting or key order.
+- **Overlap resolution for an empty ledger's head hash.** `verify` on an empty chain reports the
+  genesis constant as the head, matching what `scripts/verify_ledger.py` prints, so both tools
+  produce the same shape of output.
+- **`scripts/verify_ledger.py` imports nothing from the package.** Standard library only, its own
+  copy of the constant and the hash rule, about fifty lines with the docstring. Reason: the point
+  of an offline verifier is that a reviewer does not have to trust the code being audited. It also
+  refuses an export whose declared genesis hash differs from its own constant, so the header is
+  informational and not authoritative.
+
+### What broke
+
+- `test_export_contains_no_phone_or_email` failed against a clean export. The Indian mobile
+  pattern `(?<!\d)[6-9]\d{9}(?!\d)` matched a ten-digit run inside a 64-character sha256
+  `ref_hash`. Fixed by anchoring the pattern on alphanumeric boundaries rather than digit
+  boundaries, which is what a real phone number in text looks like. The test now guards the export
+  and would still catch a genuine leak.
+- The Hypothesis mutation test failed twice, both times in the test's own mutation helper, not in
+  the ledger. First, flipping a byte inside a multi-byte UTF-8 character and decoding with
+  `surrogateescape` produced a lone surrogate that could not be re-encoded when the hash was
+  recomputed; fixed by decoding with `errors="replace"`. Second, mutating the `seq` field makes
+  `verify` report the sequence number it found rather than the one it expected, so asserting
+  `broken_seq in (target + 1, target + 2)` was wrong; the assertion is now that a break is
+  reported at all. Guarded by
+  `tests/property/test_ledger_mutation.py::test_any_single_byte_mutation_fails_verification`
+  at 300 examples, plus a reordering property.
+- `test_shipped_source_has_no_ledger_mutation` failed on `salvage/ledger.py` itself: the module
+  docstring quoted the two forbidden SQL phrases while explaining the rule. Fixed by rewording the
+  docstring so the patterns live only in the test. The grep test also carries two self-checks, one
+  asserting the patterns match real mutating SQL and one asserting they do not fire on
+  `INSERT INTO ledger` or on `UPDATE incidents`, so a grep that silently stopped matching would
+  itself fail.
