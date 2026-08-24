@@ -26,6 +26,8 @@ def test_every_documented_command_is_registered():
         "detect",
         "diagnose",
         "agent",
+        "eval",
+        "e2e",
         "webhooks",
         "serve",
     }
@@ -53,6 +55,13 @@ def test_every_documented_command_is_registered():
         "record-fixtures",
     }
     assert set(groups["agent"]._subparsers._group_actions[0].choices) == {"run"}  # noqa: SLF001
+    assert set(groups["eval"]._subparsers._group_actions[0].choices) == {  # noqa: SLF001
+        "run",
+        "volume",
+        "sensitivity",
+        "report",
+    }
+    assert set(groups["e2e"]._subparsers._group_actions[0].choices) == {"verify"}  # noqa: SLF001
 
 
 def test_seed_spec_parsing():
@@ -166,3 +175,53 @@ def test_sim_run_produces_events_ground_truth_and_a_verifiable_ledger(
 def test_unknown_command_exits_with_usage(capsys):
     with pytest.raises(SystemExit):
         main(["nope"])
+
+
+def test_e2e_verify_says_so_when_there_is_nothing_to_verify(capsys, tmp_path):
+    """The command must not print an empty success when the real run has not happened."""
+    code, out, err = _run(capsys, ["--db", str(tmp_path / "e2e.db"), "e2e", "verify"])
+    assert code == 1
+    assert "No end-to-end ledger entries found" in err
+
+
+def test_e2e_verify_prints_the_ledger_entries_the_real_run_produced(capsys, tmp_path):
+    from salvage.db import open_migrated
+    from salvage.ledger import Ledger
+
+    db = tmp_path / "e2e.db"
+    conn = open_migrated(db)
+    ledger = Ledger(conn)
+    ledger.append("e2e.order.created", "order", "order_abc", {"amount": 100}, ts=1)
+    ledger.append(
+        "e2e.link.created", "case", "case_abc", {"link_id": "plink_abc", "order_id": "order_abc"},
+        ts=2,
+    )
+    ledger.append(
+        "e2e.link.paid", "case", "case_abc", {"link_id": "plink_abc", "payment_id": "pay_abc"},
+        ts=3,
+    )
+    ledger.append(
+        "webhook.received", "webhook_event", "evt_abc",
+        {"event_type": "payment_link.paid", "verified": True, "acted": True}, ts=4,
+    )
+    conn.close()
+
+    code, out, _ = _run(capsys, ["--db", str(db), "e2e", "verify"])
+    assert code == 0
+    assert "seq=1 e2e.order.created" in out
+    assert "plink_abc" in out
+    assert "evt_abc" in out
+    assert "Chain intact" in out
+
+
+def test_e2e_verify_reports_an_incomplete_run(capsys, tmp_path):
+    from salvage.db import open_migrated
+    from salvage.ledger import Ledger
+
+    db = tmp_path / "e2e2.db"
+    conn = open_migrated(db)
+    Ledger(conn).append("e2e.order.created", "order", "order_abc", {"amount": 100}, ts=1)
+    conn.close()
+    code, _, err = _run(capsys, ["--db", str(db), "e2e", "verify"])
+    assert code == 1
+    assert "Incomplete" in err

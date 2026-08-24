@@ -1320,3 +1320,68 @@ A third was found by the final sweep of `_settle`: a case whose order was paid w
 scheduled to notice closed as `ABANDONED` with a live link against a paid order, which is the
 shape of a real policy violation even though nothing wrong had happened. It now closes
 `PAID_ELSEWHERE`.
+
+---
+
+## 2026-08-25, M3 step 7: the evaluation runner
+
+`salvage eval run --scenarios S0,S1,S2,S3,S4 --seeds 0..9 --policies agent,B0,B1,B2`, 200
+combinations, each in its own database which is deleted the moment its metrics are collected, so
+peak disk is one run rather than two hundred. `salvage eval volume`, `salvage eval sensitivity` and
+`salvage eval report` sit beside it, and `salvage e2e verify` reads back what the real end-to-end
+script recorded.
+
+### Decisions
+
+- **The detector runs for every policy, including B0.** Detection is not part of what separates the
+  arms, so running it everywhere means time to detect and false alarms are measured once per world
+  rather than once per agent run, and a baseline's numbers do not depend on the agent.
+- **A swept parameter set writes its own params file.** `params_with` copies the shipped
+  `params.yaml` and replaces values, which changes `params_hash`, so a result produced under a
+  swept set can never be mistaken for one produced under the shipped set.
+- **`salvage eval run` exits non-zero if any world differs across policies.** A regression in the
+  identical-world property fails the command rather than producing a quieter table.
+- **The report refuses to invent a number.** A section whose sweep has not been run says so and
+  prints the command that would produce it. `test_the_report_never_invents_a_number_for_a_missing_sweep`
+  guards that.
+- **`salvage/eval/sweep.py` and `salvage/eval/report.py` are new.** Architecture section 13 names
+  `eval/run.py` and `eval/report.py`; the sweep is separated from `run.py` because `run.py` already
+  held the diagnosis sweep and the prompt export from M2. No dependency was added.
+
+---
+
+## 2026-08-25, M3 steps 8 and 9: the operating envelope
+
+### The off-peak variant detects nothing at all
+
+S1 to S4 at 03:30 IST, five seeds each: **0 of 20 faults detected.** Not slow, not misattributed.
+Not detected.
+
+The arithmetic is not subtle once it is written down. The diurnal curve puts the 03:00 and 04:00
+hours at 0.08 relative weight against an evening peak of 2.60, so the trough carries about one
+thirtieth of the peak arrival rate. At 12,000 attempts a day that is roughly 45 attempts an hour
+across the whole merchant, which is about 11 in a 15-minute window. The detector will not evaluate
+any segment key with fewer than 20 attempts in a window, so at 03:30 there is no key it can test,
+including the merchant-wide one. The fault happens, the payments fail, and nothing is testable.
+
+This is the single most useful number M3 produced and it is worth saying plainly in the pitch: the
+detector's 15-minute promise is a promise about the evening peak. Overnight, at this merchant size,
+it does not detect at all. The fix is not a threshold, it is volume or a longer window, and both
+have costs that belong in a later milestone.
+
+Nothing was tuned against this. The thresholds were frozen in M1 and the off-peak variant did not
+exist until M2.
+
+---
+
+## 2026-08-25, M3 step 10: sensitivity and the adversarial set
+
+The response-model multipliers are judgement, so the results have to say how much the answer
+depends on them. `salvage eval sensitivity` scales both intervention multipliers by 0.5, 0.75, 1.0,
+1.5 and 2.0 and reports the gap between B1 and B0 at each. `--adversarial` additionally runs the
+set PRD section 12 specifies: p_organic 0.60 for every value band and every multiplier 1.0, so a
+nudge neither helps nor hurts and cause-aware timing cannot matter.
+
+The sweep compares B1 against B0 rather than the agent against B1, because the agent arm is
+unmeasured without a diagnosis model. When the fixtures are refilled the same command produces the
+agent-minus-B1 figure PRD section 12 actually asks for; the shape of the table does not change.
