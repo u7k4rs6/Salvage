@@ -75,19 +75,38 @@ def cmd_ledger_export(args: argparse.Namespace) -> int:
 
 
 def cmd_sim_run(args: argparse.Namespace) -> int:
+    from salvage.detect.run import detect
     from salvage.sim.runner import run_scenario
 
     conn = open_migrated(_db_path(args))
     try:
         result = run_scenario(conn, scenario=args.scenario, seed=args.seed, days=args.days)
+        print(
+            f"run_id={result.run_id} scenario={result.scenario} seed={result.seed}\n"
+            f"attempts={result.attempts} failures={result.failures} orders={result.orders} "
+            f"customers={result.customers}\n"
+            f"ground_truth_rows={result.truth_rows} sim window={result.sim_start}..{result.sim_end}"
+        )
+        if args.detect:
+            eval_days = max(1, (result.sim_end - result.eval_day_start) // 86400 + 1)
+            report = detect(
+                conn,
+                eval_start=result.eval_day_start,
+                eval_end=result.eval_day_start + eval_days * 86400,
+            )
+            print(
+                f"detector: {report.windows_evaluated} windows, "
+                f"{report.incidents_opened} incident(s) opened, "
+                f"{len(report.closed)} closed, {report.stats_written} segment stats"
+            )
+            for opened in report.opened:
+                offset = ""
+                if result.scheduled_faults:
+                    minutes = (opened.opened_at - result.scheduled_faults[0].start_ts) / 60
+                    offset = f", {minutes:.0f} sim minutes after fault onset"
+                print(f"  {opened.incident_id} on {opened.segment_key}{offset}")
     finally:
         conn.close()
-    print(
-        f"run_id={result.run_id} scenario={result.scenario} seed={result.seed}\n"
-        f"attempts={result.attempts} failures={result.failures} orders={result.orders} "
-        f"customers={result.customers}\n"
-        f"ground_truth_rows={result.truth_rows} sim window={result.sim_start}..{result.sim_end}"
-    )
     return 0
 
 
@@ -193,7 +212,15 @@ def build_parser() -> argparse.ArgumentParser:
     sim_run.add_argument(
         "--days", type=int, default=None, help="evaluation days, default from params.yaml"
     )
-    sim_run.set_defaults(func=cmd_sim_run)
+    # The detector runs by default. The architecture is one pipeline: a database with traffic and
+    # no incidents is not a state any other part of Salvage can use.
+    sim_run.add_argument(
+        "--no-detect",
+        dest="detect",
+        action="store_false",
+        help="generate traffic only, do not run the detector",
+    )
+    sim_run.set_defaults(func=cmd_sim_run, detect=True)
 
     detect = subparsers.add_parser("detect", help="detector").add_subparsers(
         dest="command", required=True

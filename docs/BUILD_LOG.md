@@ -447,3 +447,32 @@ segment the fault was actually applied to.
   of 500 MB for an evaluation run (Architecture section 16). The symptom was a calibration run
   dying with no output. Fixed by putting the scratch databases under `data/` and deleting each one
   as soon as its row is computed, so the peak is one database.
+
+---
+
+## 2026-08-24, M1 step 7: CLI and API
+
+### Decisions on open items
+
+- **`salvage sim run` runs the detector by default.** The M1 brief lists `sim run` and
+  `detect calibrate` as separate commands, and they are, but a database with eight days of traffic
+  and no incidents is not a state any other part of Salvage can use: the architecture is one
+  pipeline. `--no-detect` generates traffic only. `detect calibrate` is unaffected; it drives its
+  own runs.
+- **The API ships two routes.** `POST /api/webhooks/razorpay` and `GET /api/health`, plus
+  `POST /api/webhooks/razorpay/replay` in dev only. No dashboard routes, per the M1 brief. CORS is
+  not configured because there is no browser origin to allow until the Vite dashboard exists in
+  M4; adding a permissive CORS policy now would be a security hole with no user.
+- **`salvage serve` binds 127.0.0.1:8000 by default**, per security doc section 9. The host is a
+  flag rather than a constant so the tunnel rehearsal in M4 does not need a code change, but the
+  default never leaves loopback.
+- **The `--db` flag is global, not per subcommand**, so the invocation is
+  `salvage --db path ledger verify`. It exists mainly for tests and for running two scenarios into
+  separate databases without changing the environment.
+
+### What broke
+
+- Nothing new in this step. The CLI surfaced one thing worth recording: `salvage webhooks record`
+  on a simulator-only database writes zero files, which is correct (the simulator does not produce
+  webhook events, it produces payment entities that go straight through the normaliser) but reads
+  like a failure. The command now says how many it wrote rather than printing nothing.
