@@ -37,9 +37,7 @@ def run(tmp_path_factory):
     params_path.write_text(yaml.safe_dump(raw, sort_keys=False), encoding="utf-8")
 
     conn = open_migrated(root / "run.db")
-    result = run_policy_scenario(
-        conn, scenario="S1", seed=2, policy="B1", params_path=params_path
-    )
+    result = run_policy_scenario(conn, scenario="S1", seed=2, policy="B1", params_path=params_path)
     yield result, conn
     conn.close()
 
@@ -47,15 +45,12 @@ def run(tmp_path_factory):
 def test_every_refused_action_has_a_ledger_entry(run, injection_log):
     _, conn = run
     refused = {
-        str(row["id"])
-        for row in conn.execute("SELECT id FROM actions WHERE status = 'refused'")
+        str(row["id"]) for row in conn.execute("SELECT id FROM actions WHERE status = 'refused'")
     }
     assert refused, "the run produced no refusals, so this proves nothing"
     ledgered = {
         str(row["ref_id"])
-        for row in conn.execute(
-            "SELECT ref_id FROM ledger WHERE kind = 'execute.action.refused'"
-        )
+        for row in conn.execute("SELECT ref_id FROM ledger WHERE kind = 'execute.action.refused'")
     }
     assert refused <= ledgered, sorted(refused - ledgered)[:5]
     injection_log.record(

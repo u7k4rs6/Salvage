@@ -231,6 +231,6 @@ def test_the_ground_truth_grep_would_catch_a_real_leak():
     import re
 
     forbidden = re.compile(r"truth_cause|sim_truth_")
-    assert forbidden.search('SELECT truth_cause FROM payment_attempts')
+    assert forbidden.search("SELECT truth_cause FROM payment_attempts")
     assert forbidden.search('conn.execute("SELECT * FROM sim_truth_incidents")')
-    assert not forbidden.search('SELECT * FROM v_payment_attempts')
+    assert not forbidden.search("SELECT * FROM v_payment_attempts")

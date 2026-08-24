@@ -218,9 +218,7 @@ def aggregate(rows: list[RunMetrics]) -> list[Aggregate]:
     out = []
     for (scenario, policy), group in sorted(grouped.items()):
         latencies = [
-            row.time_to_detect_minutes
-            for row in group
-            if row.time_to_detect_minutes is not None
+            row.time_to_detect_minutes for row in group if row.time_to_detect_minutes is not None
         ]
         finite_contacts = [
             row.contacts_per_1000_rupees
@@ -241,9 +239,7 @@ def aggregate(rows: list[RunMetrics]) -> list[Aggregate]:
                 mean_contacts_per_1000=_mean(finite_contacts),
                 mean_link_orders=_mean([row.by_route_orders.get("link", 0) for row in group]),
                 mean_steer_orders=_mean([row.by_route_orders.get("steer", 0) for row in group]),
-                mean_organic_orders=_mean(
-                    [row.by_route_orders.get("organic", 0) for row in group]
-                ),
+                mean_organic_orders=_mean([row.by_route_orders.get("organic", 0) for row in group]),
                 total_violations=sum(row.policy_violations for row in group),
                 mean_escalations=_mean([row.escalations for row in group]),
                 detected=len(latencies),

@@ -193,16 +193,25 @@ def test_e2e_verify_prints_the_ledger_entries_the_real_run_produced(capsys, tmp_
     ledger = Ledger(conn)
     ledger.append("e2e.order.created", "order", "order_abc", {"amount": 100}, ts=1)
     ledger.append(
-        "e2e.link.created", "case", "case_abc", {"link_id": "plink_abc", "order_id": "order_abc"},
+        "e2e.link.created",
+        "case",
+        "case_abc",
+        {"link_id": "plink_abc", "order_id": "order_abc"},
         ts=2,
     )
     ledger.append(
-        "e2e.link.paid", "case", "case_abc", {"link_id": "plink_abc", "payment_id": "pay_abc"},
+        "e2e.link.paid",
+        "case",
+        "case_abc",
+        {"link_id": "plink_abc", "payment_id": "pay_abc"},
         ts=3,
     )
     ledger.append(
-        "webhook.received", "webhook_event", "evt_abc",
-        {"event_type": "payment_link.paid", "verified": True, "acted": True}, ts=4,
+        "webhook.received",
+        "webhook_event",
+        "evt_abc",
+        {"event_type": "payment_link.paid", "verified": True, "acted": True},
+        ts=4,
     )
     conn.close()
 

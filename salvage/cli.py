@@ -473,8 +473,10 @@ def cmd_eval_run(args: argparse.Namespace) -> int:
     seeds = _parse_seeds(args.seeds)
 
     total = len(scenarios) * len(seeds) * len(policies)
-    print(f"Running {total} combination(s): {len(scenarios)} scenario(s) x "
-          f"{len(seeds)} seed(s) x {len(policies)} policy arm(s), variant {args.variant}")
+    print(
+        f"Running {total} combination(s): {len(scenarios)} scenario(s) x "
+        f"{len(seeds)} seed(s) x {len(policies)} policy arm(s), variant {args.variant}"
+    )
 
     def progress(done, total_runs, scenario, seed, policy, metrics):
         print(
