@@ -165,6 +165,103 @@ def eligible_order_ids(conn, *, start: int, end: int) -> list[str]:
     return [order.order_id for order in eligible_orders(conn, start=start, end=end)]
 
 
+# ---------------------------------------------------------------------------
+# The at-risk order set
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class FaultWindow:
+    """One fault's window and the instruments it hit.
+
+    Comes from the simulator's fault schedule, which is ground truth, so only the evaluation
+    runner builds these. It is used to define a denominator, never to make a decision: no policy
+    code path receives one.
+    """
+
+    start: int
+    end: int
+    selector: dict[str, str]
+
+
+# The instrument columns a fault selector can name, mapped to the attempt columns they match.
+_SELECTOR_COLUMNS = {
+    "method": "method",
+    "upi_handle": "upi_handle",
+    "card_bin": "card_bin",
+    "card_issuer": "card_issuer",
+    "card_network": "card_network",
+    "nb_bank": "nb_bank",
+}
+
+_AT_RISK_SQL = """
+    WITH first_attempt AS (
+        SELECT a.order_id, a.id AS attempt_id, a.created_at, a.status, a.error_reason, a.method,
+               a.upi_handle, a.card_bin, a.card_issuer, a.card_network, a.nb_bank,
+               ROW_NUMBER() OVER (PARTITION BY a.order_id ORDER BY a.created_at, a.id) AS rn
+        FROM v_payment_attempts a
+    )
+    SELECT f.order_id, f.created_at AS failed_at, f.error_reason, f.method, f.upi_handle,
+           f.card_bin, f.card_issuer, f.card_network, f.nb_bank, o.amount, o.customer_id
+    FROM first_attempt f
+    JOIN v_orders o ON o.id = f.order_id
+    WHERE f.rn = 1 AND f.status = 'failed'
+    ORDER BY f.created_at, f.order_id
+"""
+
+
+def at_risk_orders(conn, windows: list[FaultWindow]) -> list[EligibleOrder]:
+    """Orders the fault actually put at risk.
+
+    An order is at risk when its first payment attempt failed inside a fault window **and** on the
+    instrument that fault was breaking. Both halves matter. Without the window, the set is every
+    failure in the day, most of which is ordinary background noise no policy is aimed at; without
+    the selector, a UPI handle outage would count every card failure in the same ninety minutes as
+    something the agent should have saved.
+
+    This is the denominator PRD section 11 means by at-risk revenue, and it is identical across
+    policy arms by construction: it is computed from the world's fault schedule and the attempt
+    stream, neither of which any policy touches.
+
+    With no faults, as in S0, the set is empty. That is the correct answer and it is the point:
+    on a day when nothing broke there is nothing at risk, so a policy that sends a thousand
+    messages that day has spent them on nothing.
+    """
+    if not windows:
+        return []
+    out: list[EligibleOrder] = []
+    for raw in conn.execute(_AT_RISK_SQL):
+        row = dict(raw)
+        if any(_matches(row, window) for window in windows):
+            out.append(
+                EligibleOrder(
+                    order_id=str(row["order_id"]),
+                    customer_id=str(row["customer_id"]),
+                    amount=int(row["amount"]),
+                    failed_at=int(row["failed_at"]),
+                    error_reason=row["error_reason"],
+                    method=str(row["method"]),
+                )
+            )
+    return out
+
+
+def _matches(row: dict[str, Any], window: FaultWindow) -> bool:
+    if not (window.start <= int(row["failed_at"]) < window.end):
+        return False
+    for key, value in window.selector.items():
+        column = _SELECTOR_COLUMNS.get(key)
+        if column is None:
+            return False
+        if row.get(column) != value:
+            return False
+    return True
+
+
+def at_risk_order_ids(conn, windows: list[FaultWindow]) -> list[str]:
+    return [order.order_id for order in at_risk_orders(conn, windows)]
+
+
 @dataclass
 class ProfileCounters:
     """Bookkeeping a runner fills in as it acts, for the decomposition table."""

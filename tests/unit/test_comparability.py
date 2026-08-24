@@ -15,7 +15,13 @@ import pytest
 
 from salvage.db import open_migrated
 from salvage.eval.agent_run import count_policy_violations, run_policy_scenario, violation_breakdown
-from salvage.eval.baselines import DEFAULT_POLICY_ORDER, eligible_order_ids, get_policy
+from salvage.eval.baselines import (
+    DEFAULT_POLICY_ORDER,
+    FaultWindow,
+    at_risk_order_ids,
+    eligible_order_ids,
+    get_policy,
+)
 from salvage.eval.metrics import ROUTES
 from salvage.sim.verify import verify_stream
 
@@ -89,6 +95,85 @@ def test_the_eligible_order_set_is_identical_across_policies(runs):
         assert order_ids == reference, f"{policy} considered a different order set"
 
 
+def test_the_at_risk_order_set_is_identical_across_policies(runs):
+    """The primary denominator, proven identical the same way the stream digests are.
+
+    The at-risk set is the population the agent exists for: orders whose first attempt failed
+    inside a fault window and on the instrument that fault was breaking. It is computed from the
+    world's fault schedule and the attempt stream, neither of which any policy touches, so it must
+    be byte-identical across arms. If it were not, the primary table would be four different
+    questions rather than one comparison.
+    """
+    sets = {}
+    for policy, (result, conn) in runs.items():
+        windows = [
+            FaultWindow(start=f.start_ts, end=f.end_ts, selector=dict(f.fault.selector))
+            for f in result.sim.scheduled_faults
+        ]
+        sets[policy] = tuple(at_risk_order_ids(conn, windows))
+
+    reference = sets[POLICIES[0]]
+    assert reference, "the scenario produced no at-risk orders, so this proves nothing"
+    for policy, order_ids in sets.items():
+        assert order_ids == reference, f"{policy} was measured over a different at-risk set"
+    # Order matters too, not just membership: the ids come back in a deterministic order and a
+    # difference there would mean the attempt stream itself moved.
+    assert len(set(sets.values())) == 1
+
+
+def test_the_at_risk_counts_recorded_in_the_metrics_match_across_policies(runs):
+    counts = {
+        policy: (result.metrics.at_risk_orders, result.metrics.at_risk_amount)
+        for policy, (result, _) in runs.items()
+    }
+    assert len(set(counts.values())) == 1, counts
+    assert next(iter(counts.values()))[0] > 0
+
+
+def test_a_scenario_with_no_fault_has_an_empty_at_risk_set(tmp_path, small_params_path):
+    """S0 is the whole reason the primary table is scoped this way.
+
+    Nothing broke, so nothing was at risk, so no policy can have recovered anything from the
+    at-risk set. A policy that sends messages on that day has spent them on nothing, which is
+    exactly what the primary table should show and what a whole-run table hides.
+    """
+    from salvage.db import open_migrated
+
+    conn = open_migrated(tmp_path / "s0.db")
+    try:
+        result = run_policy_scenario(
+            conn, scenario="S0", seed=1, policy="B1", params_path=small_params_path
+        )
+    finally:
+        conn.close()
+    assert result.sim.scheduled_faults == ()
+    assert result.metrics.at_risk_orders == 0
+    assert result.metrics.at_risk_recovered_orders == 0
+    assert result.metrics.at_risk_recovery_rate == 0.0
+    # And yet it sent messages, which is the point.
+    assert result.metrics.messages_sent > 0
+
+
+def test_at_risk_orders_are_scoped_to_the_failing_instrument(runs):
+    """Not just the window. A UPI handle outage does not put card failures at risk."""
+    result, conn = runs[POLICIES[0]]
+    fault = result.sim.scheduled_faults[0]
+    windows = [
+        FaultWindow(
+            start=fault.start_ts, end=fault.end_ts, selector=dict(fault.fault.selector)
+        )
+    ]
+    scoped = set(at_risk_order_ids(conn, windows))
+
+    window_only = [FaultWindow(start=fault.start_ts, end=fault.end_ts, selector={})]
+    everything_in_window = set(at_risk_order_ids(conn, window_only))
+
+    assert scoped
+    assert scoped < everything_in_window, (
+        "scoping by instrument removed nothing, so the selector is not being applied"
+    )
+
+
 def test_the_measured_population_is_identical_across_policies(runs):
     populations = {
         policy: (result.metrics.eligible_orders, result.metrics.eligible_amount)
@@ -99,7 +184,7 @@ def test_the_measured_population_is_identical_across_policies(runs):
 
 def test_the_in_fault_population_is_identical_across_policies(runs):
     populations = {
-        policy: (result.metrics.fault_eligible_orders, result.metrics.fault_eligible_amount)
+        policy: (result.metrics.at_risk_orders, result.metrics.at_risk_amount)
         for policy, (result, _) in runs.items()
     }
     assert len(set(populations.values())) == 1, populations

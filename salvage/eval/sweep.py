@@ -161,6 +161,94 @@ def digests_match(result: SweepResult) -> bool:
     return all(len(set(d.values())) <= 1 for d in result.digests.values())
 
 
+# One row per (scenario, seed, policy). Committed alongside docs/RESULTS.md so a reviewer can
+# check any table in the document without re-running anything, and so a single-seed number can
+# never hide inside a mean. The raw JSON stays gitignored because it also carries the digests and
+# the notes, which are large and already summarised in the document.
+CSV_COLUMNS = (
+    "scenario",
+    "seed",
+    "policy",
+    "variant",
+    "at_risk_orders",
+    "at_risk_amount",
+    "at_risk_recovered_orders",
+    "at_risk_recovered_amount",
+    "at_risk_recovery_rate",
+    "at_risk_messages",
+    "at_risk_link_orders",
+    "at_risk_steer_orders",
+    "at_risk_organic_orders",
+    "eligible_orders",
+    "eligible_amount",
+    "recovered_orders",
+    "recovered_amount",
+    "recovery_rate",
+    "link_orders",
+    "steer_orders",
+    "organic_orders",
+    "messages_sent",
+    "links_created",
+    "opt_outs",
+    "escalations",
+    "incidents",
+    "actions_refused",
+    "policy_violations",
+    "time_to_detect_minutes",
+    "stream_digest",
+)
+
+
+def write_metrics_csv(result: SweepResult, path: Path | str = "docs/results_by_run.csv") -> Path:
+    """The flat per-run table. No aggregation, no rounding, no interpretation."""
+    import csv
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(CSV_COLUMNS))
+        writer.writeheader()
+        for row in sorted(result.rows, key=lambda r: (r.scenario, r.seed, r.policy)):
+            writer.writerow(
+                {
+                    "scenario": row.scenario,
+                    "seed": row.seed,
+                    "policy": row.policy,
+                    "variant": row.variant,
+                    "at_risk_orders": row.at_risk_orders,
+                    "at_risk_amount": row.at_risk_amount,
+                    "at_risk_recovered_orders": row.at_risk_recovered_orders,
+                    "at_risk_recovered_amount": row.at_risk_recovered_amount,
+                    "at_risk_recovery_rate": f"{row.at_risk_recovery_rate:.6f}",
+                    "at_risk_messages": row.at_risk_messages,
+                    "at_risk_link_orders": row.at_risk_by_route_orders.get("link", 0),
+                    "at_risk_steer_orders": row.at_risk_by_route_orders.get("steer", 0),
+                    "at_risk_organic_orders": row.at_risk_by_route_orders.get("organic", 0),
+                    "eligible_orders": row.eligible_orders,
+                    "eligible_amount": row.eligible_amount,
+                    "recovered_orders": row.recovered_orders,
+                    "recovered_amount": row.recovered_amount,
+                    "recovery_rate": f"{row.recovery_rate:.6f}",
+                    "link_orders": row.by_route_orders.get("link", 0),
+                    "steer_orders": row.by_route_orders.get("steer", 0),
+                    "organic_orders": row.by_route_orders.get("organic", 0),
+                    "messages_sent": row.messages_sent,
+                    "links_created": row.links_created,
+                    "opt_outs": row.opt_outs,
+                    "escalations": row.escalations,
+                    "incidents": row.incidents,
+                    "actions_refused": row.actions_refused,
+                    "policy_violations": row.policy_violations,
+                    "time_to_detect_minutes": (
+                        "" if row.time_to_detect_minutes is None
+                        else f"{row.time_to_detect_minutes:.1f}"
+                    ),
+                    "stream_digest": row.stream_digest,
+                }
+            )
+    return path
+
+
 def write_results_json(result: SweepResult, directory: Path | str = "data/results") -> Path:
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)
@@ -185,7 +273,12 @@ class Aggregate:
     std_recovered_amount: float
     mean_recovered_orders: float
     mean_recovery_rate: float
-    mean_fault_recovery_rate: float
+    mean_at_risk_recovery_rate: float
+    mean_at_risk_orders: float
+    mean_at_risk_amount: float
+    mean_at_risk_recovered_amount: float
+    mean_at_risk_messages: float
+    mean_opt_outs: float
     mean_messages: float
     mean_contacts_per_1000: float
     mean_link_orders: float
@@ -234,7 +327,14 @@ def aggregate(rows: list[RunMetrics]) -> list[Aggregate]:
                 std_recovered_amount=_std([float(row.recovered_amount) for row in group]),
                 mean_recovered_orders=_mean([row.recovered_orders for row in group]),
                 mean_recovery_rate=_mean([row.recovery_rate for row in group]),
-                mean_fault_recovery_rate=_mean([row.fault_recovery_rate for row in group]),
+                mean_at_risk_recovery_rate=_mean([row.at_risk_recovery_rate for row in group]),
+                mean_at_risk_orders=_mean([row.at_risk_orders for row in group]),
+                mean_at_risk_amount=_mean([row.at_risk_amount for row in group]),
+                mean_at_risk_recovered_amount=_mean(
+                    [row.at_risk_recovered_amount for row in group]
+                ),
+                mean_at_risk_messages=_mean([row.at_risk_messages for row in group]),
+                mean_opt_outs=_mean([row.opt_outs for row in group]),
                 mean_messages=_mean([row.messages_sent for row in group]),
                 mean_contacts_per_1000=_mean(finite_contacts),
                 mean_link_orders=_mean([row.by_route_orders.get("link", 0) for row in group]),

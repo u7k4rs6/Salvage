@@ -350,6 +350,16 @@ def test_the_blind_recorder_refuses_a_prompt_carrying_its_own_answer():
     )
     assert_blind(clean)
 
+    # The field name merchant_config_changed_recently is legitimate and must not be refused.
+    assert_blind(
+        PromptForRecording(
+            prompt_hash="h",
+            system="s",
+            user="merchant_config_changed_recently: True\nsegment_key: netbanking",
+            schema_name="LLMDiagnosis",
+        )
+    )
+
     for leak in ("scenario: S1", "seed: 3", "truth_cause: issuer_outage"):
         with pytest.raises(LabelLeak):
             assert_blind(

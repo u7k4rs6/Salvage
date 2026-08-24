@@ -88,7 +88,12 @@ def run_policy_scenario(
     )
     stats = runner.run(until=sim.sim_end, window_start=window_start, window_end=window_end)
 
-    fault_windows = [(f.start_ts, f.end_ts) for f in sim.scheduled_faults]
+    from salvage.eval.baselines import FaultWindow
+
+    fault_windows = [
+        FaultWindow(start=f.start_ts, end=f.end_ts, selector=dict(f.fault.selector))
+        for f in sim.scheduled_faults
+    ]
     metrics = measure_run(
         conn,
         scenario=scenario,
@@ -116,7 +121,9 @@ def run_policy_scenario(
     metrics.incidents = sum(
         1 for incident in incidents if not str(incident["id"]).endswith("_baseline")
     )
-    metrics.time_to_detect_minutes = _time_to_detect(incidents, fault_windows)
+    metrics.time_to_detect_minutes = _time_to_detect(
+        incidents, [(w.start, w.end) for w in fault_windows]
+    )
     metrics.policy_violations = count_policy_violations(conn)
 
     return PolicyRunResult(

@@ -11,6 +11,7 @@ the only code allowed to, and this is it.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -82,16 +83,26 @@ class LabelLeak(RuntimeError):
 
 # Anything that would tell a model which scenario it is looking at. Checked against every prompt
 # before it is sent, so the isolation fails loudly rather than quietly.
-_LABEL_PATTERNS = (
-    "scenario",
-    "seed",
-    "truth_cause",
-    "sim_truth",
-    "issuer_outage",
-    "auth_failure_bin",
-    "gateway_degradation",
-    "merchant_config",
-    "customer_side",
+#
+# Word boundaries, not substrings. The evidence packet legitimately carries a field called
+# `merchant_config_changed_recently`, which a substring check reads as the cause name
+# `merchant_config` and refuses. That would have made every S4 prompt unrecordable with a
+# confusing error, and it was caught by tests/unit/test_agent_arm_ready.py rather than by anyone
+# reading this list. `\b` does not match between "merchant_config" and "_changed" because an
+# underscore is a word character, which is exactly the distinction wanted here.
+_LABEL_PATTERNS = tuple(
+    re.compile(rf"\b{name}\b")
+    for name in (
+        "scenario",
+        "seed",
+        "truth_cause",
+        "sim_truth",
+        "issuer_outage",
+        "auth_failure_bin",
+        "gateway_degradation",
+        "merchant_config",
+        "customer_side",
+    )
 )
 
 
@@ -104,15 +115,17 @@ def assert_blind(prompt: PromptForRecording, *, allow_cause_names_in_system: boo
     """
     lowered = prompt.user.lower()
     for pattern in _LABEL_PATTERNS:
-        if pattern in lowered:
+        match = pattern.search(lowered)
+        if match:
             raise LabelLeak(
-                f"the evidence prompt contains {pattern!r}, which would tell the model the answer"
+                f"the evidence prompt contains {match.group(0)!r}, which would tell the model "
+                "the answer"
             )
     if not allow_cause_names_in_system:
         system = prompt.system.lower()
-        for pattern in ("scenario", "seed", "truth_cause"):
-            if pattern in system:
-                raise LabelLeak(f"the system prompt contains {pattern!r}")
+        for name in ("scenario", "seed", "truth_cause"):
+            if re.search(rf"\b{name}\b", system):
+                raise LabelLeak(f"the system prompt contains {name!r}")
 
 
 def prompts_for_recording(

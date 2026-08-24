@@ -15,7 +15,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from salvage.eval.baselines import eligible_orders
+from salvage.eval.baselines import FaultWindow, at_risk_orders, eligible_orders
 
 # How a paid order came to be paid. Attribution is first past the post: an order is paid once, and
 # whichever route got there first gets the credit. Recorded on the order in `recovery_route`.
@@ -55,13 +55,19 @@ class RunMetrics:
     by_route_orders: dict[str, int] = field(default_factory=dict)
     by_route_amount: dict[str, int] = field(default_factory=dict)
 
-    # In-fault population: the orders whose first attempt failed inside a fault window. This is
-    # the population a recovery agent is aimed at; the rest is ordinary background failure that no
-    # policy can do much about and that dilutes every rate it appears in.
-    fault_eligible_orders: int = 0
-    fault_eligible_amount: int = 0
-    fault_recovered_orders: int = 0
-    fault_recovered_amount: int = 0
+    # The at-risk population: orders whose first attempt failed inside a fault window and on the
+    # instrument that fault was breaking. This is the primary denominator, because it is the only
+    # population a recovery agent is aimed at. The whole-run numbers above are dominated by
+    # ordinary background failure that happens on every day including days with no fault at all,
+    # which is why the S0 row of a whole-run table shows a link-sending baseline apparently
+    # winning on a day when nothing was wrong.
+    at_risk_orders: int = 0
+    at_risk_amount: int = 0
+    at_risk_recovered_orders: int = 0
+    at_risk_recovered_amount: int = 0
+    at_risk_by_route_orders: dict[str, int] = field(default_factory=dict)
+    at_risk_by_route_amount: dict[str, int] = field(default_factory=dict)
+    at_risk_messages: int = 0
 
     messages_sent: int = 0
     links_created: int = 0
@@ -78,10 +84,10 @@ class RunMetrics:
         return self.recovered_orders / self.eligible_orders if self.eligible_orders else 0.0
 
     @property
-    def fault_recovery_rate(self) -> float:
-        if not self.fault_eligible_orders:
+    def at_risk_recovery_rate(self) -> float:
+        if not self.at_risk_orders:
             return 0.0
-        return self.fault_recovered_orders / self.fault_eligible_orders
+        return self.at_risk_recovered_orders / self.at_risk_orders
 
     @property
     def contacts_per_1000_rupees(self) -> float:
@@ -98,7 +104,7 @@ class RunMetrics:
     def as_dict(self) -> dict[str, Any]:
         data = {k: v for k, v in self.__dict__.items()}
         data["recovery_rate"] = self.recovery_rate
-        data["fault_recovery_rate"] = self.fault_recovery_rate
+        data["at_risk_recovery_rate"] = self.at_risk_recovery_rate
         data["contacts_per_1000_rupees"] = self.contacts_per_1000_rupees
         return data
 
@@ -112,18 +118,25 @@ def measure_run(
     variant: str,
     window_start: int,
     window_end: int,
-    fault_windows: list[tuple[int, int]] | None = None,
+    fault_windows: list[FaultWindow] | None = None,
 ) -> RunMetrics:
-    """Measure one run over the shared eligible order set.
+    """Measure one run, over two populations.
 
-    Reads v_orders and v_payment_attempts and the recovery tables. No ground truth: fault_windows
-    are passed in by the runner, which is the only code allowed to know them.
+    The at-risk set is the primary one and is the population the agent exists for. The whole-run
+    set is every order whose first attempt failed during the evaluation day, most of which is
+    ordinary background failure.
+
+    Reads v_orders and v_payment_attempts and the recovery tables. The fault windows are passed in
+    by the runner, which is the only code allowed to know them.
     """
     fault_windows = fault_windows or []
     orders = eligible_orders(conn, start=window_start, end=window_end)
+    at_risk = {order.order_id: order for order in at_risk_orders(conn, fault_windows)}
     metrics = RunMetrics(scenario=scenario, seed=seed, policy=policy, variant=variant)
     metrics.by_route_orders = dict.fromkeys(ROUTES, 0)
     metrics.by_route_amount = dict.fromkeys(ROUTES, 0)
+    metrics.at_risk_by_route_orders = dict.fromkeys(ROUTES, 0)
+    metrics.at_risk_by_route_amount = dict.fromkeys(ROUTES, 0)
 
     paid = {
         str(row["id"]): (int(row["paid_at"]) if row["paid_at"] is not None else None)
@@ -137,10 +150,10 @@ def measure_run(
     for order in orders:
         metrics.eligible_orders += 1
         metrics.eligible_amount += order.amount
-        in_fault = any(start <= order.failed_at < end for start, end in fault_windows)
-        if in_fault:
-            metrics.fault_eligible_orders += 1
-            metrics.fault_eligible_amount += order.amount
+        is_at_risk = order.order_id in at_risk
+        if is_at_risk:
+            metrics.at_risk_orders += 1
+            metrics.at_risk_amount += order.amount
 
         if order.order_id not in paid:
             continue
@@ -149,9 +162,26 @@ def measure_run(
         route = routes.get(order.order_id, ROUTE_ORGANIC)
         metrics.by_route_orders[route] = metrics.by_route_orders.get(route, 0) + 1
         metrics.by_route_amount[route] = metrics.by_route_amount.get(route, 0) + order.amount
-        if in_fault:
-            metrics.fault_recovered_orders += 1
-            metrics.fault_recovered_amount += order.amount
+        if is_at_risk:
+            metrics.at_risk_recovered_orders += 1
+            metrics.at_risk_recovered_amount += order.amount
+            metrics.at_risk_by_route_orders[route] = (
+                metrics.at_risk_by_route_orders.get(route, 0) + 1
+            )
+            metrics.at_risk_by_route_amount[route] = (
+                metrics.at_risk_by_route_amount.get(route, 0) + order.amount
+            )
+
+    # Messages sent to a customer whose order was at risk. Reported beside at-risk revenue,
+    # because revenue without contact volume next to it is not a comparison.
+    if at_risk:
+        placeholders = ",".join("?" for _ in at_risk)
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM customer_comms c JOIN recovery_cases r ON r.id = c.case_id "
+            f"WHERE r.order_id IN ({placeholders})",
+            tuple(at_risk),
+        ).fetchone()
+        metrics.at_risk_messages = int(row["n"])
 
     return metrics
 

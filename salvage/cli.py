@@ -277,8 +277,9 @@ def cmd_agent_run(args: argparse.Namespace) -> int:
             for route in ("link", "steer", "organic")
         )
         + "\n"
-        f"in-fault: {metrics.fault_recovered_orders}/{metrics.fault_eligible_orders} "
-        f"({metrics.fault_recovery_rate:.3f})\n"
+        f"at risk: {metrics.at_risk_recovered_orders}/{metrics.at_risk_orders} "
+        f"({metrics.at_risk_recovery_rate:.3f}), {metrics.at_risk_messages} message(s) to "
+        f"at-risk customers, {metrics.opt_outs} opt-out(s)\n"
         f"policy violations: {metrics.policy_violations}   "
         f"stream_digest={metrics.stream_digest[:16]}"
     )
@@ -543,7 +544,7 @@ def _aggregate_block(rows) -> str:
         summary = f"{row.mean_recovered_amount:,.0f} +/- {row.std_recovered_amount:,.0f}"
         lines.append(
             f"{row.scenario:<9}{row.policy:>7}{row.seeds:>7}{summary:>36}"
-            f"{row.mean_recovery_rate:>7.3f}{row.mean_fault_recovery_rate:>10.3f}"
+            f"{row.mean_recovery_rate:>7.3f}{row.mean_at_risk_recovery_rate:>10.3f}"
             f"{row.mean_messages:>7.0f}{row.total_violations:>6}"
         )
     return "\n".join(lines)
@@ -632,6 +633,11 @@ def cmd_eval_report(args: argparse.Namespace) -> int:
     )
     path = write_results_md(inputs.main, inputs=inputs)
     print(f"Wrote {path}")
+
+    from salvage.eval.sweep import write_metrics_csv
+
+    csv_path = write_metrics_csv(inputs.main)
+    print(f"Wrote {csv_path} ({len(inputs.main.rows)} rows)")
     return 0
 
 
@@ -652,21 +658,23 @@ def _write_artifact(name: str, payload) -> Path:
 def cmd_e2e_verify(args: argparse.Namespace) -> int:
     """Check and print the ledger entries the real end-to-end run produced.
 
-    scripts/e2e_real_link.py creates the objects; this reads back what it recorded, verifies the
-    chain and prints the sequence numbers in the shape docs/RESULTS.md section 10 wants.
+    scripts/e2e_real_link.py creates the real test-mode objects; this reads back what it recorded,
+    verifies the chain, checks that the four entries the run must produce are present and linked
+    to each other in order, and prints the sequence numbers and hashes in the shape
+    docs/RESULTS.md section 11 wants.
     """
     from salvage.ledger import Ledger, verify
 
     conn = open_migrated(_db_path(args))
     try:
-        kinds = ("e2e.order.created", "e2e.link.created", "e2e.link.paid")
-        entries = [entry for entry in Ledger(conn).entries() if entry.kind in kinds]
-        webhook_entries = [
-            entry for entry in Ledger(conn).entries() if entry.kind == "webhook.received"
-        ]
+        required = ("e2e.order.created", "e2e.link.created", "e2e.link.paid")
+        all_entries = Ledger(conn).entries()
+        by_seq = {entry.seq: entry for entry in all_entries}
+        e2e_entries = [entry for entry in all_entries if entry.kind in required]
+        webhook_entries = [entry for entry in all_entries if entry.kind == "webhook.received"]
         result = verify(conn)
 
-        if not entries:
+        if not e2e_entries:
             print(
                 "No end-to-end ledger entries found. Run scripts/e2e_real_link.py first.",
                 file=sys.stderr,
@@ -674,34 +682,85 @@ def cmd_e2e_verify(args: argparse.Namespace) -> int:
             print(f"Ledger state: {result}", file=sys.stderr)
             return 1
 
-        print("Real end-to-end run, ledger entries:")
-        for entry in entries:
+        print("Real end-to-end run, ledger entries")
+        print()
+        header = f"{'seq':>5}  {'kind':<22} {'ref':<28} {'hash':<18} {'prev_hash':<18} detail"
+        print(header)
+        print("-" * len(header))
+        for entry in e2e_entries + webhook_entries:
             payload = json.loads(entry.payload_json)
             detail = ", ".join(
                 f"{key}={value}"
                 for key, value in sorted(payload.items())
-                if key in ("order_id", "link_id", "payment_id", "amount", "request_id")
+                if key
+                in (
+                    "order_id",
+                    "link_id",
+                    "payment_id",
+                    "amount",
+                    "request_id",
+                    "event_type",
+                    "verified",
+                    "acted",
+                )
             )
-            print(f"  seq={entry.seq} {entry.kind} ref={entry.ref_id} {detail}")
-        for entry in webhook_entries:
-            payload = json.loads(entry.payload_json)
             print(
-                f"  seq={entry.seq} webhook.received event={entry.ref_id} "
-                f"type={payload.get('event_type')} verified={payload.get('verified')} "
-                f"acted={payload.get('acted')}"
+                f"{entry.seq:>5}  {entry.kind:<22} {entry.ref_id[:28]:<28} "
+                f"{entry.hash[:16]:<18} {entry.prev_hash[:16]:<18} {detail}"
             )
+
+        # Each entry must chain to the one before it. verify() already recomputes the whole chain;
+        # this additionally shows the specific links a reviewer would check by eye.
         print()
+        broken_links = []
+        for entry in e2e_entries + webhook_entries:
+            if entry.seq == 1:
+                continue
+            previous = by_seq.get(entry.seq - 1)
+            if previous is None or previous.hash != entry.prev_hash:
+                broken_links.append(entry.seq)
+        if broken_links:
+            print(f"Chain linkage broken at sequence {broken_links}", file=sys.stderr)
+        else:
+            print("Each entry's prev_hash matches the hash of the entry before it.")
+
         print(result)
-        missing = [kind for kind in kinds if not any(e.kind == kind for e in entries)]
+        missing = [kind for kind in required if not any(e.kind == kind for e in e2e_entries)]
         if missing:
             print(f"Incomplete: no entry for {', '.join(missing)}", file=sys.stderr)
         if not webhook_entries:
             print(
                 "No verified webhook was received. Point a tunnel at the webhook endpoint and "
-                "run again, or replay a saved fixture.",
+                "run again, or replay a saved fixture with: salvage webhooks replay <dir>",
                 file=sys.stderr,
             )
-        return 0 if result.ok and not missing else 1
+
+        print()
+        print("Paste into docs/RESULTS.md section 11:")
+        print()
+        print("| field | value |")
+        print("|---|---|")
+        for kind, label in (
+            ("e2e.order.created", "order id"),
+            ("e2e.link.created", "payment link id"),
+            ("e2e.link.paid", "payment id"),
+        ):
+            entry = next((e for e in e2e_entries if e.kind == kind), None)
+            payload = json.loads(entry.payload_json) if entry else {}
+            value = (
+                payload.get("order_id")
+                or payload.get("link_id")
+                or payload.get("payment_id")
+                or (entry.ref_id if entry else "not recorded")
+            )
+            print(f"| {label} | `{value}` |")
+        events = ", ".join(f"`{entry.ref_id}`" for entry in webhook_entries) or "none received"
+        print(f"| webhook event ids | {events} |")
+        sequences = ", ".join(str(entry.seq) for entry in e2e_entries + webhook_entries)
+        print(f"| ledger sequence numbers | {sequences} |")
+        print(f"| head hash | `{result.head_hash}` |")
+
+        return 0 if result.ok and not missing and not broken_links else 1
     finally:
         conn.close()
 

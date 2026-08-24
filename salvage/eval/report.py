@@ -86,38 +86,139 @@ def _by_scenario(rows: list[Aggregate]) -> dict[str, dict[str, Aggregate]]:
     return out
 
 
-def headline_table(result: SweepResult) -> str:
+def primary_table(result: SweepResult) -> str:
+    """Recovered revenue over the at-risk order set, with contact volume beside it."""
     rows = aggregate(result.rows)
     grouped = _by_scenario(rows)
     policies = _policies(result)
     seeds = len(result.seeds)
 
     lines = [
-        f"Recovered revenue in rupees, mean plus or minus standard deviation across {seeds} seeds.",
+        f"Mean across {seeds} seeds. Every cell is **recovered revenue in rupees, messages sent, "
+        "opt-outs** for the at-risk order set only.",
         "",
-        "Every policy is measured over the same order set: every order whose first payment attempt",
-        "failed during the evaluation day. The number counts every route to payment, including",
-        "customers who came back on their own, because that is the only quantity that means the",
-        "same thing for all four arms.",
+        "An order is at risk when its first payment attempt failed inside a fault window **and** "
+        "on the instrument that fault was breaking. That is the population a recovery agent is "
+        "aimed at. It is computed from the world's fault schedule and the attempt stream, neither "
+        "of which any policy touches, so it is identical across all four arms and a test proves "
+        "it. S0 has no fault, so its at-risk set is empty and every arm recovers nothing from it: "
+        "the messages column is the whole story on that row.",
+        "",
+        "Revenue is never shown without contact volume beside it. A policy that recovers more by "
+        "messaging everybody has not obviously won.",
         "",
     ]
-    header = "| scenario | " + " | ".join(policies) + " | best |"
+    header = "| scenario | at-risk orders | " + " | ".join(policies) + " |"
     lines.append(header)
     lines.append("|" + "---|" * (len(policies) + 2))
     for scenario in sorted(grouped):
         cells = []
-        best_policy, best_value = None, -1.0
+        at_risk = 0
+        for policy in policies:
+            entry = grouped[scenario].get(policy)
+            if entry is None:
+                cells.append("not run")
+                continue
+            at_risk = int(round(entry.mean_at_risk_orders))
+            cells.append(
+                f"{rupees(entry.mean_at_risk_recovered_amount)} / "
+                f"{entry.mean_at_risk_messages:.0f} msg / {entry.mean_opt_outs:.0f} opt-out"
+            )
+        lines.append(f"| {scenario} | {at_risk} | " + " | ".join(cells) + " |")
+
+    lines.append("")
+    lines.append("Recovery rate over the same set:")
+    lines.append("")
+    lines.append("| scenario | " + " | ".join(policies) + " |")
+    lines.append("|" + "---|" * (len(policies) + 1))
+    for scenario in sorted(grouped):
+        cells = []
+        for policy in policies:
+            entry = grouped[scenario].get(policy)
+            cells.append(
+                "not run" if entry is None else f"{entry.mean_at_risk_recovery_rate:.3f}"
+            )
+        lines.append(f"| {scenario} | " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def whole_run_table(result: SweepResult) -> str:
+    """The old headline, demoted, with the reason in the caption."""
+    rows = aggregate(result.rows)
+    grouped = _by_scenario(rows)
+    policies = _policies(result)
+    seeds = len(result.seeds)
+
+    lines = [
+        f"Recovered revenue in rupees over **every** order whose first attempt failed during the "
+        f"evaluation day, mean plus or minus standard deviation across {seeds} seeds, with "
+        "messages sent and opt-outs.",
+        "",
+        "This is secondary, and the S0 row says why. S0 has no fault at all, and a link-sending "
+        "baseline still shows roughly 1.8 times what doing nothing shows. That is not a recovery "
+        "agent working; it is the measure being dominated by ordinary background failure that "
+        "happens every day, on which a policy that messages everybody will always score well. The "
+        "primary table above scopes to the orders a fault actually put at risk.",
+        "",
+    ]
+    header = "| scenario | " + " | ".join(policies) + " |"
+    lines.append(header)
+    lines.append("|" + "---|" * (len(policies) + 1))
+    for scenario in sorted(grouped):
+        cells = []
         for policy in policies:
             entry = grouped[scenario].get(policy)
             if entry is None:
                 cells.append("not run")
                 continue
             cells.append(
-                f"{rupees(entry.mean_recovered_amount)} +/- {rupees(entry.std_recovered_amount)}"
+                f"{rupees(entry.mean_recovered_amount)} +/- "
+                f"{rupees(entry.std_recovered_amount)} / {entry.mean_messages:.0f} msg / "
+                f"{entry.mean_opt_outs:.0f} opt-out"
             )
-            if entry.mean_recovered_amount > best_value:
-                best_policy, best_value = policy, entry.mean_recovered_amount
-        lines.append(f"| {scenario} | " + " | ".join(cells) + f" | {best_policy} |")
+        lines.append(f"| {scenario} | " + " | ".join(cells) + " |")
+    return "\n".join(lines)
+
+
+def message_cost_caveat(result: SweepResult) -> str:
+    """What the simulator does not charge for, named rather than tuned away."""
+    rows = aggregate(result.rows)
+    worst = max(rows, key=lambda row: row.mean_messages, default=None)
+    total_messages = sum(row.mean_messages * row.seeds for row in rows)
+    total_opt_outs = sum(row.mean_opt_outs * row.seeds for row in rows)
+    rate = (total_opt_outs / total_messages) if total_messages else 0.0
+
+    lines = [
+        "**A message costs nothing in this simulator except the chance that the customer opts "
+        "out.** There is no regulatory cost, no TRAI or DLT registration limit, no sender "
+        "reputation, no per-message fee, no fatigue beyond the single opt-out draw, and no effect "
+        "on anything the customer does later. Deliberately: modelling those would mean inventing "
+        "half a dozen more parameters, and the point here is to name the limit rather than tune "
+        "it away.",
+        "",
+        "Read every advantage a link-sending baseline shows in that light. B1's whole-run lead is "
+        "real inside the model and it is bought entirely with contact volume that the model prices "
+        "at almost zero.",
+        "",
+    ]
+    if worst is not None:
+        lines.append(
+            f"For scale: the heaviest arm in this sweep sends about {worst.mean_messages:.0f} "
+            f"messages per simulated day on {worst.scenario} ({worst.policy}). A real merchant "
+            "sending that volume would be having a different conversation, with their operator "
+            "and possibly with a regulator, before they had it about recovered revenue."
+        )
+        lines.append("")
+    lines.append(
+        f"**Opt-outs are doing some work, but not much.** Across the sweep, "
+        f"{rate:.1%} of messages produced an opt-out, from the "
+        "`opt_out_probability_base` and `opt_out_probability_still_failing` parameters in "
+        "`salvage/sim/params.yaml` (0.02 and 0.12). That is the only push-back a policy feels for "
+        "sending, and at that rate a policy can send a thousand messages and lose a few dozen "
+        "customers permanently, which the model then charges it nothing further for. If the "
+        "results are ever used to argue for a high-volume strategy, this parameter is the first "
+        "one to attack."
+    )
     return "\n".join(lines)
 
 
@@ -152,7 +253,7 @@ def secondary_table(result: SweepResult) -> str:
         contacts = f"{row.mean_contacts_per_1000:.2f}" if row.mean_messages else "0.00"
         lines.append(
             f"| {row.scenario} | {row.policy} | {row.mean_recovery_rate:.3f} | "
-            f"{row.mean_fault_recovery_rate:.3f} | {contacts} | "
+            f"{row.mean_at_risk_recovery_rate:.3f} | {contacts} | "
             f"{row.mean_escalations:.1f} | {row.detected}/{row.seeds} | {latency} | "
             f"{row.total_violations} |"
         )
@@ -421,23 +522,31 @@ classification, not action. Reading it as a policy comparison would be a mistake
 diagnosis never clears the action threshold, so such an arm would escalate everything and recover
 nothing.
 
-## 1. Headline: recovered revenue
+## 1. Primary: recovered revenue over the at-risk order set
 
-{headline_table(main)}
+{primary_table(main)}
 
-## 2. Decomposition
+### What a message costs here, and what it does not
+
+{message_cost_caveat(main)}
+
+## 2. Secondary: whole-run totals
+
+{whole_run_table(main)}
+
+## 3. Decomposition
 
 {decomposition_table(main)}
 
-## 3. Secondary metrics
+## 4. Secondary metrics
 
 {secondary_table(main)}
 
-## 4. Identical worlds
+## 5. Identical worlds
 
 {digest_table(main)}
 
-## 5. Diagnosis ablation
+## 6. Diagnosis ablation
 
 {
         inputs.diagnosis
@@ -448,23 +557,23 @@ nothing.
         )
     }
 
-## 6. Detector operating envelope
+## 7. Detector operating envelope
 
 {volume_section(inputs.volume_sweep)}
 
-## 7. Peak against trough detection
+## 8. Peak against trough detection
 
 {offpeak_section(main, inputs.offpeak)}
 
-## 8. Sensitivity and the adversarial set
+## 9. Sensitivity and the adversarial set
 
 {sensitivity_section(inputs.sensitivity)}
 
-## 9. Fault injection
+## 10. Fault injection
 
 {injection_section(inputs.injection)}
 
-## 10. The real end-to-end run
+## 11. The real end-to-end run
 
 Not yet run. It needs Razorpay test-mode credentials, which the build environment did not have.
 `scripts/e2e_real_link.py` is ready and refuses to run without them.
@@ -483,7 +592,7 @@ uv run salvage e2e verify
 | webhook event id | _to fill_ |
 | ledger sequence numbers | _to fill_ |
 
-## 11. Known limitations
+## 12. Known limitations
 
 {_limitations(inputs)}
 """)
@@ -528,18 +637,18 @@ def _limitations(inputs: ReportInputs) -> str:
         "cost is one duplicate incident in fifty runs.",
         "**Time to detect is a function of segment volume, not of fault severity.** Both slow "
         "detections on the held-out seeds happened because the affected segment sat at or below "
-        "the 20-attempt floor, not because the signal was weak. Section 6 gives the boundary.",
+        "the 20-attempt floor, not because the signal was weak. Section 7 gives the boundary.",
         "**The simulator is the instrument.** Every parameter is in `salvage/sim/params.yaml` with "
         "its assumption written beside it. The response-model multipliers are judgement, which is "
-        "what section 8 exists to quantify.",
+        "what section 9 exists to quantify.",
         "**Traffic volume is 12,000 attempts a day, not the 1,500 in the architecture note.** At "
         "1,500 the detector cannot meet the 15-minute target on a single-instrument fault at all. "
         "The arithmetic is in `docs/BUILD_LOG.md`.",
     ]
     if not inputs.volume_sweep:
-        items.append("**The volume sweep has not been run**, so section 6 has no boundary figure.")
+        items.append("**The volume sweep has not been run**, so section 7 has no boundary figure.")
     if not inputs.sensitivity:
-        items.append("**The sensitivity sweep has not been run**, so section 8 is empty.")
+        items.append("**The sensitivity sweep has not been run**, so section 9 is empty.")
     return "\n".join(f"- {item}" for item in items)
 
 
@@ -581,7 +690,7 @@ def rows_from_json(payload: dict[str, Any]) -> SweepResult:
         for key, value in row.items():
             if hasattr(metrics, key) and key not in (
                 "recovery_rate",
-                "fault_recovery_rate",
+                "at_risk_recovery_rate",
                 "contacts_per_1000_rupees",
             ):
                 setattr(metrics, key, value)

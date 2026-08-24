@@ -217,10 +217,15 @@ def test_e2e_verify_prints_the_ledger_entries_the_real_run_produced(capsys, tmp_
 
     code, out, _ = _run(capsys, ["--db", str(db), "e2e", "verify"])
     assert code == 0
-    assert "seq=1 e2e.order.created" in out
+    assert "e2e.order.created" in out
     assert "plink_abc" in out
     assert "evt_abc" in out
     assert "Chain intact" in out
+    # Hashes and linkage, which is what the report needs.
+    assert "prev_hash" in out
+    assert "prev_hash matches the hash of the entry before it" in out
+    assert "| ledger sequence numbers | 1, 2, 3, 4 |" in out
+    assert "| head hash |" in out
 
 
 def test_e2e_verify_reports_an_incomplete_run(capsys, tmp_path):

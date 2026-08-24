@@ -115,7 +115,7 @@ def test_organic_recovery_is_measurable_and_non_zero(tmp_path, small_params_path
     assert metrics.recovered_orders > 0
     assert 0.0 < metrics.recovery_rate < 1.0
     assert metrics.recovered_amount > 0
-    assert metrics.fault_eligible_orders > 0
+    assert metrics.at_risk_orders > 0
     # B0 does nothing, so every recovery it has is organic by definition.
     assert metrics.by_route_orders["organic"] == metrics.recovered_orders
     assert metrics.messages_sent == 0
