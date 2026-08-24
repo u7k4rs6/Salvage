@@ -102,17 +102,19 @@ def test_the_results_json_round_trips(small_sweep, tmp_path):
 def test_the_report_has_every_required_section(small_sweep):
     report = build_report(ReportInputs(main=small_sweep))
     for heading in (
-        "## 1. Headline: recovered revenue",
-        "## 2. Decomposition",
-        "## 3. Secondary metrics",
-        "## 4. Identical worlds",
-        "## 5. Diagnosis ablation",
-        "## 6. Detector operating envelope",
-        "## 7. Peak against trough detection",
-        "## 8. Sensitivity and the adversarial set",
-        "## 9. Fault injection",
-        "## 10. The real end-to-end run",
-        "## 11. Known limitations",
+        "## 1. Primary: recovered revenue over the at-risk order set",
+        "### What a message costs here, and what it does not",
+        "## 2. Secondary: whole-run totals",
+        "## 3. Decomposition",
+        "## 4. Secondary metrics",
+        "## 5. Identical worlds",
+        "## 6. Diagnosis ablation",
+        "## 7. Detector operating envelope",
+        "## 8. Peak against trough detection",
+        "## 9. Sensitivity and the adversarial set",
+        "## 10. Fault injection",
+        "## 11. The real end-to-end run",
+        "## 12. Known limitations",
     ):
         assert heading in report, heading
 
@@ -137,10 +139,19 @@ def test_the_report_never_invents_a_number_for_a_missing_sweep(small_sweep):
     assert "It is not estimated here and no figure is given for it." in report
 
 
-def test_the_report_marks_the_best_policy_per_scenario(small_sweep):
+def test_the_primary_table_never_shows_revenue_without_contact_volume(small_sweep):
+    """The old headline marked a best policy per scenario. It no longer does, because recovered
+    revenue against messages sent is a trade-off and naming a winner hides the axis the reader
+    should be arguing about. Every cell carries both numbers instead."""
     report = build_report(ReportInputs(main=small_sweep))
-    headline = report.split("## 2.")[0]
-    assert "| best |" in headline
+    primary = report.split("## 2.")[0]
+    assert "| best |" not in primary
+    # The revenue table only. The rate table below it repeats the same population as a fraction.
+    revenue = primary.split("Recovery rate over the same set")[0]
+    body = [line for line in revenue.splitlines() if line.startswith("| S")]
+    assert body, "the primary table has at least one scenario row"
+    for line in body:
+        assert "msg" in line and "opt-out" in line, line
 
 
 # -- helpers ---------------------------------------------------------------
