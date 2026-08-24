@@ -146,6 +146,9 @@ def build_planner_prompt(
             conditions.append("single nudge only")
         if entry.note:
             conditions.append(entry.note)
+        # Deduplicate while keeping order: requires_segment_recovered and the matrix note say the
+        # same thing for gateway_degradation, and printing it twice reads like a bug to a model.
+        conditions = list(dict.fromkeys(conditions))
         suffix = f" ({'; '.join(conditions)})" if conditions else ""
         allowed_lines.append(f"  {action.value}: allowed{suffix}")
 
