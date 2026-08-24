@@ -231,3 +231,58 @@ en dashes anywhere in this repository, by instruction.
   against a configured 60 / 25 / 10 / 5, and a full eight-day run took 3.2 seconds.
 - One performance change was made before it became a problem: the fault error-profile sampler was
   being rebuilt for every attempt inside the fault window. It is now built once per fault.
+
+---
+
+## 2026-08-24, M1 step 5: ingest
+
+### Decisions on open items
+
+- **An unverified body is not stored.** The security doc says verification is the authentication
+  and that verified events are normalised, but it does not say what happens to a body that fails
+  verification. It is rejected with 400 and nothing is written. Reason: storing it would let
+  anyone who finds the URL fill the database, and there is no audit value in a record of
+  unauthenticated noise. Guarded by
+  `tests/unit/test_webhooks.py::test_bad_signature_is_rejected_and_stores_nothing`.
+- **Customer resolution for a real webhook.** Razorpay's payment entity has no Salvage customer
+  id. If the order is already known, its customer is used. Otherwise a customer is created with
+  `consent = 0` and a salted `ref_hash` derived from whatever identifier the payload carries
+  (contact, then email, then the order id). Consent defaults to off, so the policy engine refuses
+  to contact someone Salvage has never met. The raw contact stays only in
+  `webhook_events.raw_json`, which is what security doc section 5 allows and what the ledger and
+  exports exclude. Guarded by `test_a_customer_is_created_for_an_unknown_order` and
+  `test_the_ledger_entry_carries_no_contact_or_email`.
+- **The normaliser derives the UPI handle from the VPA.** Razorpay does not publish the handle as
+  its own field, so it is the part after the `@`. That derivation is isolated in one function,
+  `_upi_handle`, so if Razorpay adds a handle field only that function changes. This is the one
+  place in the ingest path where Salvage infers rather than reads.
+- **Wallet code shares a column with the bank code.** `payment_attempts.nb_bank` holds the
+  4-character bank code for netbanking and UPI and the wallet code for wallets, so a single
+  segment key means "which instrument inside this method" for every method. Recorded because the
+  column name now says less than it holds.
+- **A missing webhook secret returns 503, not 500.** The server cannot verify anything without
+  it. 503 is the honest status and Razorpay retries on it.
+- **A payload with no `created_at` counts as fresh.** Razorpay always sends one; refusing to act
+  because a field outside Salvage's control is absent would be worse than acting.
+- **Payment link handling exists but does nothing yet.** M1 creates no links, so there is never a
+  matching recovery case. The lookup is written now so a replayed or out-of-order link event is a
+  recorded no-op today and correct in M2 without a second code path.
+
+### What broke
+
+- Every webhook endpoint test failed with `sqlite3.ProgrammingError: SQLite objects created in a
+  thread can only be used in that same thread`. This was not a test artefact: FastAPI runs a
+  synchronous dependency generator in a worker thread while an `async def` endpoint body runs on
+  the event loop thread, so a connection created by the dependency legitimately crosses threads on
+  every real request too. Fixed by opening connections with `check_same_thread=False` in
+  `salvage/db.py`, with a comment saying why that is safe here: Salvage is single-process, every
+  write goes through `BEGIN IMMEDIATE`, and `busy_timeout` is set. The whole endpoint test file
+  guards it.
+- `test_replay_route_does_not_exist_in_demo` failed, and it was a real security defect rather
+  than a test problem. The webhook router was a module-level singleton and
+  `register_dev_replay_route()` mutated it in place, so once any dev-mode app had been created in
+  a process, every later app in that process carried the unsigned replay route, including a
+  demo-mode one. Fixed by replacing the singleton with `build_router(include_dev_replay=...)`,
+  which builds a fresh router per application, so "compiled out of the router otherwise" is
+  literally true. The endpoint itself also still refuses outside dev, as defence in depth.
+  Guarded by `test_replay_route_exists_in_dev` and `test_replay_route_does_not_exist_in_demo`.

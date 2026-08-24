@@ -30,7 +30,12 @@ def connect(path: Path | str | None = None) -> sqlite3.Connection:
     path = Path(path)
     if str(path) != ":memory:":
         path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(path), isolation_level=None)
+    # check_same_thread=False because FastAPI hands a sync dependency generator to a worker
+    # thread while an async endpoint body runs on the event loop thread, so one request's
+    # connection legitimately crosses threads. Salvage is single-process and every write goes
+    # through a BEGIN IMMEDIATE transaction with busy_timeout set, so the serialisation sqlite3
+    # would otherwise provide is not what is keeping writes correct.
+    conn = sqlite3.connect(str(path), isolation_level=None, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
