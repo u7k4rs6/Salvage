@@ -195,12 +195,17 @@ class ResponseModel:
             return 1.0
         return math.exp(-max(0.0, hours_since_failure) / self._decay_hours)
 
-    def intervention_draw(self, *, order_index: int, nudge_number: int) -> tuple[float, float]:
-        """(pays draw, opts-out draw) for one nudge to one order.
+    def intervention_draw(
+        self, *, order_index: int, nudge_number: int
+    ) -> tuple[float, float, float]:
+        """(pays draw, opts-out draw, pay-delay draw) for one nudge to one order.
 
         Keyed by order and nudge number, so B1 sending a first nudge and the agent sending a first
         nudge to the same customer resolve against the same random value. That is what makes the
         comparison in docs/RESULTS.md a comparison of decisions rather than of luck.
+
+        Three draws, always taken in this order, so a policy that ignores one of them cannot shift
+        the others.
         """
         rng = order_stream(self._seed, f"{INTERVENTION_STREAM}:{nudge_number}", order_index)
-        return float(rng.random()), float(rng.random())
+        return float(rng.random()), float(rng.random()), float(rng.random())

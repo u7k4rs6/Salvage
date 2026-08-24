@@ -81,8 +81,15 @@ class LLMProvider(ABC):
     model: str = ""
 
     @abstractmethod
-    def _generate(self, system: str, user: str, schema: dict[str, Any]) -> str:
-        """Return the model's raw text. Implementations do transport and retries only."""
+    def _generate(self, system: str, user: str, schema: dict[str, Any], schema_name: str) -> str:
+        """Return the model's raw text. Implementations do transport and retries only.
+
+        schema_name is passed explicitly rather than read out of the schema dict, because
+        gemini_schema strips `title` (Gemini's responseSchema does not accept it) and the prompt
+        hash has to be the same value everywhere it is computed: in complete(), in the fixture
+        provider's lookup, and in `salvage diagnose export-prompts`. Three different derivations
+        of the same key is a silent cache miss waiting to happen.
+        """
 
     def complete(self, system: str, user: str, schema: type[T], *, conn=None) -> T:
         """Ask, validate, and retry once with the validation error appended.
@@ -101,7 +108,7 @@ class LLMProvider(ABC):
         prompt = user
         last_error: str | None = None
         for attempt in range(2):
-            raw = self._generate(system, prompt, schema_json)
+            raw = self._generate(system, prompt, schema_json, schema.__name__)
             try:
                 parsed = schema.model_validate_json(_extract_json(raw))
             except (ValidationError, ValueError) as exc:
@@ -219,8 +226,11 @@ class GeminiProvider(LLMProvider):
         fallback_model: str = GEMINI_FALLBACK_MODEL,
         client: httpx.Client | None = None,
         base_url: str = GEMINI_BASE_URL,
+        sleeper: Any = None,
     ) -> None:
         settings = get_settings()
+        # Injectable so tests exercise the retry ladder without actually waiting through it.
+        self._sleeper = sleeper or _sleep_backoff
         self._api_key = api_key if api_key is not None else settings.gemini_api_key
         self.model = model or settings.salvage_llm_model or GEMINI_DEFAULT_MODEL
         self._primary_model = self.model
@@ -245,7 +255,8 @@ class GeminiProvider(LLMProvider):
             },
         }
 
-    def _generate(self, system: str, user: str, schema: dict[str, Any]) -> str:
+    def _generate(self, system: str, user: str, schema: dict[str, Any], schema_name: str) -> str:
+        del schema_name
         if not self._api_key:
             raise LLMError("GEMINI_API_KEY is not set")
 
@@ -261,7 +272,7 @@ class GeminiProvider(LLMProvider):
                 )
             except httpx.TimeoutException as exc:
                 last_detail = f"timeout: {exc}"
-                _sleep_backoff(attempt)
+                self._sleeper(attempt)
                 continue
 
             if response.status_code == 429:
@@ -271,12 +282,12 @@ class GeminiProvider(LLMProvider):
                     model = self._fallback_model
                     self.model = model
                     continue
-                _sleep_backoff(attempt)
+                self._sleeper(attempt)
                 continue
 
             if response.status_code >= 500:
                 last_detail = f"{response.status_code} server error"
-                _sleep_backoff(attempt)
+                self._sleeper(attempt)
                 continue
 
             if response.status_code >= 400:
@@ -336,7 +347,8 @@ class OllamaProvider(LLMProvider):
         if self._owns_client:
             self._client.close()
 
-    def _generate(self, system: str, user: str, schema: dict[str, Any]) -> str:
+    def _generate(self, system: str, user: str, schema: dict[str, Any], schema_name: str) -> str:
+        del schema_name
         try:
             response = self._client.post(
                 f"{self._base_url}/api/chat",
@@ -392,8 +404,8 @@ class FixtureProvider(LLMProvider):
     def path_for(self, key: str) -> Path:
         return self.directory / f"{key}.json"
 
-    def _generate(self, system: str, user: str, schema: dict[str, Any]) -> str:
-        key = cache_mod.prompt_hash(system, user, schema.get("title", "schema"), schema)
+    def _generate(self, system: str, user: str, schema: dict[str, Any], schema_name: str) -> str:
+        key = cache_mod.prompt_hash(system, user, schema_name, schema)
         path = self.path_for(key)
         if path.exists():
             record = json.loads(path.read_text(encoding="utf-8"))
@@ -401,7 +413,7 @@ class FixtureProvider(LLMProvider):
 
         self.misses.append(key)
         if self.recorder is not None:
-            raw = self.recorder._generate(system, user, schema)  # noqa: SLF001
+            raw = self.recorder._generate(system, user, schema, schema_name)  # noqa: SLF001
             self.directory.mkdir(parents=True, exist_ok=True)
             path.write_text(
                 json.dumps(
@@ -434,6 +446,66 @@ class FixtureProvider(LLMProvider):
 # ---------------------------------------------------------------------------
 
 
+class CollectingProvider(LLMProvider):
+    """Records every prompt it is asked and answers none of them.
+
+    This is how a fixture set is bootstrapped without a live provider. Run the agent with it, and
+    every prompt the loop would have sent is written out with the hash the fixture will be looked
+    up by. Each call then fails, so the loop takes its documented "no model answer" path and
+    escalates, which is also a useful thing to be able to exercise on purpose.
+    """
+
+    name = "collect"
+
+    def __init__(self, out_path: Path | str, model: str = "collect") -> None:
+        self.out_path = Path(out_path)
+        self.model = model
+        self.out_path.parent.mkdir(parents=True, exist_ok=True)
+        self._seen: set[str] = set()
+
+    def _generate(self, system: str, user: str, schema: dict[str, Any], schema_name: str) -> str:
+        key = cache_mod.prompt_hash(system, user, schema_name, schema)
+        if key not in self._seen:
+            self._seen.add(key)
+            with self.out_path.open("a", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(
+                        {
+                            "prompt_hash": key,
+                            "schema_title": schema_name,
+                            "system": system,
+                            "user": user,
+                        },
+                        sort_keys=True,
+                    )
+                    + "\n"
+                )
+        raise LLMError(f"collecting provider recorded prompt {key} and returns no answer")
+
+
+class FixtureThenCollectProvider(FixtureProvider):
+    """Answer from fixtures where they exist, record the prompts where they do not.
+
+    The bootstrap loop: run, collect the prompts the run needs, author those answers, run again.
+    Each pass answers one more step of the loop, because a later prompt depends on an earlier
+    answer. Local tooling only; CI uses the strict fixture provider.
+    """
+
+    name = "fixture"
+
+    def __init__(self, out_path: Path | str, directory: Path | str = FIXTURE_DIR) -> None:
+        super().__init__(directory, strict=False)
+        self._collector = CollectingProvider(out_path)
+
+    def _generate(self, system: str, user: str, schema: dict[str, Any], schema_name: str) -> str:
+        key = cache_mod.prompt_hash(system, user, schema_name, schema)
+        path = self.path_for(key)
+        if path.exists():
+            record = json.loads(path.read_text(encoding="utf-8"))
+            return json.dumps(record["response"])
+        return self._collector._generate(system, user, schema, schema_name)  # noqa: SLF001
+
+
 def build_provider(name: str | None = None, **kwargs: Any) -> LLMProvider:
     """The provider named by SALVAGE_LLM_PROVIDER, or by the argument.
 
@@ -446,6 +518,10 @@ def build_provider(name: str | None = None, **kwargs: Any) -> LLMProvider:
         return GeminiProvider(**kwargs)
     if name == "ollama":
         return OllamaProvider(**kwargs)
+    if name == "collect":
+        return CollectingProvider(**kwargs)
+    if name == "fixture-collect":
+        return FixtureThenCollectProvider(**kwargs)
     raise ValueError(f"unknown LLM provider {name!r}")
 
 

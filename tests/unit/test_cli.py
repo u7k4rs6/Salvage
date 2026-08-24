@@ -19,7 +19,16 @@ def _run(capsys, argv: list[str]) -> tuple[int, str, str]:
 def test_every_documented_command_is_registered():
     parser = build_parser()
     groups = parser._subparsers._group_actions[0].choices  # noqa: SLF001
-    assert set(groups) == {"db", "ledger", "sim", "detect", "diagnose", "webhooks", "serve"}
+    assert set(groups) == {
+        "db",
+        "ledger",
+        "sim",
+        "detect",
+        "diagnose",
+        "agent",
+        "webhooks",
+        "serve",
+    }
     assert set(groups["db"]._subparsers._group_actions[0].choices) == {"migrate"}  # noqa: SLF001
     assert set(groups["ledger"]._subparsers._group_actions[0].choices) == {  # noqa: SLF001
         "verify",
@@ -42,6 +51,7 @@ def test_every_documented_command_is_registered():
         "export-prompts",
         "import-fixtures",
     }
+    assert set(groups["agent"]._subparsers._group_actions[0].choices) == {"run"}  # noqa: SLF001
 
 
 def test_seed_spec_parsing():

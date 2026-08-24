@@ -211,6 +211,68 @@ def cmd_detect_calibrate(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# agent
+# ---------------------------------------------------------------------------
+
+
+def _make_provider(args: argparse.Namespace):
+    """The provider named on the command line, or None for the model-free path."""
+    if args.provider == "none":
+        return None
+    from salvage.llm.provider import build_provider
+
+    if args.provider in ("collect", "fixture-collect"):
+        return build_provider(args.provider, out_path=args.collect_out)
+    return build_provider(args.provider)
+
+
+def cmd_agent_run(args: argparse.Namespace) -> int:
+    from salvage.eval.agent_run import run_agent_scenario
+
+    provider = _make_provider(args)
+
+    conn = open_migrated(_db_path(args))
+    try:
+        result = run_agent_scenario(
+            conn,
+            scenario=args.scenario,
+            seed=args.seed,
+            variant=args.variant,
+            provider=provider,
+            kill_switch=args.kill_switch,
+        )
+    finally:
+        conn.close()
+
+    stats = result.stats
+    print(
+        f"run_id={result.sim.run_id} scenario={args.scenario} seed={args.seed} "
+        f"variant={args.variant}\n"
+        f"incidents={stats.incidents} diagnosed={stats.diagnosed} "
+        f"escalations={stats.escalations}\n"
+        f"cases={stats.cases} actions proposed={stats.actions_proposed} "
+        f"executed={stats.actions_executed} refused={stats.actions_refused} "
+        f"deferred={stats.actions_deferred} queued={stats.actions_queued}\n"
+        f"links={stats.links_created} messages sent={stats.messages_sent} "
+        f"rejected by validator={stats.messages_rejected} opt-outs={stats.opt_outs}\n"
+        f"recovered by the agent: {stats.recovered_cases} case(s), "
+        f"{stats.recovered_amount} paise\n"
+        f"organic recovery (B0) in the same run: {result.organic.recovered_orders}/"
+        f"{result.organic.failed_orders} orders "
+        f"({result.organic.recovery_rate:.3f})"
+    )
+    for incident in result.incidents:
+        print(
+            f"  incident {incident['id']} on {incident['segment_key']}: "
+            f"rules={incident['rules_cause']} llm={incident['llm_cause']} "
+            f"cause={incident['root_cause']} confidence={incident['confidence']}"
+        )
+    for escalation in result.escalations:
+        print(f"  escalation {escalation['id']}: {escalation['reason']}")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # diagnose
 # ---------------------------------------------------------------------------
 
@@ -219,11 +281,7 @@ def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
     from salvage.eval.metrics import format_accuracy_table, summarise
     from salvage.eval.run import diagnosis_sweep
 
-    provider = None
-    if args.provider != "none":
-        from salvage.llm.provider import build_provider
-
-        provider = build_provider(args.provider)
+    provider = _make_provider(args)
 
     outcomes = diagnosis_sweep(
         scenarios=[s.strip() for s in args.scenarios.split(",") if s.strip()],
@@ -262,8 +320,13 @@ def cmd_diagnose_import_fixtures(args: argparse.Namespace) -> int:
     """
     import json as _json
 
+    from salvage.decide.planner import Plan
     from salvage.diagnose.llm import LLMDiagnosis
     from salvage.llm.provider import FIXTURE_DIR, write_fixture
+
+    # The schema an answer is validated against is the one the prompt asked for. A planner answer
+    # validated against the diagnosis schema would be rejected for the wrong reason.
+    schemas = {"LLMDiagnosis": LLMDiagnosis, "Plan": Plan}
 
     prompts = {}
     with Path(args.prompts).open(encoding="utf-8") as handle:
@@ -280,7 +343,12 @@ def cmd_diagnose_import_fixtures(args: argparse.Namespace) -> int:
         if key not in prompts:
             print(f"no prompt for hash {key}, skipping", file=sys.stderr)
             continue
-        validated = LLMDiagnosis.model_validate(answer)
+        schema_name = prompts[key].get("schema_title", "LLMDiagnosis")
+        schema = schemas.get(schema_name)
+        if schema is None:
+            print(f"unknown schema {schema_name!r} for hash {key}, skipping", file=sys.stderr)
+            continue
+        validated = schema.model_validate(answer)
         write_fixture(
             directory,
             key=key,
@@ -419,6 +487,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     calibrate.set_defaults(func=cmd_detect_calibrate)
 
+    agent = subparsers.add_parser("agent", help="the whole loop").add_subparsers(
+        dest="command", required=True
+    )
+    agent_run = agent.add_parser(
+        "run", help="simulate, detect, diagnose, plan, gate, act and settle one scenario"
+    )
+    agent_run.add_argument("--scenario", required=True)
+    agent_run.add_argument("--seed", type=int, required=True)
+    agent_run.add_argument("--variant", default="peak")
+    agent_run.add_argument(
+        "--provider",
+        default="none",
+        help="none, fixture, gemini, ollama, or collect to record prompts without answering",
+    )
+    agent_run.add_argument(
+        "--collect-out",
+        dest="collect_out",
+        default="data/prompts_agent.jsonl",
+        help="where the collect provider writes prompts",
+    )
+    agent_run.add_argument("--kill-switch", dest="kill_switch", action="store_true")
+    agent_run.set_defaults(func=cmd_agent_run)
+
     diagnose = subparsers.add_parser("diagnose", help="diagnosis").add_subparsers(
         dest="command", required=True
     )
@@ -431,7 +522,10 @@ def build_parser() -> argparse.ArgumentParser:
     accuracy.add_argument(
         "--provider",
         default="none",
-        help="none for the rules-only floor, or fixture, gemini, ollama",
+        help="none for the rules-only floor, or fixture, gemini, ollama, collect",
+    )
+    accuracy.add_argument(
+        "--collect-out", dest="collect_out", default="data/prompts_diagnose.jsonl"
     )
     accuracy.set_defaults(func=cmd_diagnose_accuracy)
 
