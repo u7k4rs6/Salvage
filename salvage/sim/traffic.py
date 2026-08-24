@@ -69,13 +69,13 @@ def description_for(reason: str) -> str:
 class GeneratedAttempt:
     """One simulated payment attempt, plus the ground truth that goes with it."""
 
-    entity: dict[str, Any]     # the Razorpay payment entity
+    entity: dict[str, Any]  # the Razorpay payment entity
     customer_id: str
     order_amount: int
     created_at: int
     failed: bool
     fault_caused: bool
-    truth_cause: str           # a RootCause value, or "organic", or "none" for a success
+    truth_cause: str  # a RootCause value, or "organic", or "none" for a success
 
 
 class _ProfileSampler:

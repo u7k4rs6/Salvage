@@ -59,10 +59,26 @@ class SimCustomer:
 
 
 _SKU_WORDS = (
-    "Cotton Kurta", "Linen Shirt", "Steel Kettle", "Ceramic Mug", "Cane Basket",
-    "Block Print Dupatta", "Jute Rug", "Copper Bottle", "Terracotta Planter", "Wool Throw",
-    "Khadi Napkins", "Brass Diya Set", "Cotton Bedsheet", "Chanderi Stole", "Clay Cookware",
-    "Bamboo Tray", "Handloom Towel", "Ikat Cushion", "Marble Coaster Set", "Leather Journal",
+    "Cotton Kurta",
+    "Linen Shirt",
+    "Steel Kettle",
+    "Ceramic Mug",
+    "Cane Basket",
+    "Block Print Dupatta",
+    "Jute Rug",
+    "Copper Bottle",
+    "Terracotta Planter",
+    "Wool Throw",
+    "Khadi Napkins",
+    "Brass Diya Set",
+    "Cotton Bedsheet",
+    "Chanderi Stole",
+    "Clay Cookware",
+    "Bamboo Tray",
+    "Handloom Towel",
+    "Ikat Cushion",
+    "Marble Coaster Set",
+    "Leather Journal",
 )
 
 

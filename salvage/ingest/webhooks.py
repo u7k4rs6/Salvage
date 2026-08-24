@@ -267,6 +267,7 @@ def ingest_event(
 # Router
 # ---------------------------------------------------------------------------
 
+
 def get_conn() -> Iterator[Any]:
     """One connection per request. SQLite in WAL mode, single process, so this is cheap.
 

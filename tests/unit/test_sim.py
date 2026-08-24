@@ -234,9 +234,7 @@ def test_s0_has_no_fault_and_no_fault_caused_attempts(tmp_path, small_params_pat
         ("S4", "merchant_config"),
     ],
 )
-def test_every_scenario_produces_its_own_truth_cause(
-    tmp_path, small_params_path, scenario, cause
-):
+def test_every_scenario_produces_its_own_truth_cause(tmp_path, small_params_path, scenario, cause):
     result, conn = _run(tmp_path, scenario, 2, small_params_path, name=f"{scenario}.db")
     try:
         counts = {
@@ -294,9 +292,21 @@ def test_simulated_events_are_shaped_like_a_razorpay_payment_entity(tmp_path, sm
         ).fetchone()
         entity = json.loads(row["raw_json"])
         for field in (
-            "id", "entity", "amount", "currency", "status", "order_id", "method",
-            "error_code", "error_source", "error_step", "error_reason", "error_description",
-            "created_at", "notes", "acquirer_data",
+            "id",
+            "entity",
+            "amount",
+            "currency",
+            "status",
+            "order_id",
+            "method",
+            "error_code",
+            "error_source",
+            "error_step",
+            "error_reason",
+            "error_description",
+            "created_at",
+            "notes",
+            "acquirer_data",
         ):
             assert field in entity, field
         assert entity["entity"] == "payment"
@@ -312,9 +322,7 @@ def test_simulated_events_are_shaped_like_a_razorpay_payment_entity(tmp_path, sm
         conn.close()
 
 
-def test_run_appends_exactly_two_ledger_entries_and_the_chain_verifies(
-    tmp_path, small_params_path
-):
+def test_run_appends_exactly_two_ledger_entries_and_the_chain_verifies(tmp_path, small_params_path):
     from salvage.ledger import verify
 
     result, conn = _run(tmp_path, "S1", 1, small_params_path)

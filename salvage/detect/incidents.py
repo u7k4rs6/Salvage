@@ -87,9 +87,7 @@ def _sort_key(key: str, stats: dict[str, WindowStat]) -> tuple[int, int, str]:
     return (stat.attempts, _DIMENSION_ORDER.get(dimension, 99), key)
 
 
-def attribute(
-    passing: list[WindowStat], thresholds: Thresholds = FROZEN
-) -> list[FiringGroup]:
+def attribute(passing: list[WindowStat], thresholds: Thresholds = FROZEN) -> list[FiringGroup]:
     """Group the firing keys into one group per fault and choose each group's segment."""
     if not passing:
         return []
@@ -224,9 +222,7 @@ def firing_siblings(segment_key: str, firing_keys: set[str]) -> int:
     if dimension is None:
         return sum(1 for key in firing_keys if key != ALL_KEY and parse_key(key)[1] is None)
     return sum(
-        1
-        for key in firing_keys
-        if parse_key(key)[0] == method and parse_key(key)[1] == dimension
+        1 for key in firing_keys if parse_key(key)[0] == method and parse_key(key)[1] == dimension
     )
 
 
@@ -297,16 +293,15 @@ def at_risk_amount(conn, *, segment_key: str, window_start: int, evaluated_at: i
 
     row = conn.execute(
         "SELECT COALESCE(SUM(o.amount), 0) AS total FROM v_orders o WHERE o.id IN ("
-        "  SELECT DISTINCT a.order_id FROM v_payment_attempts a WHERE " + " AND ".join(conditions) +
-        ") AND o.paid_at IS NULL",
+        "  SELECT DISTINCT a.order_id FROM v_payment_attempts a WHERE "
+        + " AND ".join(conditions)
+        + ") AND o.paid_at IS NULL",
         tuple(args),
     ).fetchone()
     return int(row["total"])
 
 
-def open_incident(
-    conn, *, segment_key: str, opened_at: int, scope: list[str], at_risk: int
-) -> str:
+def open_incident(conn, *, segment_key: str, opened_at: int, scope: list[str], at_risk: int) -> str:
     incident_id = incident_id_for(segment_key, opened_at)
     repo.insert_incident(
         conn,
@@ -336,8 +331,7 @@ def close_incident(conn, incident_id: str, closed_at: int) -> None:
     to add it.
     """
     open_cases = conn.execute(
-        "SELECT COUNT(*) AS n FROM recovery_cases WHERE incident_id = ? "
-        "AND outcome IS NULL",
+        "SELECT COUNT(*) AS n FROM recovery_cases WHERE incident_id = ? AND outcome IS NULL",
         (incident_id,),
     ).fetchone()["n"]
     if open_cases:

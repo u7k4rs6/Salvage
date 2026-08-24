@@ -336,11 +336,16 @@ def test_replay_route_does_not_exist_in_demo(conn, monkeypatch):
         app = create_app()
         assert "/api/webhooks/razorpay/replay" not in _route_paths(app)
         app.dependency_overrides[webhooks.get_conn] = lambda: conn
-        assert TestClient(app).post(
-            "/api/webhooks/razorpay/replay",
-            content=b"{}",
-            headers={"X-Razorpay-Event-Id": "e"},
-        ).status_code == 404
+        assert (
+            TestClient(app)
+            .post(
+                "/api/webhooks/razorpay/replay",
+                content=b"{}",
+                headers={"X-Razorpay-Event-Id": "e"},
+            )
+            .status_code
+            == 404
+        )
     finally:
         reset_settings_cache()
 

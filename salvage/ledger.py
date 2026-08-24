@@ -133,9 +133,7 @@ class Ledger:
 
     # -- write ------------------------------------------------------------
 
-    def append(
-        self, kind: str, ref_type: str, ref_id: str, payload: Any, ts: int
-    ) -> LedgerEntry:
+    def append(self, kind: str, ref_type: str, ref_id: str, payload: Any, ts: int) -> LedgerEntry:
         """Append one entry and return it.
 
         Runs in an IMMEDIATE transaction so the read of the head and the write of the successor
@@ -219,18 +217,27 @@ def verify_entries(entries: list[LedgerEntry]) -> VerifyResult:
     for entry in entries:
         if entry.seq != expected_seq:
             return VerifyResult(
-                False, len(entries), None, entry.seq,
+                False,
+                len(entries),
+                None,
+                entry.seq,
                 f"expected sequence {expected_seq}, found {entry.seq}",
             )
         if entry.prev_hash != prev_hash:
             return VerifyResult(
-                False, len(entries), None, entry.seq,
+                False,
+                len(entries),
+                None,
+                entry.seq,
                 "prev_hash does not match the previous entry's hash",
             )
         recomputed = entry.recomputed_hash()
         if recomputed != entry.hash:
             return VerifyResult(
-                False, len(entries), None, entry.seq,
+                False,
+                len(entries),
+                None,
+                entry.seq,
                 "stored hash does not match the recomputed hash",
             )
         prev_hash = entry.hash

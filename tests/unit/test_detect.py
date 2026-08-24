@@ -304,7 +304,14 @@ def test_thresholds_are_immutable():
 def test_hour_bands_split_the_day_into_four():
     thresholds = Thresholds()
     assert [thresholds.hour_band(h) for h in (0, 5, 6, 11, 12, 17, 18, 23)] == [
-        0, 0, 1, 1, 2, 2, 3, 3
+        0,
+        0,
+        1,
+        1,
+        2,
+        2,
+        3,
+        3,
     ]
 
 

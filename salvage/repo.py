@@ -197,9 +197,7 @@ def get_attempt(conn: sqlite3.Connection, attempt_id: str) -> dict[str, Any] | N
     return dict(row) if row else None
 
 
-def attempts_between(
-    conn: sqlite3.Connection, start: int, end: int
-) -> list[dict[str, Any]]:
+def attempts_between(conn: sqlite3.Connection, start: int, end: int) -> list[dict[str, Any]]:
     """Attempts with created_at in [start, end). Agent-facing, view only."""
     rows = conn.execute(
         "SELECT * FROM v_payment_attempts WHERE created_at >= ? AND created_at < ? "
@@ -352,9 +350,7 @@ def insert_comm(conn: sqlite3.Connection, comm: dict[str, Any]) -> None:
     _insert(conn, "customer_comms", comm)
 
 
-def comms_count_for_customer(
-    conn: sqlite3.Connection, customer_id: str, since: int
-) -> int:
+def comms_count_for_customer(conn: sqlite3.Connection, customer_id: str, since: int) -> int:
     row = conn.execute(
         "SELECT COUNT(*) AS n FROM customer_comms WHERE customer_id = ? AND sent_at >= ?",
         (customer_id, since),
@@ -381,9 +377,7 @@ def insert_webhook_event(conn: sqlite3.Connection, event: dict[str, Any]) -> boo
 
 
 def get_webhook_event(conn: sqlite3.Connection, event_id: str) -> dict[str, Any] | None:
-    row = conn.execute(
-        "SELECT * FROM webhook_events WHERE event_id = ?", (event_id,)
-    ).fetchone()
+    row = conn.execute("SELECT * FROM webhook_events WHERE event_id = ?", (event_id,)).fetchone()
     return dict(row) if row else None
 
 
@@ -426,9 +420,7 @@ def active_checkout_hints(conn: sqlite3.Connection, now: int) -> list[dict[str, 
 
 
 def get_llm_cache(conn: sqlite3.Connection, prompt_hash: str) -> dict[str, Any] | None:
-    row = conn.execute(
-        "SELECT * FROM llm_cache WHERE prompt_hash = ?", (prompt_hash,)
-    ).fetchone()
+    row = conn.execute("SELECT * FROM llm_cache WHERE prompt_hash = ?", (prompt_hash,)).fetchone()
     return dict(row) if row else None
 
 
@@ -570,9 +562,7 @@ def insert_customers_batch(conn: sqlite3.Connection, customers: Sequence[dict[st
     )
 
 
-def insert_truth_attempts_batch(
-    conn: sqlite3.Connection, truths: Sequence[dict[str, Any]]
-) -> None:
+def insert_truth_attempts_batch(conn: sqlite3.Connection, truths: Sequence[dict[str, Any]]) -> None:
     if not truths:
         return
     conn.executemany(
