@@ -147,12 +147,16 @@ def format_organic_table(rows: list[OrganicRecovery]) -> str:
             f"  {scenario}: organic recovery {overall:.3f} overall, {in_fault:.3f} inside the "
             f"fault window ({fault_failed:.0f} failed orders per run there)"
         )
-    zero = [scenario for scenario in sorted(by_scenario)
-            if all(r.recovered_orders == 0 for r in by_scenario[scenario])]
+    zero = [
+        scenario
+        for scenario in sorted(by_scenario)
+        if all(r.recovered_orders == 0 for r in by_scenario[scenario])
+    ]
     if zero:
         lines.append("")
         lines.append(
-            "WARNING: organic recovery is zero for " + ", ".join(zero) +
-            ". B0 recovers nothing there, so any comparison against it is meaningless."
+            "WARNING: organic recovery is zero for "
+            + ", ".join(zero)
+            + ". B0 recovers nothing there, so any comparison against it is meaningless."
         )
     return "\n".join(lines)

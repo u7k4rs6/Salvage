@@ -404,11 +404,7 @@ class _RunState:
         On a settlement day nothing new is created and only the queue drains.
         """
         day_end = day_start + DAY_SECONDS
-        stream = (
-            self._generator.generate_day(day_start, self._scheduled)
-            if generate
-            else iter(())
-        )
+        stream = self._generator.generate_day(day_start, self._scheduled) if generate else iter(())
         for generated in stream:
             self._drain_until(generated.created_at)
             self._record(generated)

@@ -175,18 +175,14 @@ def cmd_sim_organic(args: argparse.Namespace) -> int:
                 db_path = workdir / f"{scenario}_{seed}_{args.variant}.db"
                 conn = open_migrated(db_path)
                 try:
-                    result = run_scenario(
-                        conn, scenario=scenario, seed=seed, variant=args.variant
-                    )
+                    result = run_scenario(conn, scenario=scenario, seed=seed, variant=args.variant)
                     rows.append(
                         measure_organic_recovery(
                             conn,
                             scenario=scenario,
                             seed=seed,
                             variant=args.variant,
-                            fault_windows=[
-                                (f.start_ts, f.end_ts) for f in result.scheduled_faults
-                            ],
+                            fault_windows=[(f.start_ts, f.end_ts) for f in result.scheduled_faults],
                         )
                     )
                 finally:

@@ -54,10 +54,7 @@ def committed_entry(conn, run_id: str) -> dict:
     The last such entry wins if a run id somehow appears twice: the ledger is append only, so a
     second entry is a later statement about the same run, not a replacement of the first.
     """
-    entries = [
-        entry
-        for entry in Ledger(conn).iter_entries(kind="sim.run.finished", ref_id=run_id)
-    ]
+    entries = [entry for entry in Ledger(conn).iter_entries(kind="sim.run.finished", ref_id=run_id)]
     if not entries:
         raise StreamNotCommitted(f"no sim.run.finished ledger entry for run {run_id!r}")
     return json.loads(entries[-1].payload_json)
@@ -84,9 +81,7 @@ def verify_stream(conn, run_id: str | None = None) -> StreamVerifyResult:
 
     sim_start = int(payload.get("sim_start", run["sim_start"]))
     sim_end = int(payload.get("sim_end", run["sim_end"]))
-    computed_digest, computed_attempts = stream_digest(
-        conn, sim_start=sim_start, sim_end=sim_end
-    )
+    computed_digest, computed_attempts = stream_digest(conn, sim_start=sim_start, sim_end=sim_end)
 
     if computed_digest == committed_digest:
         detail = "ok"

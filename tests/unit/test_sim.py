@@ -413,9 +413,10 @@ def test_traffic_volume_is_a_scenario_parameter_not_a_constant():
 
     raw = dict(params.raw)
     raw["scenarios"] = dict(raw["scenarios"])
-    raw["scenarios"]["S1"] = {**raw["scenarios"]["S1"], "overrides": {"traffic": {
-        "attempts_per_day": 3000
-    }}}
+    raw["scenarios"]["S1"] = {
+        **raw["scenarios"]["S1"],
+        "overrides": {"traffic": {"attempts_per_day": 3000}},
+    }
     overridden = params_mod.Params(
         raw=raw, path=params.path, scenarios=params_mod._parse_scenarios(raw)
     )

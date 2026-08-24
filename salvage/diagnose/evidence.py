@@ -295,9 +295,7 @@ def _trend(conn, segment_key: str, window_start: int, window_end: int) -> Trend:
     return "flat"
 
 
-def _minutes_since_onset(
-    conn, segment_key: str, opened_at: int, thresholds: Thresholds
-) -> int:
+def _minutes_since_onset(conn, segment_key: str, opened_at: int, thresholds: Thresholds) -> int:
     """Best estimate of how long the segment has been degraded.
 
     The agent does not know true onset, so it is estimated from the persisted window statistics:
@@ -337,9 +335,7 @@ def build_evidence(
 ) -> EvidencePacket:
     """Build the packet for one incident window."""
     opened_at = opened_at if opened_at is not None else window_end
-    baselines = baselines or build_baselines(
-        conn, baseline_end=window_start, thresholds=thresholds
-    )
+    baselines = baselines or build_baselines(conn, baseline_end=window_start, thresholds=thresholds)
 
     window = _collect(conn, segment_key=segment_key, start=window_start, end=window_end)
     merchant = _collect(conn, segment_key=ALL_KEY, start=window_start, end=window_end)
