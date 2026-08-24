@@ -489,3 +489,95 @@ def count_truth_attempts(conn: sqlite3.Connection, run_id: str) -> int:
         "SELECT COUNT(*) AS n FROM sim_truth_attempts WHERE run_id = ?", (run_id,)
     ).fetchone()
     return int(row["n"])
+
+
+# ---------------------------------------------------------------------------
+# Batch writers. Same SQL as the single-row upserts above, issued with executemany so a simulated
+# day (about 12,000 attempts) is one round of work rather than 12,000. Semantics are identical:
+# these are the same statements, not a faster path with different rules.
+# ---------------------------------------------------------------------------
+
+_ORDER_UPSERT_SQL = """
+    INSERT INTO orders (id, customer_id, amount, currency, status, source, created_at, paid_at)
+    VALUES (:id, :customer_id, :amount, :currency, :status, :source, :created_at, :paid_at)
+    ON CONFLICT(id) DO UPDATE SET
+        status  = CASE WHEN orders.status = 'paid' THEN 'paid' ELSE excluded.status END,
+        paid_at = COALESCE(orders.paid_at, excluded.paid_at),
+        amount  = excluded.amount
+"""
+
+_ATTEMPT_UPSERT_SQL = """
+    INSERT INTO payment_attempts (
+        id, order_id, customer_id, method, upi_handle, card_bin, card_network, card_issuer,
+        nb_bank, status, error_code, error_source, error_step, error_reason, error_description,
+        created_at, raw_json, truth_cause
+    ) VALUES (
+        :id, :order_id, :customer_id, :method, :upi_handle, :card_bin, :card_network,
+        :card_issuer, :nb_bank, :status, :error_code, :error_source, :error_step,
+        :error_reason, :error_description, :created_at, :raw_json, :truth_cause
+    )
+    ON CONFLICT(id) DO UPDATE SET
+        status = CASE
+            WHEN payment_attempts.status = 'captured' THEN 'captured'
+            WHEN payment_attempts.status = 'authorized' AND excluded.status = 'failed'
+                THEN 'authorized'
+            ELSE excluded.status
+        END,
+        error_code        = COALESCE(excluded.error_code, payment_attempts.error_code),
+        error_source      = COALESCE(excluded.error_source, payment_attempts.error_source),
+        error_step        = COALESCE(excluded.error_step, payment_attempts.error_step),
+        error_reason      = COALESCE(excluded.error_reason, payment_attempts.error_reason),
+        error_description = COALESCE(
+            excluded.error_description, payment_attempts.error_description),
+        raw_json          = excluded.raw_json
+"""
+
+
+def upsert_orders_batch(conn: sqlite3.Connection, orders: Sequence[dict[str, Any]]) -> None:
+    conn.executemany(
+        _ORDER_UPSERT_SQL,
+        [
+            {
+                "id": o["id"],
+                "customer_id": o["customer_id"],
+                "amount": o["amount"],
+                "currency": o.get("currency", "INR"),
+                "status": o["status"],
+                "source": o["source"],
+                "created_at": o["created_at"],
+                "paid_at": o.get("paid_at"),
+            }
+            for o in orders
+        ],
+    )
+
+
+def upsert_attempts_batch(conn: sqlite3.Connection, attempts: Sequence[dict[str, Any]]) -> None:
+    conn.executemany(
+        _ATTEMPT_UPSERT_SQL,
+        [{column: a.get(column) for column in ATTEMPT_COLUMNS} for a in attempts],
+    )
+
+
+def insert_customers_batch(conn: sqlite3.Connection, customers: Sequence[dict[str, Any]]) -> None:
+    if not customers:
+        return
+    columns = list(customers[0])
+    placeholders = ", ".join(f":{c}" for c in columns)
+    conn.executemany(
+        f"INSERT INTO customers ({', '.join(columns)}) VALUES ({placeholders})",
+        customers,
+    )
+
+
+def insert_truth_attempts_batch(
+    conn: sqlite3.Connection, truths: Sequence[dict[str, Any]]
+) -> None:
+    if not truths:
+        return
+    conn.executemany(
+        "INSERT INTO sim_truth_attempts "
+        "(attempt_id, run_id, fault_caused, truth_cause, p_organic, organic_retry_at) VALUES "
+        "(:attempt_id, :run_id, :fault_caused, :truth_cause, :p_organic, :organic_retry_at)",
+        truths,
+    )

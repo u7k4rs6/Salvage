@@ -1,0 +1,354 @@
+# Salvage simulator parameters.
+#
+# docs/01_PRD.md section 12: "Every simulator parameter lives in one YAML file with the assumption
+# written beside it. There are no hidden constants." This is that file. Nothing in salvage/sim/
+# hard-codes a number that belongs here.
+#
+# The simulator is the measuring instrument, so read this file as the caveat list on every number
+# in docs/RESULTS.md. Where a value is a guess, the comment says so.
+#
+# Units: amounts are integers in paise. Durations are seconds unless the key says minutes.
+# Probabilities are per attempt.
+
+version: 1
+
+clock:
+  # Sim epoch: 2026-08-01 00:00:00 IST, which is 2026-07-31 18:30:00 UTC.
+  # Assumption: a fixed epoch makes runs reproducible and lets quiet hours (21:00 to 09:00 IST)
+  # be computed from the sim clock without a timezone library.
+  epoch_unix: 1785522600
+  # IST is UTC+5:30 with no daylight saving. This is a fact, not an assumption.
+  ist_offset_seconds: 19800
+  # Seven simulated days of warm-up, then one evaluation day (docs/01_PRD.md section 10).
+  # The warm-up exists so the detector's trailing-seven-day hour-band baseline has data.
+  warmup_days: 7
+  eval_days: 1
+
+merchant:
+  name: "Kettle and Cloth"
+  # 20 SKUs between 300 and 6,000 rupees (Architecture section 9).
+  # Assumption: prices are drawn on a log-uniform grid so the catalogue has more cheap items than
+  # expensive ones, which is what a D2C catalogue looks like.
+  sku_count: 20
+  sku_min_paise: 30000
+  sku_max_paise: 600000
+
+  # Architecture section 9 says 2,000 customers. This project uses 8,000. See attempts_per_day
+  # below for the arithmetic; the two numbers moved together and the reason is recorded in
+  # docs/BUILD_LOG.md. At 12,000 attempts per day, 2,000 customers would each transact six times a
+  # day, which no D2C store sees. 8,000 customers gives about 12 orders per customer over the
+  # eight simulated days.
+  customer_count: 8000
+
+  # Consent flag true for about 70 percent (Architecture section 9).
+  # Assumption: consent is independent of method, value and everything else.
+  consent_rate: 0.70
+
+  # About 40 percent of customers get the hi_en locale (Architecture section 9).
+  locale_hi_en_rate: 0.40
+
+  # About 60 percent of customers have a usable secondary instrument (Architecture section 9).
+  # This is what makes "steer to another method" possible for some customers and not others.
+  secondary_instrument_rate: 0.60
+
+  # Typical order value per customer, drawn lognormal around the catalogue midpoint.
+  # Assumption: customers have a persistent spend level, so a customer who buys cheap keeps buying
+  # cheap. Without this, order value carries no customer signal and the value-band response model
+  # below would be pure noise.
+  typical_amount_lognormal_mu: 11.6      # ln(paise), about 1,090 rupees
+  typical_amount_lognormal_sigma: 0.55
+
+traffic:
+  # Architecture section 9 says "about 1,500 attempts per day". This project uses 12,000.
+  #
+  # Why: the detector in Architecture section 5 requires at least 20 attempts in a 15-minute
+  # window before a key can fire, and docs/01_PRD.md goal G1 requires detection within 15
+  # simulated minutes. At 1,500 attempts per day, a single UPI handle sees about two attempts per
+  # 15-minute window, so the n >= 20 rule can never be met on the segment S1 breaks and the 15
+  # minute target is unreachable by construction. The two figures in the documents are mutually
+  # inconsistent. Volume is the one that moved, because the detection target is a product
+  # requirement and the traffic figure is an illustration. Full reasoning in docs/BUILD_LOG.md.
+  #
+  # 12,000 per day is about 500 per hour on average and about 1,500 per hour at the evening peak.
+  attempts_per_day: 12000
+
+  # Diurnal curve, one relative weight per IST hour, peaking 19:00 to 23:00 (Architecture
+  # section 9). Weights are relative; the generator normalises them so the daily total matches
+  # attempts_per_day in expectation.
+  # Assumption: an Indian D2C store's evening peak is roughly three times its daily mean, with a
+  # smaller lunchtime bump and a deep trough between 02:00 and 06:00. Shape is judgement, not data.
+  diurnal_weights:
+    0: 0.35
+    1: 0.20
+    2: 0.12
+    3: 0.08
+    4: 0.08
+    5: 0.12
+    6: 0.25
+    7: 0.45
+    8: 0.70
+    9: 0.95
+    10: 1.15
+    11: 1.25
+    12: 1.30
+    13: 1.20
+    14: 1.05
+    15: 1.00
+    16: 1.05
+    17: 1.20
+    18: 1.45
+    19: 2.10
+    20: 2.45
+    21: 2.60
+    22: 2.30
+    23: 1.30
+
+  # Method mix (Architecture section 9): UPI 60, cards 25, netbanking 10, wallets 5.
+  # Implemented as the mix of customers' preferred instruments, and every attempt uses the
+  # customer's preferred instrument, so the observed mix equals this mix.
+  method_mix:
+    upi: 0.60
+    card: 0.25
+    netbanking: 0.10
+    wallet: 0.05
+
+  # UPI handles. Real VPA suffixes; the share split is an assumption.
+  # Assumption: PhonePe (@ybl) and Google Pay routed through HDFC and SBI dominate, which matches
+  # the public NPCI app-share picture, but the exact split here is judgement.
+  upi_handles:
+    - { handle: "ybl",        bank: "YESB", share: 0.30 }
+    - { handle: "okhdfcbank", bank: "HDFC", share: 0.26 }
+    - { handle: "oksbi",      bank: "SBIN", share: 0.20 }
+    - { handle: "okicici",    bank: "ICIC", share: 0.14 }
+    - { handle: "paytm",      bank: "PYTM", share: 0.10 }
+
+  # Card BIN ranges mapped to issuer and network (Architecture section 9).
+  # Assumption: one BIN6 per issuer keeps the BIN key and the issuer key coincident, which is the
+  # simplest thing that still lets the detector's attribution choose between them. The BIN6 values
+  # are the documented Razorpay test-card prefixes where one exists, otherwise synthetic.
+  # Razorpay's bank codes are the 4-character IFSC-style codes its payment entity uses.
+  card_bins:
+    - { bin6: "411111", network: "Visa",       issuer: "HDFC", share: 0.30 }
+    - { bin6: "555555", network: "MasterCard", issuer: "ICIC", share: 0.25 }
+    - { bin6: "401200", network: "Visa",       issuer: "UTIB", share: 0.20 }
+    - { bin6: "508500", network: "RuPay",      issuer: "SBIN", share: 0.15 }
+    - { bin6: "601136", network: "RuPay",      issuer: "KKBK", share: 0.10 }
+
+  # Netbanking banks, Razorpay bank codes. Share split is an assumption.
+  netbanking_banks:
+    - { bank: "HDFC", share: 0.30 }
+    - { bank: "ICIC", share: 0.24 }
+    - { bank: "SBIN", share: 0.22 }
+    - { bank: "UTIB", share: 0.14 }
+    - { bank: "PUNB", share: 0.10 }
+
+  # Wallets, Razorpay wallet codes. Share split is an assumption.
+  wallets:
+    - { wallet: "paytm",     share: 0.40 }
+    - { wallet: "phonepe",   share: 0.30 }
+    - { wallet: "amazonpay", share: 0.20 }
+    - { wallet: "freecharge", share: 0.10 }
+
+# Organic failure behaviour: what fails when nothing is wrong.
+# Assumption on the rates: Indian gateway success rates published by Razorpay and NPCI put UPI in
+# the high eighties to low nineties, cards lower because of 3DS drop-off, netbanking lowest
+# because of bank session timeouts, wallets highest because the flow is short. The exact numbers
+# here are judgement calibrated to that ordering, not measured.
+organic:
+  failure_rate_by_method:
+    upi: 0.10
+    card: 0.16
+    netbanking: 0.20
+    wallet: 0.09
+
+  # Error profiles. Every reason, source and step below is a value Razorpay publishes; see
+  # salvage/taxonomy.py for the source URLs. The weights are assumptions about how often each
+  # reason turns up in ordinary traffic, informed by the "next steps" advice on Razorpay's error
+  # pages (the ones it tells merchants to expect most often are weighted highest).
+  # Weights within a method are normalised, so they do not have to sum to 1.
+  error_profiles:
+    upi:
+      - { reason: insufficient_funds,     source: customer,     step: payment_authorization,  weight: 0.22 }
+      - { reason: payment_timed_out,      source: customer,     step: payment_authentication, weight: 0.18 }
+      - { reason: payment_cancelled,      source: customer,     step: payment_authentication, weight: 0.15 }
+      - { reason: bank_technical_error,   source: issuer_bank,  step: payment_debit_request,  weight: 0.15 }
+      - { reason: vpa_resolution_failed,  source: customer_psp, step: payment_request,        weight: 0.08 }
+      - { reason: invalid_vpa,            source: customer,     step: payment_initiation,     weight: 0.07 }
+      - { reason: gateway_technical_error, source: gateway,     step: payment_request,        weight: 0.06 }
+      - { reason: psp_not_available,      source: customer_psp, step: payment_initiation,     weight: 0.05 }
+      - { reason: transaction_limit_exceeded, source: issuer_bank, step: payment_authorization, weight: 0.04 }
+    card:
+      - { reason: authentication_failed,  source: customer,    step: payment_authentication, weight: 0.20 }
+      - { reason: insufficient_funds,     source: issuer_bank, step: payment_authorization,  weight: 0.16 }
+      - { reason: incorrect_otp,          source: customer,    step: payment_authentication, weight: 0.14 }
+      - { reason: card_declined,          source: issuer_bank, step: payment_authorization,  weight: 0.13 }
+      - { reason: payment_timed_out,      source: customer,    step: payment_authentication, weight: 0.10 }
+      - { reason: bank_technical_error,   source: issuer_bank, step: payment_authorization,  weight: 0.08 }
+      - { reason: incorrect_cvv,          source: customer,    step: payment_initiation,     weight: 0.06 }
+      - { reason: card_expired,           source: customer,    step: payment_initiation,     weight: 0.05 }
+      - { reason: payment_risk_check_failed, source: issuer_bank, step: payment_authorization, weight: 0.04 }
+      - { reason: gateway_technical_error, source: gateway,    step: payment_authorization,  weight: 0.04 }
+    netbanking:
+      - { reason: payment_cancelled,      source: customer,    step: payment_authentication, weight: 0.24 }
+      - { reason: bank_technical_error,   source: issuer_bank, step: payment_authentication, weight: 0.22 }
+      - { reason: insufficient_funds,     source: customer,    step: payment_authorization,  weight: 0.18 }
+      - { reason: payment_timed_out,      source: customer,    step: payment_authentication, weight: 0.16 }
+      - { reason: user_not_registered_for_netbanking, source: customer, step: payment_initiation, weight: 0.10 }
+      - { reason: bank_not_available,     source: issuer_bank, step: payment_initiation,     weight: 0.10 }
+    wallet:
+      - { reason: insufficient_funds,     source: customer, step: payment_authorization,  weight: 0.34 }
+      - { reason: payment_timed_out,      source: customer, step: payment_authentication, weight: 0.24 }
+      - { reason: payment_cancelled,      source: customer, step: payment_authentication, weight: 0.22 }
+      - { reason: issuer_technical_error, source: issuer,   step: payment_authorization,  weight: 0.20 }
+
+# Customer response model.
+# M1 implements organic retry only. Intervention multipliers arrive in M2 and are listed here
+# already so the file is the whole instrument, not half of it (docs/01_PRD.md section 12).
+response:
+  # Probability that a customer whose payment failed comes back and pays on their own within 24
+  # hours, by order value band (Architecture section 9).
+  # Assumption: a customer who wanted a 4,000 rupee item is more likely to come back than one who
+  # wanted a 300 rupee item. The gradient is judgement; the sensitivity sweep in M3 exists because
+  # of exactly this parameter.
+  p_organic_by_value_band:
+    - { max_paise: 50000,   p: 0.28 }   # under 500 rupees
+    - { max_paise: 150000,  p: 0.34 }   # 500 to 1,500 rupees
+    - { max_paise: 300000,  p: 0.40 }   # 1,500 to 3,000 rupees
+    - { max_paise: null,    p: 0.46 }   # 3,000 rupees and above
+
+  # A hard decline (card blocked, account closed, suspected fraud, invalid instrument) means the
+  # instrument itself will not work, so an organic retry on the same instrument mostly fails.
+  # Assumption: multiply p_organic by this. The list of hard-decline reasons is in
+  # salvage/taxonomy.py and comes from Razorpay's published reasons.
+  p_organic_hard_decline_multiplier: 0.25
+
+  # When the organic retry happens, as a lognormal over minutes after the failure, truncated to
+  # 24 hours. Assumption: most people who come back do it within the hour; a tail comes back the
+  # next day. Median about 35 minutes.
+  organic_retry_delay_lognormal_mu: 3.55      # ln(minutes)
+  organic_retry_delay_lognormal_sigma: 1.30
+  organic_retry_max_minutes: 1440
+
+  # M2 only. Listed here now so the instrument is legible as a whole; nothing in M1 reads them.
+  # All four are from Architecture section 9.
+  m2_multipliers:
+    nudge_while_method_still_failing: 0.30     # and raises opt-out probability
+    nudge_after_recovery_or_with_alternate: 2.20
+    nudge_multiplier_cap: 0.80
+    live_checkout_steer_during_failing_session: 0.55
+    second_nudge_multiplier: 0.50
+    decay_time_constant_hours: 12
+  # The adversarial parameter set from docs/01_PRD.md section 12, kept here so M3 does not invent
+  # its own numbers: p_organic 0.6 everywhere and every multiplier 1.0.
+  m2_adversarial:
+    p_organic_flat: 0.60
+    all_multipliers: 1.0
+
+# Fault scenarios, as data (Architecture section 9: "a scenario is a list of
+# {segment_selector, start, duration, failure_rate, error_profile}").
+#
+# start_minute is minutes after the start of the evaluation day, in IST. Every fault is scheduled
+# in the evening peak. Assumption, and it is a load-bearing one: rail degradation is most likely
+# and most expensive when volume is highest, and a detector's time to detect is a function of
+# volume, so scheduling a fault at 03:00 would measure the trough rather than the detector.
+# A seed-dependent jitter of up to 90 minutes is applied so five seeds do not all break at the
+# same minute.
+#
+# failure_rate is the probability that a matching attempt fails because of the fault. It replaces
+# the organic rate for matching attempts rather than adding to it, except where noted.
+scenarios:
+  S0:
+    description: "No fault. Normal noise only. This is the calibration scenario."
+    faults: []
+
+  S1:
+    description: >
+      One UPI handle's issuer fails for 90 minutes; other handles healthy.
+      True cause: issuer_outage.
+    faults:
+      - selector: { method: upi, upi_handle: okhdfcbank }
+        start_minute: 1170          # 19:30 IST
+        duration_minutes: 90
+        failure_rate: 0.92          # Architecture section 9 fixes this at 92 percent
+        truth_cause: issuer_outage
+        # Architecture section 9 says "bank source". "bank" is not in Razorpay's published source
+        # list for UPI (that list has issuer_bank), but it is what Razorpay's own payment.failed
+        # webhook sample emits, so the value is both what the document asks for and something the
+        # real API produces. It exercises the taxonomy passthrough on purpose.
+        error_profile:
+          - { reason: bank_technical_error, source: bank,        step: payment_debit_request, weight: 0.55 }
+          - { reason: payment_declined,     source: issuer_bank, step: payment_debit_request, weight: 0.25 }
+          - { reason: bank_not_available,   source: bank,        step: payment_initiation,    weight: 0.20 }
+
+  S2:
+    description: >
+      One card BIN range fails at authentication for 2 hours.
+      True cause: auth_failure_bin.
+    faults:
+      - selector: { method: card, card_bin: "411111" }
+        start_minute: 1155          # 19:15 IST
+        duration_minutes: 120
+        failure_rate: 0.88
+        truth_cause: auth_failure_bin
+        error_profile:
+          - { reason: authentication_failed, source: issuer_bank, step: payment_authentication, weight: 0.60 }
+          - { reason: otp_attempts_exceeded, source: customer,    step: payment_authentication, weight: 0.22 }
+          - { reason: card_not_enrolled,     source: issuer_bank, step: payment_authentication, weight: 0.18 }
+
+  S3:
+    description: >
+      Gateway degradation: intermittent timeouts across all methods for 60 minutes.
+      True cause: gateway_degradation.
+    faults:
+      - selector: {}                # every method
+        start_minute: 1200          # 20:00 IST
+        duration_minutes: 60
+        failure_rate: 0.45
+        truth_cause: gateway_degradation
+        error_profile:
+          - { reason: gateway_technical_error,        source: gateway,  step: payment_authorization, weight: 0.45 }
+          - { reason: request_timed_out,              source: gateway,  step: payment_request,       weight: 0.30 }
+          - { reason: invalid_response_from_gateway,  source: internal, step: payment_response,      weight: 0.15 }
+          - { reason: payment_declined_due_to_high_traffic, source: gateway, step: payment_authorization, weight: 0.10 }
+
+  S4:
+    description: >
+      Merchant misconfiguration produces business-source errors on one method.
+      True cause: merchant_config. Correct behaviour is escalate to a human, no customer contact.
+    faults:
+      - selector: { method: netbanking }
+        start_minute: 1140          # 19:00 IST
+        duration_minutes: 180
+        failure_rate: 0.85
+        truth_cause: merchant_config
+        # Sets merchant_config_changed_recently, which the rules classifier reads.
+        sets_config_changed_flag: true
+        error_profile:
+          - { reason: payment_method_not_enabled, source: business, step: payment_initiation, weight: 0.40 }
+          - { reason: bank_not_enabled,           source: business, step: payment_initiation, weight: 0.30 }
+          - { reason: input_validation_failed,    source: business, step: payment_initiation, weight: 0.20 }
+          - { reason: invalid_amount,             source: business, step: payment_initiation, weight: 0.10 }
+
+  # S5 is stretch (docs/01_PRD.md section 10) and is not implemented in M1. The parameters are
+  # here so the file describes the whole instrument.
+  S5:
+    description: >
+      Customer-side long tail: insufficient funds, wrong OTP, user cancelled; no cluster.
+      True cause: customer_side. Not implemented in M1.
+    implemented: false
+    faults:
+      - selector: {}
+        start_minute: 1140
+        duration_minutes: 240
+        failure_rate: 0.10          # added diffusely on top of organic, not a replacement
+        additive: true
+        truth_cause: customer_side
+        error_profile:
+          - { reason: insufficient_funds, source: customer, step: payment_authorization,  weight: 0.40 }
+          - { reason: incorrect_otp,      source: customer, step: payment_authentication, weight: 0.35 }
+          - { reason: payment_cancelled,  source: customer, step: payment_authentication, weight: 0.25 }
+
+# Seed-dependent jitter applied to every fault's start_minute, so five seeds do not break at the
+# same wall-clock minute. Assumption: onset jitter tests the detector's independence from a
+# particular minute of the day without moving the fault out of the evening peak.
+fault_start_jitter_minutes: 90

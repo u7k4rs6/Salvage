@@ -153,3 +153,81 @@ en dashes anywhere in this repository, by instruction.
   asserting the patterns match real mutating SQL and one asserting they do not fire on
   `INSERT INTO ledger` or on `UPDATE incidents`, so a grep that silently stopped matching would
   itself fail.
+
+---
+
+## 2026-08-24, M1 step 4: simulator
+
+### Decisions on open items
+
+- **Traffic volume, and why it moved.** Architecture section 9 says "about 1,500 attempts per
+  day". `sim/params.yaml` uses 12,000, and the customer base moves from 2,000 to 8,000 with it.
+  The arithmetic: the detector in Architecture section 5 will not evaluate a key with fewer than
+  20 attempts in a 15-minute window, and PRD goal G1 requires detection within 15 simulated
+  minutes. At 1,500 attempts a day, UPI is 900 of them, one of five handles carries roughly 230,
+  and a 15-minute window on that handle holds about 2.4 attempts. The n >= 20 rule can never fire
+  on the segment S1 breaks, so the 15-minute target is unreachable by construction. The two
+  figures in the documents are mutually inconsistent and one had to move. Volume moved, because
+  the detection target is a product requirement (G1, a row in the metrics table) and the traffic
+  figure is an illustration in an architecture note. At 12,000 a day the S1 segment sees about 40
+  attempts per 15-minute window at the evening peak, which clears the rule in about eight
+  minutes. Customers moved with it because 2,000 customers making 12,000 attempts a day is six
+  orders per customer per day, which no D2C store sees; 8,000 gives about 12 orders per customer
+  across the eight simulated days. Both numbers and this reasoning are in `params.yaml` beside the
+  values. Guarded by `tests/unit/test_sim.py::test_s1_run_writes_events_and_ground_truth` and by
+  the calibration table in step 6.
+- **Faults are scheduled in the evening peak.** Every fault in `params.yaml` starts between 19:00
+  and 20:00 IST, with a seed-dependent jitter of up to 90 minutes. This is load bearing and is
+  written beside the values: time to detect is a function of volume, so scheduling a fault at
+  03:00 would measure the trough rather than the detector. It is also the realistic case, since
+  rail degradation is most likely and most expensive when volume is highest. The jitter is
+  derived from the seed arithmetically rather than drawn from a random stream, so it cannot shift
+  the customers or arrivals that stream would otherwise have produced.
+- **S1 uses `error_source: bank`.** Architecture section 9 says S1 sets the UPI handle to fail
+  with "bank source". `bank` is not in Razorpay's published source list for UPI, which has
+  `issuer_bank`. It is kept because it is what the document asks for, because it is what
+  Razorpay's own `payment.failed` webhook sample emits, and because the rules classifier in
+  Architecture section 6 already expects either ("dominant source is `bank` or `issuer_bank`"). It
+  also exercises the taxonomy passthrough on real data rather than only in a test.
+- **Ledger granularity for simulated traffic.** The architecture diagram has ingest feeding the
+  ledger. The simulator appends two entries per run, `sim.run.started` and `sim.run.finished`, not
+  one per attempt. Reason: the ledger is an audit trail of what Salvage did, and Salvage did not
+  act on a simulated attempt; generating the batch is one act. One entry per attempt would also be
+  96,000 separate write transactions per run and would make `ledger verify` and the ledger page
+  useless. Real webhook events are ledgered one entry per verified event in step 5, which is where
+  per-event auditability actually matters. Guarded by
+  `tests/unit/test_sim.py::test_run_appends_exactly_two_ledger_entries_and_the_chain_verifies`.
+- **`truth_cause` values.** `none` for a successful attempt, `organic` for a failure that would
+  have happened anyway, and one of the six root-cause classes for a fault-caused failure. The
+  migration comment said "one of the six causes, or 'none' for a success"; `organic` was added,
+  because PRD section 10 requires ground truth to say "whether it was fault-caused or organic" and
+  a two-value column cannot. The counterfactual (`p_organic`, `organic_retry_at`) lives in
+  `sim_truth_attempts` and exists for failed attempts only, since a successful payment has no
+  retry to counterfactualise.
+- **Every attempt uses the customer's preferred instrument.** The alternate instrument exists so
+  the M2 policy engine can ask whether a customer has another rail. It is not used for traffic, so
+  the observed method mix equals the configured mix exactly rather than approximately.
+- **Fixed draw count in the response model.** `ResponseModel.draw` consumes exactly three values
+  from the response substream on every call, whatever the branch taken. Without that, adding an
+  intervention branch in M2 would shift every later order's draws and the "shared random stream
+  per seed" guarantee would silently break between M1 and M2.
+- **Two new modules in `salvage/sim/`.** `clock.py` (the sim clock and IST arithmetic, needed by
+  traffic, faults and the detector) and `params.py` (the YAML loader and its validation).
+  Architecture section 13 lists neither. No dependency was added.
+- **The parameter file validates itself.** `params.load()` refuses a file whose shares do not sum
+  to one, whose diurnal curve is not 24 positive hours, or whose error profiles name a reason,
+  step or source Razorpay does not publish. A typo in a reason name would otherwise reach
+  `docs/RESULTS.md` unchallenged. Guarded by
+  `tests/unit/test_sim.py::test_bad_reason_in_params_is_refused`.
+- **S5 is refused, not silently skipped.** `params.yaml` carries S5's parameters with
+  `implemented: false` so the file describes the whole instrument, and `run_scenario` raises if
+  asked for it. PRD section 10 marks S5 stretch and the M1 brief says to skip it.
+
+### What broke
+
+- Nothing failed in a way that needed a fix in this step. The first S1 run was checked by hand
+  against the fault window before any test was written: the affected UPI handle failed at 93.1
+  percent against siblings at 5 to 12 percent, the method mix came out 59.4 / 24.9 / 10.3 / 5.4
+  against a configured 60 / 25 / 10 / 5, and a full eight-day run took 3.2 seconds.
+- One performance change was made before it became a problem: the fault error-profile sampler was
+  being rebuilt for every attempt inside the fault window. It is now built once per fault.
