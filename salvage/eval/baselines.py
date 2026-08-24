@@ -91,9 +91,7 @@ B2 = PolicyProfile(
     nudge_offsets=(3600, 6 * 3600),
 )
 
-POLICIES: dict[str, PolicyProfile] = {
-    profile.name: profile for profile in (AGENT, B0, B1, B2)
-}
+POLICIES: dict[str, PolicyProfile] = {profile.name: profile for profile in (AGENT, B0, B1, B2)}
 DEFAULT_POLICY_ORDER = ("agent", "B0", "B1", "B2")
 
 

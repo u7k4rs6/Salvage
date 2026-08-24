@@ -64,9 +64,7 @@ def run_policy_scenario(
     profile = get_policy(policy)
     params = load(params_path) if params_path else default_params()
 
-    sim = run_scenario(
-        conn, scenario=scenario, seed=seed, variant=variant, params_path=params_path
-    )
+    sim = run_scenario(conn, scenario=scenario, seed=seed, variant=variant, params_path=params_path)
     window_start = sim.eval_day_start
     window_end = sim.eval_day_start + params.eval_days * 86400
 
@@ -206,8 +204,7 @@ def violation_breakdown(conn, calendar=None) -> dict[str, int]:
 
     calendar = calendar or IstCalendar()
     counts = {
-        name: int(conn.execute(query).fetchone()[0])
-        for name, query in _VIOLATION_QUERIES.items()
+        name: int(conn.execute(query).fetchone()[0]) for name, query in _VIOLATION_QUERIES.items()
     }
     # Quiet hours need IST arithmetic, so this one is a scan rather than a query.
     quiet = 0

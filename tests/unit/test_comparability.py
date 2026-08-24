@@ -82,9 +82,7 @@ def test_the_eligible_order_set_is_identical_across_policies(runs):
     sets = {}
     for policy, (result, conn) in runs.items():
         params_days = result.sim.eval_day_start
-        sets[policy] = set(
-            eligible_order_ids(conn, start=params_days, end=params_days + 86400)
-        )
+        sets[policy] = set(eligible_order_ids(conn, start=params_days, end=params_days + 86400))
     reference = sets[POLICIES[0]]
     assert reference
     for policy, order_ids in sets.items():

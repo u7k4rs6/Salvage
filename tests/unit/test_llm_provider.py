@@ -354,7 +354,9 @@ def test_the_blind_recorder_refuses_a_prompt_carrying_its_own_answer():
         with pytest.raises(LabelLeak):
             assert_blind(
                 PromptForRecording(
-                    prompt_hash="h", system="s", user=f"packet\n{leak}",
+                    prompt_hash="h",
+                    system="s",
+                    user=f"packet\n{leak}",
                     schema_name="LLMDiagnosis",
                 )
             )

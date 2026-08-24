@@ -237,9 +237,7 @@ class AgentRunner:
             # sends (which are recorded against the incident) against recoveries (which are
             # recorded against cases), found zero conversions no matter how many there were, and
             # tripped a few hours into every baseline run.
-            case = self._open_case_for(
-                order, incident_id=str(incident["id"]), now=order.failed_at
-            )
+            case = self._open_case_for(order, incident_id=str(incident["id"]), now=order.failed_at)
             if case is None:
                 continue
             for offset in self._profile.nudge_offsets:
@@ -689,11 +687,40 @@ class AgentRunner:
                 "UPDATE recovery_cases SET link_id = ?, link_url = ? WHERE id = ?",
                 (link["id"], link.get("short_url"), case["id"]),
             )
+            # Keep the in-memory case in step with the row. Everything downstream in this call,
+            # including the cancel path when the order turns out to be paid, reads this dict.
+            case["link_id"] = link["id"]
+            case["link_url"] = link.get("short_url")
             self.stats.links_created += 1
-        if case["state"] == CaseState.DETECTED.value or case["state"] == CaseState.DEFERRED.value:
-            self._to_state(case, CaseState.ELIGIBLE, now)
-        if case["state"] != CaseState.WAITING.value:
-            self._to_state(case, CaseState.LINK_CREATED, now)
+
+        # Re-read the order between creating the link and sending the message. The gate checked it
+        # a moment ago, but creating a Payment Link is a network call and the customer can pay by
+        # another route while it is in flight. docs/03_SECURITY_AND_ACCESS.md section 6 says a
+        # customer who paid in the meantime is never nudged, and "in the meantime" includes this
+        # window. Found by tests/fault_injection/test_razorpay_faults.py.
+        order_now = repo.get_order(self._conn, str(case["order_id"])) or {}
+        if _paid_by(order_now, now):
+            self._close_paid_elsewhere(case, now)
+            self._record_action(
+                incident_id,
+                ActionType.SEND_RECOVERY_LINK,
+                str(case["id"]),
+                {"case_id": str(case["id"])},
+                "refused",
+                verdict.gates_json()
+                + [
+                    {
+                        "rule": "case.order_paid_during_link_creation",
+                        "passed": False,
+                        "detail": "the order was paid while the link was being created",
+                    }
+                ],
+                now,
+            )
+            self.stats.actions_refused += 1
+            return
+
+        self._walk_to_link(case, now)
 
         # Only a steering policy names an alternate method. B1 and B2 send a plain link, which
         # is what they are: docs/01_PRD.md section 12 says the baselines differ from the agent

@@ -131,9 +131,7 @@ def measure_run(
     }
     routes = {
         str(row["order_id"]): str(row["route"])
-        for row in conn.execute(
-            "SELECT order_id, route FROM recovery_routes"
-        )
+        for row in conn.execute("SELECT order_id, route FROM recovery_routes")
     }
 
     for order in orders:
@@ -324,5 +322,3 @@ def format_accuracy_table(rows: list[AccuracyRow], outcomes: list[DiagnosisOutco
         if len(misses) > 20:
             lines.append(f"  ... and {len(misses) - 20} more")
     return "\n".join(lines)
-
-

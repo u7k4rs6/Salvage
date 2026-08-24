@@ -199,7 +199,8 @@ def cmd_sim_organic(args: argparse.Namespace) -> int:
     if zero:
         print()
         print(
-            "WARNING: organic recovery is zero for " + ", ".join(sorted(set(zero)))
+            "WARNING: organic recovery is zero for "
+            + ", ".join(sorted(set(zero)))
             + ". B0 recovers nothing there, so any comparison against it is meaningless."
         )
     return 0
@@ -269,11 +270,13 @@ def cmd_agent_run(args: argparse.Namespace) -> int:
         f"eligible orders {metrics.eligible_orders} worth {metrics.eligible_amount} paise\n"
         f"RECOVERED (all routes) {metrics.recovered_orders} order(s), "
         f"{metrics.recovered_amount} paise, rate {metrics.recovery_rate:.3f}\n"
-        f"  by route: " + ", ".join(
+        f"  by route: "
+        + ", ".join(
             f"{route}={metrics.by_route_orders.get(route, 0)}"
             f"/{metrics.by_route_amount.get(route, 0)}p"
             for route in ("link", "steer", "organic")
-        ) + "\n"
+        )
+        + "\n"
         f"in-fault: {metrics.fault_recovered_orders}/{metrics.fault_eligible_orders} "
         f"({metrics.fault_recovery_rate:.3f})\n"
         f"policy violations: {metrics.policy_violations}   "
@@ -545,9 +548,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     agent_run.add_argument("--scenario", required=True)
     agent_run.add_argument("--seed", type=int, required=True)
-    agent_run.add_argument(
-        "--policy", default="agent", help="agent, B0, B1 or B2"
-    )
+    agent_run.add_argument("--policy", default="agent", help="agent, B0, B1 or B2")
     agent_run.add_argument("--variant", default="peak")
     agent_run.add_argument(
         "--provider",
