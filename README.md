@@ -20,10 +20,21 @@ anything else with money.
 
 ## Status
 
-Milestone M1 (foundation) is built: migrations and repository layer, ledger with hash chain and
-verify, simulator with scenarios S0 to S4 including organic customer retries, ingest with webhook
-signature verification, detector with calibration, a minimal CLI and a minimal FastAPI app.
-M2 (evidence packets, diagnosis, policy engine, executor) is in progress.
+M1 to M3 are built: migrations and repository layer, hash-chained ledger with an offline verifier
+and a commitment to the event stream, simulator with scenarios S0 to S4 and organic customer
+retries, webhook ingest with signature verification, detector with frozen calibrated thresholds,
+evidence packets, a rules classifier, an LLM provider layer, the allowlisted action menu and
+policy engine, the per-order state machine and executor, the simulated channel, three baselines,
+a fault injection suite and the evaluation sweep that writes `docs/RESULTS.md`.
+
+Two things are measured and two are not, and `docs/RESULTS.md` says which is which at the top:
+
+- **Measured:** the three baselines against each other, the detector's operating envelope, the
+  policy engine (zero violations across the sweep), and 41 fault injections all refused.
+- **Not measured:** anything involving an LLM. There was no Gemini key in the build environment,
+  the self-authored fixtures M2 shipped were deleted rather than reported from, and the agent arm
+  therefore runs with no diagnosis model, escalates every incident and recovers what B0 recovers.
+  One command with a key fills that in.
 
 ## Documents
 
@@ -57,8 +68,13 @@ uv run salvage sim run --scenario S1 --seed 1 --variant offpeak
 uv run salvage sim verify-stream
 uv run salvage sim organic --seeds 0..4
 uv run salvage detect calibrate --seeds 5..9
-uv run salvage agent run --scenario S1 --seed 1 --provider fixture
-uv run salvage diagnose accuracy --seeds 0..4 --provider none
+uv run salvage diagnose accuracy --seeds 0..9 --provider none
+uv run salvage eval run --scenarios S0,S1,S2,S3,S4 --seeds 0..9 --policies agent,B0,B1,B2
+uv run salvage eval volume --scenarios S1,S2 --seeds 0..4
+uv run salvage eval sensitivity --seeds 0..4 --adversarial
+uv run salvage eval report
+uv run salvage e2e verify
+uv run salvage agent run --scenario S1 --seed 1 --policy B1
 uv run salvage ledger verify
 uv run salvage ledger export --out data/ledger.jsonl
 uv run salvage webhooks record --out data/webhooks
@@ -71,12 +87,17 @@ uv run ruff check .
 
 ## A note on the LLM fixtures
 
-`salvage/llm/fixtures/` holds recorded model responses that CI replays with no network. They were
-written by Claude Opus 5 standing in for Gemini, because no Gemini key was available when M2 was
-built, and the author knew the scenario labels. They are a working test double and they are not a
-blind measurement of model accuracy. `salvage/llm/fixtures/README.md` says so at length and says
-how to regenerate them properly. No number derived from them belongs in `docs/RESULTS.md` until
-that has been done.
+`salvage/llm/fixtures/` is empty. M2 shipped 46 fixtures written by the model being evaluated,
+with the scenario labels visible to its author; they were deleted in M3 and no number was ever
+taken from them. Refilling the directory blind is one command, and the isolation is enforced by
+the code path rather than by discipline:
+
+```
+export GEMINI_API_KEY=...
+uv run salvage diagnose record-fixtures --scenarios S1,S2,S3,S4 --seeds 0..9 --provider gemini
+```
+
+`salvage/llm/fixtures/README.md` explains what went wrong and what the recorder does about it.
 
 ## Compliance note
 

@@ -1385,3 +1385,36 @@ nudge neither helps nor hurts and cause-aware timing cannot matter.
 The sweep compares B1 against B0 rather than the agent against B1, because the agent arm is
 unmeasured without a diagnosis model. When the fixtures are refilled the same command produces the
 agent-minus-B1 figure PRD section 12 actually asks for; the shape of the table does not change.
+
+### Volume sweep result: where the detector stops working
+
+`salvage eval volume --scenarios S1,S2 --seeds 0..4 --volumes 1500,5000,12000`
+
+```
+attempts/day  scenario  seeds  detected  <15 min  mean min   worst  segment
+        1,500        S1      5         4        0      38.8      70  upi
+        1,500        S2      5         0        0       n/a     n/a
+        5,000        S1      5         5        4      12.0      22  upi, upi:upi_handle:okhdfcbank
+        5,000        S2      5         5        1      22.4      41  card, card:card_network:Visa
+       12,000        S1      5         5        5       5.2       6  upi:upi_handle:okhdfcbank
+       12,000        S2      5         5        5       8.6      11  card:card_bin6:411111
+
+At 1,500 attempts a day: 4 of 10 faults detected at all, 0 of 10 inside 15 sim minutes.
+At 5,000 attempts a day: 10 of 10 faults detected at all, 5 of 10 inside 15 sim minutes.
+At 12,000 attempts a day: 10 of 10 faults detected at all, 10 of 10 inside 15 sim minutes.
+```
+
+This is the M1 decision measured rather than argued. The build log entry for M1 step 4 moved
+traffic from the architecture note's 1,500 attempts a day to 12,000, on the arithmetic that a
+single UPI handle would otherwise see about two attempts per 15-minute window and could never
+clear the detector's 20-attempt minimum. The sweep says the arithmetic was right and understated
+it: at 1,500 a day, S1 is detected less than half the time and never inside 15 minutes, S2 is not
+detected at all, and the incidents that are found are attributed to the whole method rather than
+to the failing instrument, because the instrument key is never testable.
+
+The interesting row is 5,000 a day. Everything is detected, but only half of it inside 15 minutes,
+and the attributed segment is sometimes the method and sometimes the instrument depending on the
+seed. That is the boundary: **somewhere between 5,000 and 12,000 attempts a day, on this method
+mix, a single-instrument fault becomes reliably detectable inside 15 minutes.** Below it the
+promise in PRD goal G1 does not hold, and a merchant that size needs either a longer window or a
+lower attempt floor, both of which trade against the zero false-alarm result.
