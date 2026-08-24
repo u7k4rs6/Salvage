@@ -350,7 +350,14 @@ def build_evidence(
     siblings: dict[str, Health] = {}
     for key in _sibling_keys(conn, segment_key, window_start, window_end):
         counts = _collect(conn, segment_key=key, start=window_start, end=window_end)
-        if not counts.attempts:
+        # A sibling with too few attempts is left out of the map entirely rather than called
+        # healthy. The detector refuses to judge a key below min_attempts and the evidence packet
+        # has to refuse too: a BIN range with five attempts in the window, three of which failed,
+        # is not evidence that the BIN is broken and it is not evidence that it is fine. Calling
+        # it degraded made the rules classifier drop a real auth failure to unknown because one
+        # small healthy sibling looked bad by chance. This applies the detector's existing
+        # threshold rather than inventing a second one.
+        if counts.attempts < thresholds.min_attempts:
             continue
         sibling_rate = counts.failures / counts.attempts
         sibling_baseline = baselines.rate_for(key, band).rate

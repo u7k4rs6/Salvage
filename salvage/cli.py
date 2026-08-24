@@ -16,6 +16,7 @@ CLI library. Commands, per Architecture section 14 and the M1 brief:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -210,6 +211,91 @@ def cmd_detect_calibrate(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# diagnose
+# ---------------------------------------------------------------------------
+
+
+def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
+    from salvage.eval.metrics import format_accuracy_table, summarise
+    from salvage.eval.run import diagnosis_sweep
+
+    provider = None
+    if args.provider != "none":
+        from salvage.llm.provider import build_provider
+
+        provider = build_provider(args.provider)
+
+    outcomes = diagnosis_sweep(
+        scenarios=[s.strip() for s in args.scenarios.split(",") if s.strip()],
+        seeds=_parse_seeds(args.seeds),
+        variant=args.variant,
+        provider=provider,
+    )
+    print(format_accuracy_table(summarise(outcomes), outcomes))
+    return 0
+
+
+def cmd_diagnose_export_prompts(args: argparse.Namespace) -> int:
+    import json as _json
+
+    from salvage.eval.run import export_prompts
+
+    rows = export_prompts(
+        scenarios=[s.strip() for s in args.scenarios.split(",") if s.strip()],
+        seeds=_parse_seeds(args.seeds),
+        variant=args.variant,
+    )
+    out = Path(args.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with out.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(_json.dumps(row, sort_keys=True) + "\n")
+    print(f"Wrote {len(rows)} prompt(s) to {out}")
+    return 0
+
+
+def cmd_diagnose_import_fixtures(args: argparse.Namespace) -> int:
+    """Write fixture files from a hand-authored or externally produced answer set.
+
+    The answers file is JSON: a mapping of prompt_hash to the LLMDiagnosis object. Every answer is
+    validated against the schema before it is written, so an invalid fixture cannot enter the set.
+    """
+    import json as _json
+
+    from salvage.diagnose.llm import LLMDiagnosis
+    from salvage.llm.provider import FIXTURE_DIR, write_fixture
+
+    prompts = {}
+    with Path(args.prompts).open(encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if line:
+                row = _json.loads(line)
+                prompts[row["prompt_hash"]] = row
+
+    answers = _json.loads(Path(args.answers).read_text(encoding="utf-8"))
+    directory = Path(args.out or FIXTURE_DIR)
+    written = 0
+    for key, answer in answers.items():
+        if key not in prompts:
+            print(f"no prompt for hash {key}, skipping", file=sys.stderr)
+            continue
+        validated = LLMDiagnosis.model_validate(answer)
+        write_fixture(
+            directory,
+            key=key,
+            system=prompts[key]["system"],
+            user=prompts[key]["user"],
+            response=json.loads(validated.model_dump_json()),
+            recorded_from=args.recorded_from,
+            model=args.model,
+        )
+        written += 1
+    print(f"Wrote {written} fixture(s) to {directory}")
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # webhooks
 # ---------------------------------------------------------------------------
 
@@ -332,6 +418,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="fault variant from params.yaml: peak (default) or offpeak",
     )
     calibrate.set_defaults(func=cmd_detect_calibrate)
+
+    diagnose = subparsers.add_parser("diagnose", help="diagnosis").add_subparsers(
+        dest="command", required=True
+    )
+    accuracy = diagnose.add_parser(
+        "accuracy", help="root-cause accuracy, rules-only and LLM-assisted, against ground truth"
+    )
+    accuracy.add_argument("--scenarios", default="S1,S2,S3,S4")
+    accuracy.add_argument("--seeds", default="0..4", help="'0..4' or '0,1,2'")
+    accuracy.add_argument("--variant", default="peak")
+    accuracy.add_argument(
+        "--provider",
+        default="none",
+        help="none for the rules-only floor, or fixture, gemini, ollama",
+    )
+    accuracy.set_defaults(func=cmd_diagnose_accuracy)
+
+    export = diagnose.add_parser(
+        "export-prompts", help="write every diagnosis prompt the sweep would produce, with hashes"
+    )
+    export.add_argument("--scenarios", default="S1,S2,S3,S4")
+    export.add_argument("--seeds", default="0..4")
+    export.add_argument("--variant", default="peak")
+    export.add_argument("--out", default="data/prompts.jsonl")
+    export.set_defaults(func=cmd_diagnose_export_prompts)
+
+    fixtures = diagnose.add_parser(
+        "import-fixtures", help="write fixture files from an answer set keyed by prompt hash"
+    )
+    fixtures.add_argument("prompts", help="the JSONL written by export-prompts")
+    fixtures.add_argument("answers", help="JSON mapping prompt_hash to an LLMDiagnosis object")
+    fixtures.add_argument("--out", default=None, help="defaults to salvage/llm/fixtures/")
+    fixtures.add_argument(
+        "--recorded-from",
+        dest="recorded_from",
+        required=True,
+        help="what produced these answers, recorded in every fixture file",
+    )
+    fixtures.add_argument("--model", required=True, help="the model id that produced them")
+    fixtures.set_defaults(func=cmd_diagnose_import_fixtures)
 
     webhooks = subparsers.add_parser("webhooks", help="webhook capture and replay").add_subparsers(
         dest="command", required=True
