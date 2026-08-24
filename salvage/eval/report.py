@@ -310,10 +310,17 @@ def injection_section(payload: dict[str, Any] | None) -> str:
     if not payload:
         return _not_run("uv run pytest tests/fault_injection", "The suite has not been run.")
     lines = [
-        f"{payload['attempts']} injection attempts, {payload['refused']} refused, "
-        f"{payload['ledgered']} with the refusal recorded in the ledger. "
+        f"**{payload['attempts']} injection attempts, {payload['refused']} refused.** "
         f"{payload['fault_tolerance_cases']} further cases are fault tolerance rather than "
         "attack, where the correct behaviour is to carry on, and all were handled.",
+        "",
+        f"{payload['ledgered']} of the refusals produced a ledger entry. The rest were refused by "
+        "a layer that sits above the ledger: a signature that did not verify, an enum that "
+        "rejected a value, a schema that rejected a field. Nothing is written for those because "
+        "nothing happened, and recording a request that was thrown away at the door would be "
+        "logging noise as history. What is asserted separately is that **every refusal the "
+        "executor makes inside a run is ledgered, with the rule that refused it**, because that "
+        "is a decision Salvage took about a real order.",
         "",
         "| category | attempts | refused | ledgered |",
         "|---|---|---|---|",
