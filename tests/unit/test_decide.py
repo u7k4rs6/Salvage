@@ -205,8 +205,7 @@ def test_a_plan_cannot_carry_more_than_five_actions():
         Plan(
             incident_id="inc_1",
             actions=[
-                PlannedAction(type=ActionType.NO_ACTION, params={"reason": "x"})
-                for _ in range(6)
+                PlannedAction(type=ActionType.NO_ACTION, params={"reason": "x"}) for _ in range(6)
             ],
         )
 
