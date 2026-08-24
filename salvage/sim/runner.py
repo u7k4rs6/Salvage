@@ -42,6 +42,12 @@ from salvage.sim.traffic import GeneratedAttempt, TrafficGenerator, eval_day_sta
 # small enough that a day's rows do not all sit in memory as bound parameters at once.
 BATCH_SIZE = 2000
 
+# How long before a configuration-changing fault the merchant's config change is recorded.
+# Assumption: somebody saves a setting, and the errors start on the next payment. Five minutes is
+# short enough to be causally obvious and long enough that the change is visible in the evidence
+# packet before the first window closes.
+CONFIG_CHANGE_LEAD_SECONDS = 300
+
 # Fields the ledger's stream commitment covers, in this order. Changing this list changes every
 # digest ever computed, so it lives in one place and salvage/sim/verify.py reads it from here.
 STREAM_FIELDS = ("id", "order_id", "method", "instrument", "status", "error_code", "created_at")
@@ -199,6 +205,21 @@ def run_scenario(
             },
         )
         for index, fault in enumerate(scheduled):
+            if fault.fault.sets_config_changed_flag:
+                # A merchant-side fact, not ground truth: the agent reads config_changes like any
+                # other merchant signal. Timed before the errors start, because that is the causal
+                # order and because a classifier that only ever sees the change at the same
+                # instant as the errors is being handed the answer.
+                repo.insert_config_change(
+                    conn,
+                    {
+                        "id": f"{run_id}_cfg_{index}",
+                        "changed_at": fault.start_ts - CONFIG_CHANGE_LEAD_SECONDS,
+                        "area": "payment_methods",
+                        "detail": "payment method configuration updated",
+                        "source": "sim",
+                    },
+                )
             repo.insert_truth_incident(
                 conn,
                 {

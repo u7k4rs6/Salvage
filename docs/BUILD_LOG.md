@@ -618,3 +618,174 @@ inside a fault window is consistently lower than recovery outside it (0.25 again
 customer who comes back during the outage hits the same broken rail and fails again. That gap is
 the room a cause-aware agent has to work in, and it appeared on its own rather than being put
 there.
+
+---
+
+## 2026-08-25, M2 carry-over 2: recalibration on true held-out seeds
+
+Seeds 1 to 4 were contaminated: the merchant-wide corroboration rule was added after looking at
+S0 seed 2, which is recorded under M1 step 6. Seeds 5 to 9 have never been looked at until this
+run, and nothing has been changed since.
+
+### Held-out calibration, seeds 5 to 9
+
+```
+$ uv run salvage detect calibrate --seeds 5..9
+scenario  seed  attempts  incidents  detect (sim min)  false/day  segment
+---------------------------------------------------------------------------------------------
+S0           5    100182          0               n/a       0.00
+S0           6    100730          0               n/a       0.00
+S0           7    100775          0               n/a       0.00
+S0           8    100099          0               n/a       0.00
+S0           9     99931          0               n/a       0.00
+S1           5    100282          1                 6       0.00  upi:upi_handle:okhdfcbank
+S1           6    100829          1                 5       0.00  upi:upi_handle:okhdfcbank
+S1           7    100893          1                 7       0.00  upi:upi_handle:okhdfcbank
+S1           8    100187          1                 7       0.00  upi:upi_handle:okhdfcbank
+S1           9    100012          1                 3       0.00  upi:upi_handle:okhdfcbank
+S2           5    100235          1                 5       0.00  card:card_bin6:411111
+S2           6    100775          1                 6       0.00  card:card_bin6:411111
+S2           7    100840          1                 5       0.00  card:card_bin6:411111
+S2           8    100151          1                11       0.00  card
+S2           9     99981          1                16       0.00  card
+S3           5    100348          1                 7       0.00  all
+S3           6    100885          1                 8       0.00  all
+S3           7    100934          1                 7       0.00  all
+S3           8    100233          2                 7       1.00  all
+S3           9    100087          1                 6       0.00  all
+S4           5    100271          1                 6       0.00  netbanking
+S4           6    100819          1                20       0.00  netbanking
+S4           7    100859          1                12       0.00  netbanking
+S4           8    100209          1                 7       0.00  netbanking
+S4           9    100041          1                10       0.00  netbanking
+
+S1 to S4: 20/20 detected, worst time to detect 20 sim minutes
+S0 held-out seeds 5 to 9: 0 incident(s) over 5 day(s) = 0.00 per day
+```
+
+### What the held-out numbers actually say
+
+The contaminated table said "worst 11 sim minutes, one incident per fault, always attributed to
+the exact fault segment". The held-out table says something weaker and more useful:
+
+- **False alarms: still zero.** S0 opens no incidents on any of the five unseen seeds. This is the
+  claim the corroboration rule was added for and it holds on data it was not fitted to.
+- **Detection: 20 of 20 faults found, 18 of 20 inside 15 sim minutes.** Two miss: S2 seed 9 at 16
+  minutes and S4 seed 6 at 20. So PRD goal G1's 15-minute target holds 90 percent of the time on
+  unseen seeds, not always. That is the honest number and it replaces the earlier one.
+- **Attribution: 19 of 20 land on one incident**, and S2 seeds 8 and 9 name `card` rather than the
+  BIN inside it. S3 seed 8 opens a second incident.
+
+### Why the two slow detections are slow
+
+Both were traced window by window before anything was written here, and both have the same cause,
+which is a property of the design rather than a defect in it: **the segment the fault hits sits at
+or below the detector's 20-attempt floor at that hour, so the detector has to work at a coarser
+key whose effect size is diluted by the healthy traffic in it.**
+
+- S4 seed 6: netbanking is 10 percent of traffic, so a 15-minute window at the evening peak holds
+  about 25 attempts. Poisson noise takes it under 20 for six consecutive windows between +12 and
+  +18 minutes, during which the `netbanking` key is not testable at all. The moment it is live
+  again, at +20, it fires at p = 1.7e-10. Nothing was slow to decide; there was nothing to decide
+  with.
+- S2 seed 9: `card:card_bin6:411111` never reaches 20 attempts in a window at that hour; it holds
+  17 with 14 of them failing. The detector falls back to the `card` key, whose rate is diluted by
+  four healthy BIN ranges from 0.88 down to 0.38, and 0.38 against a 0.16 baseline takes longer to
+  clear a p-value than 0.82 against 0.17 would have. This is also why the attributed segment is
+  `card` rather than the BIN: the BIN key never fires, so there is nothing to descend to.
+
+### Thresholds are frozen
+
+**No threshold was changed, and none will be for the rest of the project without an entry here
+naming the data that was looked at.** For the record, in producing the paragraph above I looked at
+S4 seed 6 and S2 seed 9, which are held-out seeds, purely to diagnose. Nothing in
+`salvage/detect/thresholds.py` or in the attribution logic was touched afterwards. Anyone
+discounting the held-out claim should discount the explanation, not the table: the table was
+produced before the diagnosis.
+
+The obvious tempting change, lowering `min_attempts` from 20, is exactly the change that would be
+fitted to these two seeds, and it would trade the zero false-alarm result for a better latency
+number. It is not being made.
+
+What this does change is what M3 has to report. Time to detect is a function of the affected
+segment's volume, so `docs/RESULTS.md` will report time to detect as a distribution with the
+off-peak variant included, not as a single number, and will state the 20-attempt floor as the
+detector's operating envelope.
+
+---
+
+## 2026-08-25, M2 carry-over 3: the ledger commits to the event stream
+
+`sim.run.finished` now carries `stream_digest`, a sha256 over the ordered attempt stream, and
+`salvage sim verify-stream <run_id>` recomputes it from the database.
+
+- **Committed fields:** `id`, `order_id`, `method`, `instrument`, `status`, `error_code`,
+  `created_at`, in that order, with 0x1f between fields and 0x1e between records so no
+  concatenation of values can imitate a different record. `instrument` is a single canonical
+  string built from the five instrument columns, so a null and an empty string cannot collide.
+- **Ordering is `(created_at, id)`, stated explicitly** rather than relying on insertion order, so
+  the runner and the verifier compute the same thing from the same query.
+- **`error_description` is deliberately not committed.** It is free text Razorpay may reword, and
+  committing to it would make the digest fragile without protecting anything the detector or the
+  policy engine reads. A test asserts that rewriting every description leaves the digest intact,
+  so the exclusion is a decision rather than an oversight.
+- **Reads `v_payment_attempts`**, so the digest cannot accidentally commit to ground truth.
+- **What the pair proves.** The hash chain proves a ledger entry has not been edited. The digest
+  proves the events that entry describes have not been edited either. A test flips one attempt
+  from failed to captured and asserts the chain still verifies while the stream does not, which is
+  precisely the gap that existed before.
+  Guarded by `tests/unit/test_stream_commitment.py`, nine cases including delete, insert, field
+  change and an unchanged-uncommitted-field control.
+
+---
+
+## 2026-08-25, M2 carry-over 4: per-thread SQLite connections
+
+M1 opened connections with `check_same_thread=False` and handed one connection to a FastAPI
+dependency. The M1 report called that safe. It was not, and the review was right.
+
+### What was actually wrong
+
+Every write in Salvage runs `BEGIN IMMEDIATE ... COMMIT`. SQLite transactions are a property of
+the connection, not of the caller. Two requests sharing one connection can interleave, and when
+they do, the second `BEGIN IMMEDIATE` raises or, worse, the first `COMMIT` commits half of the
+second request's work. The thread-safety flag silenced the check that would have caught it.
+
+### The fix
+
+- `check_same_thread=False` is gone. A connection belongs to the thread that opened it.
+- `salvage/db.py` gains `thread_connection(path)`, backed by `threading.local`, so each thread
+  gets its own connection and its own transactions. SQLite serialises the writes through the file
+  lock and `busy_timeout` absorbs the contention. Salvage is single-process and writes a webhook
+  at a time, so the file lock is not a bottleneck.
+- `thread_connection` refuses `:memory:`, because a per-thread in-memory database would silently
+  be a different database per thread.
+- The webhook endpoint now reads the request body on the event loop thread, touching no database,
+  and does all database work inside `run_in_threadpool`, acquiring the connection **inside** that
+  call. The FastAPI dependency yields a factory rather than a connection, because a dependency
+  that returned an open connection would hand a connection opened on one thread to code running on
+  another, which is the original bug with extra steps.
+- The webhook tests changed with it: they now point `SALVAGE_DB_PATH` at a real file and let the
+  endpoint open its own connection, instead of injecting a shared connection object. A test that
+  injected a connection would have stopped testing the thing that was broken.
+
+---
+
+## 2026-08-25, M2 carry-over 5: off-peak fault variant
+
+`fault_variants` in `params.yaml`, applied with `--variant`:
+
+- `peak` (default) leaves each fault at its own `start_minute`, in the 19:00 to 21:00 IST window.
+- `offpeak` moves every fault to 03:30 IST. The diurnal curve's minimum is the 03:00 and 04:00
+  hours at 0.08 relative weight against an evening peak of 2.60, so the arrival rate there is
+  about one thirtieth of the peak.
+
+A variant changes the hour and nothing else: same selector, same duration, same failure rate, same
+error profile. Guarded by
+`tests/unit/test_sim.py::test_offpeak_variant_moves_the_fault_to_the_trough`, which asserts the
+duration and selector are identical across variants and only the hour differs.
+
+Nothing has been tuned against it, and nothing will be: the thresholds were frozen before it
+existed. It is there so M3 can report a range instead of a best case, and given what the held-out
+calibration showed about the 20-attempt floor, the off-peak numbers are expected to be much worse.
+That is the point of measuring them.

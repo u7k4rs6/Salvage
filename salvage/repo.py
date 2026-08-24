@@ -415,6 +415,25 @@ def active_checkout_hints(conn: sqlite3.Connection, now: int) -> list[dict[str, 
 
 
 # ---------------------------------------------------------------------------
+# Merchant configuration change log
+# ---------------------------------------------------------------------------
+
+
+def insert_config_change(conn: sqlite3.Connection, change: dict[str, Any]) -> None:
+    _insert(conn, "config_changes", change)
+
+
+def config_changed_since(conn: sqlite3.Connection, since: int, until: int) -> list[dict[str, Any]]:
+    """Configuration changes in [since, until). Agent-facing, reads the view."""
+    rows = conn.execute(
+        "SELECT * FROM v_config_changes WHERE changed_at >= ? AND changed_at < ? "
+        "ORDER BY changed_at",
+        (since, until),
+    ).fetchall()
+    return rows_to_dicts(rows)
+
+
+# ---------------------------------------------------------------------------
 # LLM cache
 # ---------------------------------------------------------------------------
 
