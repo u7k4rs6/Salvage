@@ -185,3 +185,52 @@ def _seed_customer(conn, customer_id: str) -> None:
             "created_at": 0,
         },
     )
+
+
+def test_only_the_evaluation_runner_reads_ground_truth():
+    """Architecture section 10: "The runner is the only code allowed to read ground truth."
+
+    Ground truth is `payment_attempts.truth_cause` and the `sim_truth_*` tables. The simulator
+    writes them and `salvage/eval/` reads them. Nothing in detect, diagnose, decide, execute,
+    ingest or api may touch them, because a model or a policy that could see the answer would make
+    every number in docs/RESULTS.md meaningless.
+    """
+    import re
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2] / "salvage"
+    forbidden = re.compile(r"truth_cause|sim_truth_")
+    allowed_dirs = {"sim", "eval"}
+    findings = []
+    for path in sorted(root.rglob("*.py")):
+        relative = path.relative_to(root)
+        if relative.parts and relative.parts[0] in allowed_dirs:
+            continue
+        if relative.name == "repo.py":
+            # repo.py holds the ground-truth accessors themselves, grouped under a heading that
+            # names the evaluation runner as their only caller. What matters is who imports them.
+            continue
+        if relative.as_posix() == "ingest/normalize.py":
+            # The normaliser takes truth_cause as a write-through parameter, because the simulator
+            # and the webhook receiver share it and the simulator has the value. It never reads it
+            # back, which the assertion below checks directly.
+            continue
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if forbidden.search(line) and not line.lstrip().startswith("#"):
+                findings.append(f"{relative}:{lineno}: {line.strip()}")
+    assert findings == [], "ground truth reached a non-evaluation module: " + "; ".join(findings)
+
+    # The one allowlisted file writes truth_cause and must never read it.
+    normalize = (root / "ingest" / "normalize.py").read_text(encoding="utf-8")
+    assert "SELECT" not in normalize.upper() or "truth_cause" not in normalize.split("SELECT")[-1]
+    assert 'row["truth_cause"]' not in normalize
+    assert ".truth_cause" not in normalize
+
+
+def test_the_ground_truth_grep_would_catch_a_real_leak():
+    import re
+
+    forbidden = re.compile(r"truth_cause|sim_truth_")
+    assert forbidden.search('SELECT truth_cause FROM payment_attempts')
+    assert forbidden.search('conn.execute("SELECT * FROM sim_truth_incidents")')
+    assert not forbidden.search('SELECT * FROM v_payment_attempts')
