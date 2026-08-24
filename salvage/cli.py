@@ -304,13 +304,50 @@ def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
 
     provider = _make_provider(args)
 
+    seeds = _parse_seeds(args.seeds)
     outcomes = diagnosis_sweep(
         scenarios=[s.strip() for s in args.scenarios.split(",") if s.strip()],
-        seeds=_parse_seeds(args.seeds),
+        seeds=seeds,
         variant=args.variant,
         provider=provider,
     )
-    print(format_accuracy_table(summarise(outcomes), outcomes))
+    rows = summarise(outcomes)
+    print(format_accuracy_table(rows, outcomes))
+
+    # Written so docs/RESULTS.md can carry the table with its provenance rather than a claim.
+    provenance = (
+        "Rules-only. The LLM column is unmeasured: the fixtures M2 shipped were written by the "
+        "model being evaluated, with the scenario labels visible, and were deleted in M3. See "
+        "salvage/llm/fixtures/README.md."
+        if args.provider == "none"
+        else f"Rules-only against the {args.provider} provider."
+    )
+    _write_artifact(
+        "diagnosis.json",
+        {
+            "provenance": provenance,
+            "provider": args.provider,
+            "seeds": seeds,
+            "rows": [
+                {
+                    "scenario": row.scenario,
+                    "incidents": row.incidents,
+                    "seeds": len(seeds),
+                    "rules_accuracy": row.rules_accuracy,
+                    "llm_accuracy": (
+                        f"{row.llm_accuracy:.2f}" if row.llm_accuracy is not None else "unmeasured"
+                    ),
+                }
+                for row in rows
+            ],
+            "misses": [
+                f"{o.scenario} seed {o.seed} on `{o.segment_key}`: truth {o.true_cause}, "
+                f"rules said {o.rules_cause}"
+                for o in outcomes
+                if not o.rules_correct
+            ],
+        },
+    )
     return 0
 
 
@@ -414,6 +451,257 @@ def cmd_diagnose_record_fixtures(args: argparse.Namespace) -> int:
     if failures:
         print(f"{len(failures)} prompt(s) failed, see above", file=sys.stderr)
     return 0 if written else 1
+
+
+# ---------------------------------------------------------------------------
+# eval
+# ---------------------------------------------------------------------------
+
+
+def cmd_eval_run(args: argparse.Namespace) -> int:
+    from salvage.eval.metrics import format_metrics_table
+    from salvage.eval.sweep import (
+        aggregate,
+        digests_match,
+        sweep,
+        write_results_json,
+    )
+
+    provider = _make_provider(args)
+    scenarios = [s.strip() for s in args.scenarios.split(",") if s.strip()]
+    policies = [p.strip() for p in args.policies.split(",") if p.strip()]
+    seeds = _parse_seeds(args.seeds)
+
+    total = len(scenarios) * len(seeds) * len(policies)
+    print(f"Running {total} combination(s): {len(scenarios)} scenario(s) x "
+          f"{len(seeds)} seed(s) x {len(policies)} policy arm(s), variant {args.variant}")
+
+    def progress(done, total_runs, scenario, seed, policy, metrics):
+        print(
+            f"  [{done:>4}/{total_runs}] {scenario}/{seed}/{policy}: "
+            f"recovered {metrics.recovered_orders}/{metrics.eligible_orders} "
+            f"({metrics.recovered_amount} paise), {metrics.messages_sent} message(s), "
+            f"{metrics.policy_violations} violation(s)",
+            flush=True,
+        )
+
+    result = sweep(
+        scenarios=scenarios,
+        seeds=seeds,
+        policies=policies,
+        variant=args.variant,
+        provider=provider,
+        run_id=args.run_id,
+        progress=progress if args.verbose else None,
+    )
+
+    path = write_results_json(result)
+    print()
+    print(format_metrics_table(result.rows, title="Per-run metrics"))
+    print()
+    print(_digest_block(result))
+    print()
+    print(_aggregate_block(aggregate(result.rows)))
+    print()
+    print(f"Wrote {path} in {result.wall_seconds}s")
+    for note in result.notes:
+        print(note, file=sys.stderr)
+
+    if args.write_report:
+        from salvage.eval.report import write_results_md
+
+        report_path = write_results_md(result)
+        print(f"Wrote {report_path}")
+
+    return 0 if digests_match(result) else 1
+
+
+def _digest_block(result) -> str:
+    """The identical-world proof, printed so the report can show them matching."""
+    lines = ["Pre-intervention attempt stream digest, per scenario and seed:"]
+    header = f"  {'scenario/seed':<16}" + "".join(f"{p:>18}" for p in result.policies) + "  match"
+    lines.append(header)
+    for key in sorted(result.digests):
+        digests = result.digests[key]
+        row = f"  {key:<16}" + "".join(
+            f"{digests.get(policy, '')[:16]:>18}" for policy in result.policies
+        )
+        match = "yes" if len(set(digests.values())) <= 1 else "NO"
+        lines.append(f"{row}  {match}")
+    return "\n".join(lines)
+
+
+def _aggregate_block(rows) -> str:
+    header = (
+        f"{'scenario':<9}{'policy':>7}{'seeds':>7}{'recovered revenue (mean +/- sd)':>36}"
+        f"{'rate':>7}{'in-fault':>10}{'msgs':>7}{'viol':>6}"
+    )
+    lines = ["Aggregated across seeds:", header, "-" * len(header)]
+    for row in rows:
+        summary = f"{row.mean_recovered_amount:,.0f} +/- {row.std_recovered_amount:,.0f}"
+        lines.append(
+            f"{row.scenario:<9}{row.policy:>7}{row.seeds:>7}{summary:>36}"
+            f"{row.mean_recovery_rate:>7.3f}{row.mean_fault_recovery_rate:>10.3f}"
+            f"{row.mean_messages:>7.0f}{row.total_violations:>6}"
+        )
+    return "\n".join(lines)
+
+
+def cmd_eval_volume(args: argparse.Namespace) -> int:
+    from salvage.eval.sweep import volume_sweep
+
+    payload = volume_sweep(
+        scenarios=[s.strip() for s in args.scenarios.split(",") if s.strip()],
+        seeds=_parse_seeds(args.seeds),
+        volumes=tuple(int(v) for v in args.volumes.split(",")),
+        variant=args.variant,
+    )
+    _write_artifact("volume_sweep.json", payload)
+    header = (
+        f"{'attempts/day':>13}{'scenario':>10}{'seeds':>7}{'detected':>10}"
+        f"{'<15 min':>9}{'mean min':>10}{'worst':>8}  segment"
+    )
+    print(header)
+    print("-" * len(header))
+    for row in payload["rows"]:
+        mean = f"{row['mean_time_to_detect']:.1f}" if row["mean_time_to_detect"] else "n/a"
+        worst = f"{row['worst_time_to_detect']:.0f}" if row["worst_time_to_detect"] else "n/a"
+        print(
+            f"{row['attempts_per_day']:>13,}{row['scenario']:>10}{row['seeds']:>7}"
+            f"{row['detected']:>10}{row['within_15_minutes']:>9}{mean:>10}{worst:>8}  "
+            f"{row['segments']}"
+        )
+    print()
+    print(payload["boundary"])
+    return 0
+
+
+def cmd_eval_sensitivity(args: argparse.Namespace) -> int:
+    from salvage.eval.sweep import adversarial_sweep, sensitivity_sweep
+
+    payload = sensitivity_sweep(
+        scenario=args.scenario,
+        seeds=_parse_seeds(args.seeds),
+        scales=tuple(float(v) for v in args.scales.split(",")),
+    )
+    if args.adversarial:
+        payload["adversarial"] = adversarial_sweep(
+            scenarios=[s.strip() for s in args.scenarios.split(",") if s.strip()],
+            seeds=_parse_seeds(args.seeds),
+        )
+    _write_artifact("sensitivity.json", payload)
+
+    print(f"Sensitivity on {payload['scenario']}, multiplier scale against recovered revenue")
+    header = f"{'scale':>7}{'seeds':>7}{'B0 (paise)':>16}{'B1 (paise)':>16}{'B1 - B0':>16}"
+    print(header)
+    print("-" * len(header))
+    for row in payload["rows"]:
+        print(
+            f"{row['scale']:>7.2f}{row['seeds']:>7}{row['b0']:>16,.0f}"
+            f"{row['b1']:>16,.0f}{row['delta']:>16,.0f}"
+        )
+    if args.adversarial:
+        print()
+        print("Adversarial set: p_organic 0.60 everywhere, every multiplier 1.0")
+        adv = payload["adversarial"]
+        print(f"{'scenario':>10}{'seeds':>7}" + "".join(f"{p:>16}" for p in adv["policies"]))
+        for row in adv["rows"]:
+            cells = "".join(f"{row['by_policy'][p]:>16,.0f}" for p in adv["policies"])
+            print(f"{row['scenario']:>10}{row['seeds']:>7}{cells}")
+    return 0
+
+
+def cmd_eval_report(args: argparse.Namespace) -> int:
+    """Regenerate docs/RESULTS.md from the artifacts already on disk."""
+    from salvage.eval.report import ReportInputs, load_json, rows_from_json, write_results_md
+
+    main_payload = load_json(Path(args.results))
+    if main_payload is None:
+        print(f"no results file at {args.results}", file=sys.stderr)
+        return 2
+    offpeak_payload = load_json(Path(args.offpeak)) if args.offpeak else None
+    inputs = ReportInputs(
+        main=rows_from_json(main_payload),
+        volume_sweep=load_json("data/results/volume_sweep.json"),
+        offpeak=rows_from_json(offpeak_payload) if offpeak_payload else None,
+        sensitivity=load_json("data/results/sensitivity.json"),
+        diagnosis=load_json("data/results/diagnosis.json"),
+        injection=load_json("data/results/fault_injection.json"),
+    )
+    path = write_results_md(inputs.main, inputs=inputs)
+    print(f"Wrote {path}")
+    return 0
+
+
+def _write_artifact(name: str, payload) -> Path:
+    import json as _json
+
+    path = Path("data/results") / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(_json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return path
+
+
+# ---------------------------------------------------------------------------
+# e2e
+# ---------------------------------------------------------------------------
+
+
+def cmd_e2e_verify(args: argparse.Namespace) -> int:
+    """Check and print the ledger entries the real end-to-end run produced.
+
+    scripts/e2e_real_link.py creates the objects; this reads back what it recorded, verifies the
+    chain and prints the sequence numbers in the shape docs/RESULTS.md section 10 wants.
+    """
+    from salvage.ledger import Ledger, verify
+
+    conn = open_migrated(_db_path(args))
+    try:
+        kinds = ("e2e.order.created", "e2e.link.created", "e2e.link.paid")
+        entries = [entry for entry in Ledger(conn).entries() if entry.kind in kinds]
+        webhook_entries = [
+            entry for entry in Ledger(conn).entries() if entry.kind == "webhook.received"
+        ]
+        result = verify(conn)
+
+        if not entries:
+            print(
+                "No end-to-end ledger entries found. Run scripts/e2e_real_link.py first.",
+                file=sys.stderr,
+            )
+            print(f"Ledger state: {result}", file=sys.stderr)
+            return 1
+
+        print("Real end-to-end run, ledger entries:")
+        for entry in entries:
+            payload = json.loads(entry.payload_json)
+            detail = ", ".join(
+                f"{key}={value}"
+                for key, value in sorted(payload.items())
+                if key in ("order_id", "link_id", "payment_id", "amount", "request_id")
+            )
+            print(f"  seq={entry.seq} {entry.kind} ref={entry.ref_id} {detail}")
+        for entry in webhook_entries:
+            payload = json.loads(entry.payload_json)
+            print(
+                f"  seq={entry.seq} webhook.received event={entry.ref_id} "
+                f"type={payload.get('event_type')} verified={payload.get('verified')} "
+                f"acted={payload.get('acted')}"
+            )
+        print()
+        print(result)
+        missing = [kind for kind in kinds if not any(e.kind == kind for e in entries)]
+        if missing:
+            print(f"Incomplete: no entry for {', '.join(missing)}", file=sys.stderr)
+        if not webhook_entries:
+            print(
+                "No verified webhook was received. Point a tunnel at the webhook endpoint and "
+                "run again, or replay a saved fixture.",
+                file=sys.stderr,
+            )
+        return 0 if result.ok and not missing else 1
+    finally:
+        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -617,6 +905,62 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--provider", default="gemini", help="gemini or ollama")
     record.add_argument("--out", default=None, help="defaults to salvage/llm/fixtures/")
     record.set_defaults(func=cmd_diagnose_record_fixtures)
+
+    evaluation = subparsers.add_parser("eval", help="evaluation sweeps").add_subparsers(
+        dest="command", required=True
+    )
+    eval_run = evaluation.add_parser(
+        "run", help="run every scenario, seed and policy and write the results"
+    )
+    eval_run.add_argument("--scenarios", default="S0,S1,S2,S3,S4")
+    eval_run.add_argument("--seeds", default="0..9", help="'0..9' or '0,1,2'")
+    eval_run.add_argument("--policies", default="agent,B0,B1,B2")
+    eval_run.add_argument("--variant", default="peak")
+    eval_run.add_argument("--provider", default="none")
+    eval_run.add_argument("--collect-out", dest="collect_out", default="data/prompts_eval.jsonl")
+    eval_run.add_argument("--run-id", dest="run_id", default=None)
+    eval_run.add_argument("--verbose", action="store_true", help="print each run as it finishes")
+    eval_run.add_argument(
+        "--write-report",
+        dest="write_report",
+        action="store_true",
+        help="also write docs/RESULTS.md",
+    )
+    eval_run.set_defaults(func=cmd_eval_run)
+
+    eval_volume = evaluation.add_parser(
+        "volume", help="the same fault at several merchant volumes: the detector's envelope"
+    )
+    eval_volume.add_argument("--scenarios", default="S1,S2")
+    eval_volume.add_argument("--seeds", default="0..4")
+    eval_volume.add_argument("--volumes", default="1500,5000,12000")
+    eval_volume.add_argument("--variant", default="peak")
+    eval_volume.set_defaults(func=cmd_eval_volume)
+
+    eval_sensitivity = evaluation.add_parser(
+        "sensitivity", help="sweep the response-model multipliers and run the adversarial set"
+    )
+    eval_sensitivity.add_argument("--scenario", default="S1")
+    eval_sensitivity.add_argument("--scenarios", default="S1,S2,S3")
+    eval_sensitivity.add_argument("--seeds", default="0..4")
+    eval_sensitivity.add_argument("--scales", default="0.5,0.75,1.0,1.5,2.0")
+    eval_sensitivity.add_argument("--adversarial", action="store_true")
+    eval_sensitivity.set_defaults(func=cmd_eval_sensitivity)
+
+    eval_report = evaluation.add_parser(
+        "report", help="regenerate docs/RESULTS.md from the artifacts on disk"
+    )
+    eval_report.add_argument("--results", default="data/results/main.json")
+    eval_report.add_argument("--offpeak", default="data/results/offpeak.json")
+    eval_report.set_defaults(func=cmd_eval_report)
+
+    e2e = subparsers.add_parser("e2e", help="the real test-mode end-to-end run").add_subparsers(
+        dest="command", required=True
+    )
+    e2e_verify = e2e.add_parser(
+        "verify", help="check and print the ledger entries the real run produced"
+    )
+    e2e_verify.set_defaults(func=cmd_e2e_verify)
 
     webhooks = subparsers.add_parser("webhooks", help="webhook capture and replay").add_subparsers(
         dest="command", required=True
