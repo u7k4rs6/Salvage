@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# CI runs with the fixture LLM provider and no secrets, per
+# docs/02_TECHNICAL_ARCHITECTURE.md section 15 and docs/03_SECURITY_AND_ACCESS.md section 10.
+# The real end-to-end Razorpay script is local only and is never run here.
+env:
+  SALVAGE_LLM_PROVIDER: fixture
+  SALVAGE_ENV: dev
+  SALVAGE_KILL_SWITCH: "0"
+  SALVAGE_DB_PATH: data/ci.db
+  SALVAGE_DASHBOARD_TOKEN: ci-token-not-a-secret
+  SALVAGE_REF_HASH_SALT: ci-salt-not-a-secret
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Pin Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync dependencies from the lock file
+        run: uv sync --all-extras --frozen
+
+      - name: Secret scan
+        run: uv run python scripts/scan_secrets.py --all
+
+      - name: Lint
+        run: uv run ruff check .
+
+      # Tests run with no network. Nothing in the test suite makes an outbound call: the LLM
+      # provider is the fixture one and the Razorpay client is not exercised in CI.
+      - name: Test
+        run: uv run pytest -q

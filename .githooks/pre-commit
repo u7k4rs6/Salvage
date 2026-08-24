@@ -1,0 +1,4 @@
+#!/bin/sh
+# Secret scanning pre-commit hook. Required by docs/03_SECURITY_AND_ACCESS.md section 3.
+# Install with: git config core.hooksPath .githooks
+exec python3 scripts/scan_secrets.py

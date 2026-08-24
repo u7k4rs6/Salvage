@@ -1,0 +1,26 @@
+# Secrets. The repo is public, so this is mandatory.
+.env
+.env.*
+!.env.example
+
+# Local data: database, webhook captures, ledger exports, evaluation results.
+data/
+!data/.gitkeep
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+
+# Node and frontend build output (web/ lands in M4)
+node_modules/
+web/dist/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
