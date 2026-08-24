@@ -40,7 +40,16 @@ jobs:
       - name: Lint
         run: uv run ruff check .
 
-      # Tests run with no network. Nothing in the test suite makes an outbound call: the LLM
-      # provider is the fixture one and the Razorpay client is not exercised in CI.
+      # Tests run with no network and no credentials. Nothing in the suite makes an outbound
+      # call: the LLM provider is the strict fixture one, which raises rather than reaching for a
+      # model, and both the Gemini and the Razorpay clients are exercised through
+      # httpx.MockTransport, which is in-process.
       - name: Test
         run: uv run pytest -q
+
+      # The real end-to-end script is local only and is never run here. This asserts it stays
+      # that way: nothing in CI may hold a Razorpay key.
+      - name: Assert no credentials are present
+        run: |
+          test -z "${RAZORPAY_KEY_ID:-}" || (echo "CI must not have Razorpay credentials" && exit 1)
+          test -z "${GEMINI_API_KEY:-}" || (echo "CI must not have a Gemini key" && exit 1)

@@ -57,6 +57,8 @@ uv run salvage sim run --scenario S1 --seed 1 --variant offpeak
 uv run salvage sim verify-stream
 uv run salvage sim organic --seeds 0..4
 uv run salvage detect calibrate --seeds 5..9
+uv run salvage agent run --scenario S1 --seed 1 --provider fixture
+uv run salvage diagnose accuracy --seeds 0..4 --provider none
 uv run salvage ledger verify
 uv run salvage ledger export --out data/ledger.jsonl
 uv run salvage webhooks record --out data/webhooks
@@ -66,6 +68,15 @@ uv run python scripts/verify_ledger.py data/ledger.jsonl
 uv run pytest -q
 uv run ruff check .
 ```
+
+## A note on the LLM fixtures
+
+`salvage/llm/fixtures/` holds recorded model responses that CI replays with no network. They were
+written by Claude Opus 5 standing in for Gemini, because no Gemini key was available when M2 was
+built, and the author knew the scenario labels. They are a working test double and they are not a
+blind measurement of model accuracy. `salvage/llm/fixtures/README.md` says so at length and says
+how to regenerate them properly. No number derived from them belongs in `docs/RESULTS.md` until
+that has been done.
 
 ## Compliance note
 

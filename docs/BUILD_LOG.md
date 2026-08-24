@@ -789,3 +789,353 @@ Nothing has been tuned against it, and nothing will be: the thresholds were froz
 existed. It is there so M3 can report a range instead of a best case, and given what the held-out
 calibration showed about the 20-attempt floor, the off-peak numbers are expected to be much worse.
 That is the point of measuring them.
+
+---
+
+## 2026-08-25, M2 step 6: evidence packet
+
+### Decisions
+
+- **The schema is the enforcement, not a redaction pass.** `EvidencePacket` has no field that
+  could hold a contact, an email, a customer id, an order id or a per-customer amount, and it sets
+  `extra="forbid"`, so a packet that carried PII would have to fail validation first. A redaction
+  step that somebody has to remember to run is a redaction step that eventually does not run.
+  Guarded by `test_the_schema_is_exactly_the_documented_one`,
+  `test_the_schema_has_no_field_that_could_carry_pii` and
+  `test_redaction_no_pii_anywhere_in_the_serialised_packet`, the last of which runs the builder
+  over a database seeded with realistic synthetic contacts, emails and an order note reading
+  "Happy birthday Priya", and asserts none of it appears in any serialisation of any packet. It
+  also asserts the seeded data really did contain those things, so the test cannot pass on an
+  empty database.
+- **`merchant_config_changed_recently` reads a merchant signal, not ground truth.** Migration
+  0002 adds a `config_changes` table. In a real deployment this is the merchant's audit log of
+  dashboard and API settings changes. The simulator writes one row, five minutes before a
+  configuration-changing fault starts, because that is the causal order and because a classifier
+  that only ever sees the change at the same instant as the errors is being handed the answer.
+  The agent reads `v_config_changes` like any other merchant-side fact. Without this the flag
+  would have had to come from `sim_truth_incidents`, which the agent may not read.
+- **Sample descriptions are scrubbed as well as fenced.** Razorpay does not put contacts in its
+  description strings, but the security doc classes them as untrusted text, so they are stripped
+  of control characters, scrubbed of email, phone and long-digit patterns, whitespace-collapsed
+  and then truncated to 200 characters, in that order. Truncating first would have let a long
+  prefix push an email past the cut and out of the scrub; a test asserts it does not.
+- **Trend is computed from the two halves of the window**, rather than from the previous window,
+  so the whole packet is built from the same rows and does not depend on `segments_stats` having
+  been persisted.
+- **`minutes_since_onset` is an estimate and says so.** The agent does not know true onset. It is
+  taken from the earliest persisted window in the two hours before the incident opened in which
+  the key was already above baseline by the detector's effect size, falling back to the detection
+  time, which is a lower bound.
+
+### What broke
+
+- Two defects surfaced only when the rules classifier ran over real packets, and both were in how
+  the evidence was built rather than in the rules:
+  1. **Sibling health was asserted for segments too small to judge.** A card BIN range with five
+     attempts in the window, three of which failed by chance, was marked degraded, which made
+     `siblings all healthy` false and dropped a real S2 authentication failure to `unknown`.
+     Siblings below `min_attempts` are now left out of the map entirely rather than called
+     healthy or degraded. This applies the detector's existing frozen threshold rather than
+     inventing a second one: if the detector will not judge a key that small, the evidence packet
+     must not either.
+  2. **Sibling health alone cannot see a gateway outage.** A packet is built over the 15-minute
+     window ending at detection, and detection happens a few minutes into a fault, so most of that
+     window predates the fault and every individual method is still diluted below the effect-size
+     threshold even while the merchant-wide key has crossed it. Counting only degraded siblings
+     reported "zero methods degraded" during a gateway outage that had just taken down all four.
+     The gateway rule now takes the larger of the degraded-sibling count and the number of methods
+     named in the incident's affected scope, which is what the detector actually found firing, at
+     the moment it found it, using the frozen thresholds.
+
+---
+
+## 2026-08-25, M2 step 7: rules classifier, the ablation floor
+
+### Decisions
+
+- **The table is implemented in the order it is written**, and one ambiguity in it is left alone.
+  A card issuer segment satisfies the segment test for both `issuer_outage` ("issuer") and
+  `auth_failure_bin` ("issuer"), and because the table is evaluated in order, `issuer_outage`
+  wins. Where that costs accuracy the number is reported rather than the rule bent.
+- **"Dominant" is read as a plurality of at least 0.40**, since the document uses the word without
+  a number.
+- **"Reasons are timeouts or gateway errors" and "reasons are validation or configuration
+  errors" are read as class shares, not as a single dominant reason.** Both phrases are plural in
+  the document, and reading them as a single dominant value was wrong in a way that mattered: a
+  gateway outage spreads its failures across four gateway reasons, the largest of which is 0.26 to
+  0.39 of the window while together they are 0.60 or more. With the single-value reading the rules
+  scored 0.00 on S3, missing every gateway outage in the set. With the class reading they score
+  0.83 to 1.00 there.
+
+### Rules-only accuracy
+
+Tuned seeds 0 to 4, which is where the two evidence defects above were found and fixed:
+
+```
+scenario    incidents    rules   true cause
+S1                  5     1.00   issuer_outage
+S2                  5     1.00   auth_failure_bin
+S3                  5     1.00   gateway_degradation
+S4                  5     1.00   merchant_config
+Rules-only accuracy across all scenarios: 1.000
+```
+
+Held-out seeds 5 to 9, which nothing was fitted to:
+
+```
+scenario    incidents    rules   true cause
+S1                  5     0.80   issuer_outage
+S2                  5     0.60   auth_failure_bin
+S3                  6     0.83   gateway_degradation
+S4                  5     1.00   merchant_config
+Rules-only accuracy across all scenarios: 0.810
+```
+
+The held-out number is the real one. All four misses are the rules answering `unknown` rather than
+answering wrongly, which is the safe direction: `unknown` requires an escalation and forbids every
+customer-facing action. The four are worth naming because they are the same shape:
+
+- S1 seed 9: the bank-source share is 0.33 against a 0.00 baseline, which is a real signal, but
+  customer is still 0.33, so no single source clears the 0.40 dominance bar.
+- S2 seeds 8 and 9: the incident was attributed to `card` rather than to the BIN inside it,
+  because the BIN key never reached 20 attempts in a window (see the held-out calibration entry
+  above). `card` is not one of the card dimensions the `auth_failure_bin` rule accepts, so the
+  rule cannot fire even though the authentication-step evidence is clear.
+- S3 seed 8: a second incident on `card:card_network:Visa` with a 0.95 gateway source share. It is
+  plainly the gateway outage showing up on one segment, but the `gateway_degradation` rule needs
+  two degraded methods and this packet describes one.
+
+Every one of these is a case where a fixed table cannot express what the numbers say. That is
+exactly the gap the LLM step exists to fill, and it is why the floor had to be measured before the
+model was allowed near it.
+
+---
+
+## 2026-08-25, M2 step 8: LLM provider layer
+
+### Model ids and quotas, verified before hardcoding
+
+Checked against Google's own documentation on 25 August 2026. The URLs are in the module
+docstring of `salvage/llm/provider.py`.
+
+- `gemini-2.5-flash` and `gemini-2.5-flash-lite` are both current published model ids, so the
+  default and the 429 fallback in Architecture section 11 are both valid.
+- A newer Gemini 3 family exists (`gemini-3.7-flash` and others). Salvage does not default to it:
+  the architecture names 2.5 Flash, and free-tier availability of the 3 series could not be
+  confirmed from the documentation.
+- **The rate-limits page publishes no free-tier numbers.** It says limits depend on the account's
+  usage tier and are visible only in AI Studio. So no quota figure is hardcoded anywhere and none
+  is asserted in any document. The 429 handling is what the code depends on instead, which is the
+  right dependency: a published number would have gone stale and a hardcoded one would have been
+  a guess.
+- Google now also documents an Interactions API at `/v1beta/interactions`. This client uses
+  `generateContent`, whose request and response shapes could be verified field by field.
+
+### Decisions
+
+- **One retry on validation failure, in the base class.** Architecture section 11 fixes the
+  policy, and putting it in `LLMProvider.complete` rather than in each implementation means the
+  fixture provider exercises the same path the real one does.
+- **The prompt hash covers system, user and schema, and is computed identically in three
+  places.** This was a bug before it was a decision: `complete()` used the pydantic class name
+  while the fixture provider used the schema dict's `title`, which `gemini_schema` strips because
+  Gemini's `responseSchema` does not accept it. Three derivations of one key is a silent cache
+  miss waiting to happen, so `_generate` now takes the schema name explicitly.
+- **The cache key does not include the model id; the model is stored beside it and checked on
+  read.** A hit recorded under a different model is a miss, so falling back from Flash to
+  Flash-Lite cannot silently reuse the other model's answer.
+- **`gemini_schema` converts pydantic JSON Schema to Gemini's subset in one place**, inlining
+  `$defs`, dropping unsupported keywords and collapsing `anyOf [T, null]` to `T`.
+- **A `collect` provider and a `fixture-collect` provider were added.** Neither is in Architecture
+  section 11. They exist because a fixture set has to be producible without a live provider: run
+  the loop, record every prompt it would have sent with the hash the fixture will be looked up by,
+  author those answers, run again. Each pass answers one more step, because the planner prompt
+  contains the diagnosis confidence and so depends on the diagnosis answer. Local tooling only;
+  CI uses the strict fixture provider.
+
+### The fixtures are not a blind measurement, and this is important
+
+No Gemini key and no local Ollama were available in the environment where M2 was built. Every
+fixture in `salvage/llm/fixtures/` was written by Claude Opus 5 reading the same evidence packet
+the prompt contains. Each file records that in `recorded_from`, and
+`salvage/llm/fixtures/README.md` and the README say it too.
+
+The author knew the scenario each packet came from, because `export-prompts` writes the scenario
+and seed beside the prompt, and knew from an earlier run which cases the rules classifier had
+failed. **A model that knows the label set and knows which items are hard is not being tested.**
+The LLM-assisted accuracy figures below are an upper bound on what a real provider would score and
+must not be reported as a measurement. The rules-only column beside them was produced by code that
+cannot see labels and is the honest half of the table.
+
+Nothing derived from these fixtures may reach `docs/RESULTS.md` until they are re-recorded against
+a provider that has never seen the labels.
+
+---
+
+## 2026-08-25, M2 step 9: LLM diagnosis and reconciliation
+
+### Decisions
+
+- **The rationale constraint is in the schema, not checked afterwards.** Architecture section 6
+  says the rationale "must name at least two evidence fields". `LLMDiagnosis` validates that with
+  a field validator against `EvidencePacket.model_fields`, so a rationale citing nothing is a
+  validation failure that spends the one documented retry with the error appended. A model that
+  cannot say which numbers convinced it has not diagnosed anything. The list of valid field names
+  is read from the packet's own schema, so renaming a field there cannot leave this stale.
+- **`affected_scope` from the model is advisory.** The executor uses the detector's scope. Model
+  output never names anything acted upon.
+- **Reconciliation is the documented rule exactly**: agreement lifts confidence to at least 0.7,
+  disagreement pushes it to at most 0.5 and escalates with both hypotheses, invalid output after
+  the retry escalates.
+- **A rules-only diagnosis gets confidence 0.5.** The document gives no confidence for the no-model
+  case. 0.5 is just below the 0.6 action threshold on purpose: the rules are good enough to
+  describe an incident to a human and not good enough to act on unsupervised. The practical
+  consequence, which a test asserts, is that running the agent with `--provider none` sends zero
+  messages and creates zero links. That is a design property, not a limitation.
+- **On disagreement the model's cause is carried as the reconciled one.** It saw evidence the
+  table cannot express. It changes nothing operationally, because the confidence is below the
+  action threshold either way and both hypotheses go in the ticket.
+
+### Rules-only against LLM-assisted
+
+Tuned seeds 0 to 4:
+
+```
+scenario    incidents    rules      llm   reconciled  true cause
+S1                  5     1.00     1.00         1.00  issuer_outage
+S2                  5     1.00     1.00         1.00  auth_failure_bin
+S3                  5     1.00     1.00         1.00  gateway_degradation
+S4                  5     1.00     1.00         1.00  merchant_config
+Rules-only:  1.000    LLM-only:  1.000    Reconciled:  1.000
+```
+
+Held-out seeds 5 to 9:
+
+```
+scenario    incidents    rules      llm   reconciled  true cause
+S1                  5     0.80     1.00         1.00  issuer_outage
+S2                  5     0.60     1.00         1.00  auth_failure_bin
+S3                  6     0.83     1.00         1.00  gateway_degradation
+S4                  5     1.00     1.00         1.00  merchant_config
+Rules-only:  0.810    LLM-only:  1.000    Reconciled:  1.000
+```
+
+On the tuned seeds the model adds nothing, and `format_accuracy_table` prints that in so many
+words, because docs/01_PRD.md section 12 requires it. On the held-out seeds it closes all four
+rules misses. Read the caveat in step 8 before believing the second column: the fixtures were
+authored with the labels visible. What the table does show honestly is **where** a fixed table
+runs out, which is a real and reusable finding: every rules miss is a case where the attributed
+segment or the dominance threshold does not fit, and none is a case where the evidence was
+ambiguous.
+
+---
+
+## 2026-08-25, M2 steps 10 and 11: action menu, planner, policy engine
+
+### Decisions
+
+- **`SendRecoveryLinkParams` has exactly one field, `case_id`.** No amount, no currency, no
+  discount, no expiry override. Every params model sets `extra="forbid"`, so a model that invents
+  an `amount` field fails validation before the executor sees it. Three tests enforce this
+  structurally: no params model has a field whose name matches amount, price, currency, discount
+  or value; the planner's own output schema does not either; and a grep over `salvage/` finds no
+  code path reading an amount out of a params dict or a plan. A property test over a field that
+  cannot exist would be theatre, so the grep is the real guarantee and it carries a self-check
+  proving the pattern matches a real violation.
+- **The matrix is transcribed as data, with the conditions the prose adds** (`only after
+  recovery`, `above the value threshold`, `single nudge`) as fields on the cell rather than as
+  code in the gate.
+- **The customer_side value threshold is 150,000 paise, 1,500 rupees.** Architecture section 7
+  says "above the value threshold" without a number. Below 1,500 rupees one message per failed
+  order costs more in customer patience than the order is worth, and the value bands in
+  `params.yaml` put the median order just under it.
+- **Quiet hours queue, they do not refuse.** A send due between 21:00 and 09:00 IST returns
+  `QUEUE` with `scheduled_for` set to the next 09:00, per PRD section 9. A property test asserts
+  the target is always in the future, always at 09:00 IST, and always within 24 hours.
+- **A send into a still-degraded rail converts to `DEFER_UNTIL_RECOVERED`** rather than being
+  refused, which is what "defer instead" in PRD section 9 means.
+- **The kill switch exempts `ESCALATE_HUMAN` and `NO_ACTION`.** It suspends outbound actions;
+  escalation has no outbound effect, and the security doc says detection and diagnosis keep
+  working so the dashboard still shows what would have happened.
+- **`ActionContext` is a frozen snapshot, not a live connection.** Every check is a pure function
+  of its inputs, which is what lets Hypothesis generate contexts directly and make claims about
+  all states rather than about the ones somebody typed out.
+- **Every gate in a group runs even after one fails**, so `gate_json` records the whole picture.
+  The groups short-circuit, because a matrix refusal makes the customer checks meaningless.
+
+### What broke
+
+- The first version of the property tests filtered with `assume(action_type == SEND_RECOVERY_LINK)`
+  and Hypothesis raised `FailedHealthCheck` for filtering out four fifths of everything it
+  generated. It was right to: the tests would have run at a fraction of the coverage the example
+  count suggested. Rewritten to pin fields in the strategy rather than filter after the fact.
+
+---
+
+## 2026-08-25, M2 steps 12 to 15: executor, channel, response model, real end-to-end
+
+### Decisions
+
+- **Direct `httpx`, not the `razorpay` Python SDK.** This was Architecture section 17's open item
+  and the M2 review settled it. Payment Links plus `reference_id` idempotency plus retry
+  classification plus request-id logging all need explicit status-code control, and the SDK hides
+  the status code behind an exception type. Every request field this client sends was checked
+  against the create-standard-link request body Razorpay publishes; the URLs are in the module
+  docstring.
+- **The one unverifiable Razorpay behaviour is isolated in one function.** Razorpay does not
+  publish a machine-readable code for "this reference_id is already in use", only a description,
+  so `_is_duplicate_reference` matches on the description text. If the wording changes only that
+  function is wrong, and the failure mode is a refused create rather than a duplicate link, which
+  is the safe direction.
+- **`notify.sms` and `notify.email` are false in the request body itself**, not configurable.
+  Razorpay never contacts the customer on Salvage's behalf.
+- **The state machine refuses undrawn transitions.** `advance` raises rather than allowing, so a
+  bug produces an exception at the transition instead of a case in an impossible state three steps
+  later. This caught two real errors during the first S1 run, both cases where the code reached
+  for a terminal state the diagram does not draw from where the case actually was.
+  `terminal_target_for` encodes the answer: a case that was never acted on closes as
+  `CLOSED_NO_ACTION`, one that was waiting closes as `ABANDONED`.
+- **The agent sweeps an open incident every 15 minutes.** An incident is not a moment. The
+  detection window holds the failures that triggered it; the fault keeps failing payments for as
+  long as it lasts, and those orders are the ones a recovery agent exists for. Without sweeps the
+  S1 run opened 19 cases; with them it opens 248, which is the actual affected population.
+  Incident-level actions (`STEER_METHOD`, `ESCALATE_HUMAN`) run once per incident, not once per
+  sweep.
+- **The validator runs on the rendered message, never on the template.** A caller that validated
+  the template would miss exactly the case the validator exists for: a slot the model filled with
+  something it should not have. A test fills the alternate-method slot with "a 50% off coupon" and
+  asserts the message is rejected.
+- **Slots are sanitised of braces and control characters.** The model contributes words, not
+  structure; a slot containing a brace could reopen a template placeholder.
+- **The message body is never stored.** `customer_comms` holds a sha256. A test asserts the table
+  has no `body` column and that the ledger contains no message text.
+- **A message that fails the validator is not sent, and the link stays.** The customer can still
+  pay if they find it; Salvage does not push a message it cannot vouch for.
+- **The agent runs over a completed simulation, and the attribution is first-past-the-post.** An
+  order the agent recovers with a link would not have made its later organic retries in reality,
+  and it does not need to: an order is paid once, and whichever came first gets the credit. A case
+  whose order was paid organically before the link resolved closes as `PAID_ELSEWHERE`, and the
+  link is cancelled. This is what the per-order random streams were built for.
+- **B0 is measured before the agent runs.** Measured afterwards, an order the agent recovered is
+  also "paid", and the floor would silently absorb the agent's own recoveries. This was a real bug
+  in the first version, visible as B0 moving from 3792 to 3808 between two runs of the same seed.
+- **The real end-to-end script defaults to a test card.** Razorpay's error parameters page states
+  UPI Collect is deprecated from 28 February 2026 under NPCI guidelines, with exemptions that do
+  not cover a plain test merchant, so a hand-entered test UPI id is not a reliable instrument.
+  `--instrument upi` exists so the question in PRD section 16 can be settled by experiment rather
+  than by assumption; the result belongs here when somebody runs it. **It has not been run: no
+  Razorpay test credentials were available in this environment, so the one real end-to-end run in
+  the M2 exit criteria is outstanding.**
+
+### What broke
+
+- The planner prompt printed one condition twice for `gateway_degradation`, because
+  `requires_segment_recovered` and the matrix note say the same thing. Cosmetic, but it reads like
+  a bug to a model, so conditions are deduplicated. Caught by reading the collected prompt before
+  authoring a fixture for it.
+- `segment has recovered` was computed as `closed_at is not None`, which is always true when the
+  agent runs over a completed simulation. It told the planner the fault was already over while it
+  was still failing payments. Now compared against the current time. Also caught by reading a
+  collected prompt.
+- Calibration and the sweeps put scratch databases in `/tmp`, which is a tmpfs on this machine, and
+  the earlier fix for that had to be applied to the diagnosis and organic sweeps too.
