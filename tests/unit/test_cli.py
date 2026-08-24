@@ -49,7 +49,7 @@ def test_db_migrate_is_idempotent(capsys, tmp_path):
     db = str(tmp_path / "cli.db")
     code, out, _ = _run(capsys, ["--db", db, "db", "migrate"])
     assert code == 0
-    assert "Applied 1 migration" in out
+    assert "Applied" in out and "migration" in out
     code, out, _ = _run(capsys, ["--db", db, "db", "migrate"])
     assert code == 0
     assert "already up to date" in out

@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 
 from salvage import repo
-from salvage.db import connect, migrate, open_migrated
+from salvage.db import connect, migrate, migration_files, open_migrated
 
 # Every table named in Architecture section 3, plus the simulator ground-truth tables.
 EXPECTED_TABLES = {
@@ -67,7 +67,8 @@ def test_migrate_is_idempotent(tmp_path):
     c = connect(tmp_path / "m.db")
     first = migrate(c)
     second = migrate(c)
-    assert first == ["0001_init.sql"]
+    assert first == [name for name, _ in migration_files()]
+    assert first[0] == "0001_init.sql"
     assert second == []
     c.close()
 
