@@ -108,5 +108,5 @@ def test_no_policy_violation_survives_a_full_run(run, injection_log):
         attack="a section 9 bound broken during a full run",
         refused=True,
         ledgered=True,
-        detail=f"zero violations across {sum(breakdown.values()) or 0} checks",
+        detail=f"zero violations across {len(breakdown)} distinct section 9 checks",
     )

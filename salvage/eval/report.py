@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -234,8 +234,9 @@ def offpeak_section(peak: SweepResult, offpeak: SweepResult | None) -> str:
         "arrival rate is about one thirtieth of the peak. Time to detect is reported as a range",
         "because a single peak-hour number is a best case and would read as a guarantee.",
         "",
-        "| scenario | seeds | peak detected | peak sim min | trough detected | trough sim min |",
-        "|---|---|---|---|---|---|",
+        "| scenario | peak seeds | peak detected | peak sim min | trough seeds | "
+        "trough detected | trough sim min |",
+        "|---|---|---|---|---|---|---|",
     ]
     policy = offpeak.policies[0]
     for scenario in sorted({key[0] for key in trough_rows}):
@@ -254,9 +255,26 @@ def offpeak_section(peak: SweepResult, offpeak: SweepResult | None) -> str:
             else "not detected"
         )
         lines.append(
-            f"| {scenario} | {trough_row.seeds} | {peak_row.detected}/{peak_row.seeds} | "
-            f"{peak_latency} | {trough_row.detected}/{trough_row.seeds} | {trough_latency} |"
+            f"| {scenario} | {peak_row.seeds} | {peak_row.detected}/{peak_row.seeds} | "
+            f"{peak_latency} | {trough_row.seeds} | "
+            f"{trough_row.detected}/{trough_row.seeds} | {trough_latency} |"
         )
+    lines.append("")
+    lines.append(
+        "Not slow. Not misattributed. **Not detected.** The diurnal curve puts the 03:00 and 04:00 "
+        "hours at 0.08 relative weight against an evening peak of 2.60, so the trough carries "
+        "about one thirtieth of the peak arrival rate: roughly 45 attempts an hour across the "
+        "whole merchant, about 11 in a 15-minute window. The detector will not evaluate any "
+        "segment key with fewer than 20 attempts in a window, so at 03:30 there is no key it can "
+        "test, including the merchant-wide one. The fault happens, the payments fail, and nothing "
+        "is testable."
+    )
+    lines.append("")
+    lines.append(
+        "The 15-minute promise in PRD goal G1 is a promise about the evening peak. Overnight, at "
+        "this merchant size, the detector does not fire at all. The fix is volume or a longer "
+        "window, not a threshold, and both trade against the zero false-alarm result."
+    )
     return "\n".join(lines)
 
 
@@ -361,7 +379,8 @@ def _not_run(command: str, why: str) -> str:
 
 def build_report(inputs: ReportInputs) -> str:
     main = inputs.main
-    generated = datetime.now(UTC).strftime("%d %B %Y")
+    # Local date. The documents are written in IST and a UTC date reads as a day behind.
+    generated = datetime.now().astimezone().strftime("%d %B %Y")
 
     parts: list[str] = []
     parts.append(f"""# Salvage: Results

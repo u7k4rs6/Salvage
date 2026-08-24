@@ -1418,3 +1418,83 @@ seed. That is the boundary: **somewhere between 5,000 and 12,000 attempts a day,
 mix, a single-instrument fault becomes reliably detectable inside 15 minutes.** Below it the
 promise in PRD goal G1 does not hold, and a merchant that size needs either a longer window or a
 lower attempt floor, both of which trade against the zero false-alarm result.
+
+---
+
+## 2026-08-25, M3: the sweep, and what it says
+
+`salvage eval run` sharded by scenario, five shards in parallel: 200 runs, 50 worlds, all four
+policy arms per world. Total wall clock about 18 minutes at five-way parallelism, peak RSS 149 MB
+per shard.
+
+```
+scenario policy seeds  recovered (mean paise)              sd   rate   msgs  viol
+S0           B0    10              90,014,391      14,330,632  0.323      0     0
+S0           B1    10             160,626,996      23,664,825  0.593    878     0
+S0           B2    10             159,274,907      23,301,134  0.583   1056     0
+S0        agent    10              90,014,391      14,330,632  0.323      0     0
+S1           B0    10              97,151,097      14,914,462  0.301      0     0
+S1           B1    10             172,053,842      25,827,052  0.549   1026     0
+S1           B2    10             172,952,848      25,339,864  0.548   1296     0
+S1        agent    10              97,151,097      14,914,462  0.301      0     0
+S2           B0    10              92,926,442      15,002,709  0.307      0     0
+S2           B1    10             165,517,160      24,983,627  0.564    951     0
+S2           B2    10             165,120,357      24,757,488  0.558   1176     0
+S2        agent    10              92,926,442      15,002,709  0.307      0     0
+S3           B0    10             109,988,526      18,402,599  0.312      0     0
+S3           B1    10             187,464,011      30,399,499  0.544   1111     0
+S3           B2    10             189,294,110      29,812,266  0.547   1436     0
+S3        agent    10             109,988,526      18,402,599  0.312      0     0
+S4           B0    10              94,444,805      15,392,898  0.291      0     0
+S4           B1    10             169,254,101      26,169,487  0.538   1017     0
+S4           B2    10             168,297,685      24,925,264  0.531   1275     0
+S4        agent    10              94,444,805      15,392,898  0.291      0     0
+
+50 worlds, all digests identical across all 4 policy arms. 0 policy violations across 200 runs.
+```
+
+### The agent column equals B0 exactly, to the paise
+
+Not approximately: `90,014,391 +/- 14,330,632` in both columns on S0, and the same on every other
+row. That is the arithmetic working correctly, and it is worth stating why rather than letting it
+look like a copy-paste error. The agent has no diagnosis model, so every incident reconciles to
+confidence 0.5, which is below the 0.6 action threshold, so every action is refused on the matrix
+gate and every incident escalates. An agent that takes no action recovers exactly what customers do
+on their own, which is the definition of B0. The two arms did not share a run: they ran separately,
+against the same seed, and arrived at the same number because they did the same thing.
+
+### What the measured comparison actually shows
+
+B1 and B2 recover roughly 1.8 times what B0 does, and they do it by sending about a thousand
+messages per run. That is the blunt approach working, and it is worth being honest that in this
+simulator it works well: most failed orders are ordinary background failures outside any fault
+window, and for those a link with no cause-aware timing behind it lands on a rail that is working.
+The agent's thesis is not that links do not work. It is that a thousand messages per run is a real
+cost, that some of those messages go to customers whose rail is still broken, and that on S4 every
+one of them is about a fault no customer can do anything about. Two of those three claims are
+visible in the numbers already: B2 sends 20 to 30 percent more messages than B1 for the same
+recovery, and on S4 both baselines contact around a thousand customers about a merchant
+misconfiguration while the agent arm contacts nobody and files an escalation. The third, that
+cause-aware timing recovers more per message, is exactly what the unmeasured arm was for.
+
+### Contact efficiency is where the difference would show
+
+B1 spends 0.61 messages per 1,000 rupees recovered on S1 and B2 spends 0.77 for the same money.
+That gap between two policies that differ only in when they send is the shape of the effect the
+agent is supposed to exploit, measured between two baselines rather than between the agent and a
+baseline.
+
+### Sensitivity
+
+The gap between B1 and B0 moves from 4.35 lakh to 9.56 lakh as the intervention multipliers scale
+from 0.5 to 2.0, on a base of 9.92 lakh. So the headline advantage of sending links at all is worth
+between 44 and 96 percent of B0's recovery depending on a parameter that is judgement. That is a
+wide band and it is the honest characterisation: **the direction of the result is robust and its
+size is not.**
+
+### Adversarial set
+
+B1 and B2 stay about 30 percent ahead of B0 with every multiplier at 1.0 and p_organic flat at
+0.60. That is not the set failing: setting the multipliers to 1.0 removes any advantage from timing
+or steering, not the second occasion to pay that a link provides. The comparison the set exists for
+is agent against B1, and it cannot be made until the agent arm has a model.
