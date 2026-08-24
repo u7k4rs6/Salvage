@@ -80,15 +80,33 @@ def cmd_sim_run(args: argparse.Namespace) -> int:
 
     conn = open_migrated(_db_path(args))
     try:
-        result = run_scenario(conn, scenario=args.scenario, seed=args.seed, days=args.days)
+        result = run_scenario(
+            conn,
+            scenario=args.scenario,
+            seed=args.seed,
+            days=args.days,
+            variant=args.variant,
+        )
         print(
-            f"run_id={result.run_id} scenario={result.scenario} seed={result.seed}\n"
-            f"attempts={result.attempts} failures={result.failures} orders={result.orders} "
+            f"run_id={result.run_id} scenario={result.scenario} seed={result.seed} "
+            f"variant={result.variant}\n"
+            f"attempts={result.attempts} (first {result.first_attempts}, "
+            f"organic retries {result.retries}) failures={result.failures}\n"
+            f"orders={result.orders} paid={result.orders_paid} "
+            f"(paid on an organic retry: {result.orders_paid_on_retry}) "
             f"customers={result.customers}\n"
-            f"ground_truth_rows={result.truth_rows} sim window={result.sim_start}..{result.sim_end}"
+            f"ground_truth_rows={result.truth_rows} "
+            f"sim window={result.sim_start}..{result.sim_end}\n"
+            f"stream_digest={result.stream_digest[:16]} "
+            f"dropped_retries={result.dropped_retries}"
         )
         if args.detect:
-            eval_days = max(1, (result.sim_end - result.eval_day_start) // 86400 + 1)
+            # The evaluation days only. The settlement tail creates no new orders, so running the
+            # detector over it would evaluate three days of traffic that does not exist and
+            # inflate the window count in every report.
+            from salvage.sim.params import default_params
+
+            eval_days = args.days if args.days is not None else default_params().eval_days
             report = detect(
                 conn,
                 eval_start=result.eval_day_start,
@@ -124,11 +142,73 @@ def _parse_seeds(spec: str) -> list[int]:
     return [int(part) for part in spec.split(",") if part.strip()]
 
 
+def cmd_sim_verify_stream(args: argparse.Namespace) -> int:
+    from salvage.sim.verify import StreamNotCommitted, verify_stream
+
+    conn = open_migrated(_db_path(args))
+    try:
+        result = verify_stream(conn, args.run_id)
+    except StreamNotCommitted as exc:
+        print(f"stream not committed: {exc}", file=sys.stderr)
+        return 2
+    finally:
+        conn.close()
+    print(result)
+    return 0 if result.ok else 1
+
+
+def cmd_sim_organic(args: argparse.Namespace) -> int:
+    """Organic-only recovery, which is baseline B0. Runs each scenario into its own database."""
+    import shutil
+
+    from salvage.detect.calibrate import make_workdir
+    from salvage.eval.baselines import format_organic_table, measure_organic_recovery
+    from salvage.sim.runner import run_scenario
+
+    scenarios = [s.strip() for s in args.scenarios.split(",") if s.strip()]
+    seeds = _parse_seeds(args.seeds)
+    workdir = make_workdir()
+    rows = []
+    try:
+        for scenario in scenarios:
+            for seed in seeds:
+                db_path = workdir / f"{scenario}_{seed}_{args.variant}.db"
+                conn = open_migrated(db_path)
+                try:
+                    result = run_scenario(
+                        conn, scenario=scenario, seed=seed, variant=args.variant
+                    )
+                    rows.append(
+                        measure_organic_recovery(
+                            conn,
+                            scenario=scenario,
+                            seed=seed,
+                            variant=args.variant,
+                            fault_windows=[
+                                (f.start_ts, f.end_ts) for f in result.scheduled_faults
+                            ],
+                        )
+                    )
+                finally:
+                    conn.close()
+                    for suffix in ("", "-wal", "-shm"):
+                        Path(str(db_path) + suffix).unlink(missing_ok=True)
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+    print(format_organic_table(rows))
+    return 0
+
+
 def cmd_detect_calibrate(args: argparse.Namespace) -> int:
     from salvage.detect.calibrate import calibrate, format_table
 
     scenarios = [s.strip() for s in args.scenarios.split(",") if s.strip()]
-    rows = calibrate(scenarios=scenarios, seeds=_parse_seeds(args.seeds), days=args.days)
+    rows = calibrate(
+        scenarios=scenarios,
+        seeds=_parse_seeds(args.seeds),
+        days=args.days,
+        variant=args.variant,
+    )
     print(format_table(rows))
     return 0
 
@@ -220,7 +300,28 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_false",
         help="generate traffic only, do not run the detector",
     )
+    sim_run.add_argument(
+        "--variant",
+        default="peak",
+        help="fault variant from params.yaml: peak (default) or offpeak",
+    )
     sim_run.set_defaults(func=cmd_sim_run, detect=True)
+
+    verify_stream = sim.add_parser(
+        "verify-stream", help="recompute the ledger's commitment to the attempt stream"
+    )
+    verify_stream.add_argument(
+        "run_id", nargs="?", default=None, help="defaults to the most recent run"
+    )
+    verify_stream.set_defaults(func=cmd_sim_verify_stream)
+
+    organic = sim.add_parser(
+        "organic", help="organic-only recovery rate per scenario, which is baseline B0"
+    )
+    organic.add_argument("--scenarios", default="S0,S1,S2,S3,S4")
+    organic.add_argument("--seeds", default="0..4", help="'0..4' or '0,1,2'")
+    organic.add_argument("--variant", default="peak")
+    organic.set_defaults(func=cmd_sim_organic)
 
     detect = subparsers.add_parser("detect", help="detector").add_subparsers(
         dest="command", required=True
@@ -229,6 +330,11 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--seeds", default="0..4", help="'0..4' or '0,1,2'")
     calibrate.add_argument("--scenarios", default="S0,S1,S2,S3,S4")
     calibrate.add_argument("--days", type=int, default=None)
+    calibrate.add_argument(
+        "--variant",
+        default="peak",
+        help="fault variant from params.yaml: peak (default) or offpeak",
+    )
     calibrate.set_defaults(func=cmd_detect_calibrate)
 
     webhooks = subparsers.add_parser("webhooks", help="webhook capture and replay").add_subparsers(

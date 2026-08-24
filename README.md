@@ -4,6 +4,14 @@ Salvage is an AI agent for merchants on Razorpay that notices when payments star
 clusters, works out why, and wins the money back inside hard limits. It is the Track 03 entry for
 the Razorpay AI Buildathon 2026.
 
+The merchant it is built for is a large D2C brand: about 12,000 payment attempts a day across
+about 8,000 customers. That size is deliberate and it is a constraint, not a boast. A detector
+that has to call a single failing UPI handle inside 15 minutes needs enough attempts on that
+handle in a 15-minute window to tell a real drop from noise, and a smaller merchant does not
+supply them. Traffic volume is a simulator parameter rather than a constant, and the results
+include a sweep over it, so the numbers say where this approach stops working instead of pretending
+it always does.
+
 The loop: a deterministic detector opens an incident when a payment segment degrades, an
 LLM-assisted diagnosis cross-checked by rules names the cause, a policy engine validates every
 proposed action against an allowlisted menu, and an append-only hash-chained ledger records all of
@@ -13,9 +21,9 @@ anything else with money.
 ## Status
 
 Milestone M1 (foundation) is built: migrations and repository layer, ledger with hash chain and
-verify, simulator with scenarios S0 to S4, ingest with webhook signature verification, detector with
-calibration, a minimal CLI and a minimal FastAPI app. M2 (diagnosis, policy, executor) is not built
-yet.
+verify, simulator with scenarios S0 to S4 including organic customer retries, ingest with webhook
+signature verification, detector with calibration, a minimal CLI and a minimal FastAPI app.
+M2 (evidence packets, diagnosis, policy engine, executor) is in progress.
 
 ## Documents
 
@@ -45,7 +53,10 @@ used in this project.
 ```
 uv run salvage db migrate
 uv run salvage sim run --scenario S1 --seed 1
-uv run salvage detect calibrate --seeds 0..4
+uv run salvage sim run --scenario S1 --seed 1 --variant offpeak
+uv run salvage sim verify-stream
+uv run salvage sim organic --seeds 0..4
+uv run salvage detect calibrate --seeds 5..9
 uv run salvage ledger verify
 uv run salvage ledger export --out data/ledger.jsonl
 uv run salvage webhooks record --out data/webhooks

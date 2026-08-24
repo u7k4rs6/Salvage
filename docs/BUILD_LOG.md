@@ -520,3 +520,101 @@ The five-seed calibration table and the frozen thresholds are recorded above, un
 Every exit criterion is met: detection is under 15 sim minutes on S1 to S4 for every seed (worst
 11), S0 opens no incidents on the held-out seeds against a target of under 0.2 per day,
 `ledger verify` passes on a full S1 database, and a single-byte change breaks it.
+
+---
+
+## 2026-08-25, M2 carry-over 1: organic retries
+
+The M1 review caught this: the S1 run reported `attempts=96135` and `orders=96135`, so no order
+ever got a second attempt and no customer ever came back unprompted. Baseline B0 would have
+recovered exactly nothing and every comparison in `docs/RESULTS.md` would have been meaningless.
+
+### What was wrong
+
+M1's response model drew an organic outcome for every failed order and wrote it to
+`sim_truth_attempts` as a counterfactual, but nothing ever turned that counterfactual into an
+event. The number was recorded and then ignored.
+
+### Decisions
+
+- **An organic retry is a real payment attempt on the same order, with the same instrument.** Not
+  a coin flip resolved at the end of the run. The customer tries the rail they always use, so a
+  retry that lands while that rail is still broken fails again, for the same reason. This is the
+  behaviour that makes cause-aware timing worth anything: nudging someone back into a dead rail
+  spends their patience for nothing, and the simulator now says so.
+- **The chain is bounded rather than singular.** Architecture section 9 describes one retry
+  probability. A real customer tries more than once, so each failed attempt draws again with the
+  probability decayed by `repeat_retry_decay` (0.55), up to `max_organic_retries` (3), and the
+  whole chain must fit inside `organic_retry_max_minutes` (1440) of the first failure. Both new
+  numbers are in `params.yaml` with the assumption beside them and both are in M3's sensitivity
+  sweep.
+- **Draws are keyed by order index, not taken in sequence.** This is the load-bearing decision.
+  An order that a recovery link pays never makes the organic retries it would have made, so a
+  sequential stream would shift every later order's draws the moment a policy acted, and the agent
+  and the baselines would stop facing the same customers. `salvage/sim/rng.py` gains
+  `order_stream(seed, name, order_index)`, and an order's whole counterfactual depends on that
+  order alone. Guarded by
+  `tests/unit/test_sim.py::test_the_organic_plan_depends_only_on_the_order`.
+- **The whole chain is drawn at once, when the order first fails.** Four draws per potential
+  retry, always taken whether or not that retry happens, so the chain's length cannot change the
+  meaning of a later draw. The failure and error-profile draws for each retry are fixed at that
+  moment too, so whether a retry succeeds depends only on the rail's state when it lands.
+- **A settlement tail was added: `clock.settle_days = 3`.** No new orders are created on those
+  days; organic retries and, from M2, recovery-link payments land there. Without it, the last
+  evening's failures would count as unrecovered purely because the simulation stopped. Three days
+  rather than one so the 72 hour per-order TTL fits. `SimResult.dropped_retries` counts anything
+  still queued past the end, and it is zero on every scenario and seed measured so far; if it ever
+  is not, every recovery figure in `docs/RESULTS.md` is understated and the tail needs extending.
+- **`traffic.attempts_per_day` is a scenario parameter, never a constant.** M3 runs a volume
+  sweep, so `params.attempts_per_day(scenario_id)` is the only way to read it and a scenario can
+  override it under `scenarios.<id>.overrides.traffic.attempts_per_day`. A test greps
+  `salvage/sim/traffic.py` for the raw dict access to keep it that way.
+- **Baseline B0 lives in `salvage/eval/baselines.py`**, where Architecture section 13 puts the
+  baselines. It reads `v_orders` and `v_payment_attempts`, the same views the agent uses, so the
+  measurement is over what happened rather than over what was intended. `salvage sim organic`
+  prints it, and the table warns loudly if any scenario recovers nothing.
+
+### Organic-only recovery, five seeds, shipped params
+
+```
+scenario   seed   failed  recovered    rate  fault failed  fault recovered  fault rate
+--------------------------------------------------------------------------------------
+S0            0    11927       3776   0.317             0                0       0.000
+S0            1    12139       3752   0.309             0                0       0.000
+S0            2    11890       3931   0.331             0                0       0.000
+S0            3    11951       3813   0.319             0                0       0.000
+S0            4    11989       3834   0.320             0                0       0.000
+S1            0    12150       3816   0.314           429              112       0.261
+S1            1    12392       3792   0.306           467              106       0.227
+S1            2    12151       3963   0.326           462              110       0.238
+S1            3    12188       3854   0.316           464              125       0.269
+S1            4    12218       3869   0.317           488              115       0.236
+S2            0    12062       3794   0.315           422              116       0.275
+S2            1    12253       3767   0.307           406              104       0.256
+S2            2    12014       3945   0.328           388              112       0.289
+S2            3    12082       3829   0.317           435              122       0.280
+S2            4    12124       3848   0.317           462              106       0.229
+S3            0    12325       3909   0.317           527              176       0.334
+S3            1    12548       3860   0.308           549              158       0.288
+S3            2    12341       4051   0.328           588              178       0.303
+S3            3    12353       3923   0.318           549              165       0.301
+S3            4    12381       3943   0.318           591              176       0.298
+S4            0    12168       3810   0.313           662              178       0.269
+S4            1    12392       3769   0.304           695              149       0.214
+S4            2    12125       3956   0.326           630              171       0.271
+S4            3    12181       3835   0.315           685              174       0.254
+S4            4    12236       3857   0.315           713              155       0.217
+
+Means across seeds:
+  S0: organic recovery 0.319 overall, 0.000 inside the fault window
+  S1: organic recovery 0.316 overall, 0.246 inside the fault window (462 failed orders there)
+  S2: organic recovery 0.317 overall, 0.266 inside the fault window (423 failed orders there)
+  S3: organic recovery 0.318 overall, 0.305 inside the fault window (561 failed orders there)
+  S4: organic recovery 0.315 overall, 0.245 inside the fault window (677 failed orders there)
+```
+
+B0 is non-zero everywhere, so M3 has a floor to beat. The number worth noticing is that recovery
+inside a fault window is consistently lower than recovery outside it (0.25 against 0.32): a
+customer who comes back during the outage hits the same broken rail and fails again. That gap is
+the room a cause-aware agent has to work in, and it appeared on its own rather than being put
+there.

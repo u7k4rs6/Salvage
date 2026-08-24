@@ -31,7 +31,7 @@ Purpose: show, at a glance, whether payments are healthy and where they are brea
 
 Components:
 
-- Success-rate heatmap: rows are methods (UPI, Card, Netbanking, Wallet), columns are instruments within the method (UPI handles, card issuers, banks). Each cell shows the current 15-minute success rate, coloured on a neutral-to-red scale, with the baseline rate as small text. Cells inside an open incident get a red outline and link to the incident.
+- Success-rate heatmap: the first row is pinned and merchant-wide, labelled "All methods", and it is where an incident attributed to the `all` segment key appears. A fault that spans every method (S3, gateway degradation) is attributed there by the detector rather than to any one method, so without a pinned row it would have no cell. The remaining rows are methods (UPI, Card, Netbanking, Wallet) and the columns are instruments within the method (UPI handles, card issuers, banks). Each cell shows the current 15-minute success rate, coloured on a neutral-to-red scale, with the baseline rate as small text. Cells inside an open incident get a red outline and link to the incident. The pinned row spans the full width and carries the merchant-wide rate and baseline.
 - Active incidents strip: one card per open incident with segment, root cause, confidence, at-risk amount, recovered so far, and status badge.
 - Volume and failures sparkline for the last 24 sim hours.
 - Four stats: attempts in the last hour, current merchant-wide success rate, at-risk revenue (open incidents), recovered today.

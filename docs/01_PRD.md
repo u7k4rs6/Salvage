@@ -52,7 +52,14 @@ Salvage closes that loop with a deterministic detector, an LLM-assisted diagnosi
 
 ## 6. Users and jobs
 
-Primary user: a merchant ops or finance person at a mid-size D2C store on Razorpay. Jobs to be done:
+Primary user: a merchant ops or finance person at a large D2C brand on Razorpay, taking roughly
+12,000 payment attempts a day across about 8,000 customers. The size is stated because it is load
+bearing: the detector needs enough attempts per 15-minute window on a single instrument to reach
+statistical significance inside the 15-minute detection target in G1, and at a few thousand
+attempts a day it cannot. The arithmetic is in `docs/BUILD_LOG.md` and the figures themselves are
+in `salvage/sim/params.yaml`. Traffic volume is a scenario parameter, and M3 reports a sweep over
+it, so the results say where the detector stops working rather than assuming it always does.
+Jobs to be done:
 
 - Know within minutes that payments are breaking, and for which customers.
 - Know whether to call Razorpay, fix a setting, or wait it out.

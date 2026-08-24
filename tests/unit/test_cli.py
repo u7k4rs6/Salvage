@@ -25,7 +25,11 @@ def test_every_documented_command_is_registered():
         "verify",
         "export",
     }
-    assert set(groups["sim"]._subparsers._group_actions[0].choices) == {"run"}  # noqa: SLF001
+    assert set(groups["sim"]._subparsers._group_actions[0].choices) == {  # noqa: SLF001
+        "run",
+        "verify-stream",
+        "organic",
+    }
     assert set(groups["detect"]._subparsers._group_actions[0].choices) == {  # noqa: SLF001
         "calibrate"
     }

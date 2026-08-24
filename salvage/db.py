@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import threading
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -30,12 +31,11 @@ def connect(path: Path | str | None = None) -> sqlite3.Connection:
     path = Path(path)
     if str(path) != ":memory:":
         path.parent.mkdir(parents=True, exist_ok=True)
-    # check_same_thread=False because FastAPI hands a sync dependency generator to a worker
-    # thread while an async endpoint body runs on the event loop thread, so one request's
-    # connection legitimately crosses threads. Salvage is single-process and every write goes
-    # through a BEGIN IMMEDIATE transaction with busy_timeout set, so the serialisation sqlite3
-    # would otherwise provide is not what is keeping writes correct.
-    conn = sqlite3.connect(str(path), isolation_level=None, check_same_thread=False)
+    # No check_same_thread=False. A connection belongs to the thread that opened it. Sharing one
+    # across threads meant two requests could interleave BEGIN IMMEDIATE and COMMIT on the same
+    # connection, which silently commits half of one transaction inside the other. Code that needs
+    # a connection from a worker thread calls thread_connection() below.
+    conn = sqlite3.connect(str(path), isolation_level=None)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -89,3 +89,54 @@ def open_migrated(path: Path | str | None = None) -> sqlite3.Connection:
     conn = connect(path)
     migrate(conn)
     return conn
+
+
+# ---------------------------------------------------------------------------
+# Per-thread connections
+# ---------------------------------------------------------------------------
+
+_local = threading.local()
+
+
+class InMemoryNotShareable(ValueError):
+    """A per-thread in-memory database would be a different database per thread."""
+
+
+def thread_connection(path: Path | str | None = None) -> sqlite3.Connection:
+    """The calling thread's connection to this database, opened on first use.
+
+    The API runs synchronous request work in a worker thread pool, and a thread pool hands the
+    same task to whichever thread is free. A connection per thread is the smallest thing that is
+    actually correct: each thread's transactions are its own, SQLite serialises the writes through
+    the file lock, and busy_timeout absorbs the contention. Salvage is single-process and its
+    write rate is a webhook at a time, so the file lock is not a bottleneck.
+
+    Connections are never closed here. There is one thread pool for the life of the process and a
+    handful of threads in it, so the connections are a fixed small cost rather than a leak.
+    """
+    if path is None:
+        path = get_settings().salvage_db_path
+    if str(path) == ":memory:":
+        raise InMemoryNotShareable(
+            "an in-memory database cannot be shared across threads; use a file path"
+        )
+    key = str(Path(path).resolve())
+    registry = getattr(_local, "connections", None)
+    if registry is None:
+        registry = {}
+        _local.connections = registry
+    conn = registry.get(key)
+    if conn is None:
+        conn = open_migrated(path)
+        registry[key] = conn
+    return conn
+
+
+def close_thread_connections() -> None:
+    """Close and forget this thread's connections. Used by tests between databases."""
+    registry = getattr(_local, "connections", None)
+    if not registry:
+        return
+    for conn in registry.values():
+        conn.close()
+    registry.clear()

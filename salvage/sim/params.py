@@ -60,6 +60,9 @@ class Scenario:
     description: str
     faults: tuple[Fault, ...]
     implemented: bool = True
+    # Per-scenario parameter overrides, for example a different attempts_per_day. M3's volume
+    # sweep sets this, which is why traffic volume is a scenario parameter and not a constant.
+    overrides: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -85,6 +88,39 @@ class Params:
     @property
     def eval_days(self) -> int:
         return int(self.raw["clock"]["eval_days"])
+
+    @property
+    def settle_days(self) -> int:
+        """Days after the evaluation day in which no new orders are created.
+
+        Organic retries and recovery-link payments scheduled during the evaluation day land here.
+        Without the tail, the last evening's failures would count as unrecovered purely because
+        the simulation stopped.
+        """
+        return int(self.raw["clock"].get("settle_days", 0))
+
+    @property
+    def fault_variants(self) -> dict[str, Any]:
+        return self.raw.get("fault_variants", {})
+
+    def variant(self, name: str) -> dict[str, Any]:
+        try:
+            return self.fault_variants[name]
+        except KeyError:
+            known = ", ".join(sorted(self.fault_variants))
+            raise ParamsError(f"unknown fault variant {name!r}; known: {known}") from None
+
+    def attempts_per_day(self, scenario_id: str | None = None) -> int:
+        """Traffic volume, which is a scenario parameter rather than a constant.
+
+        M3 runs a volume sweep, so nothing in salvage/sim/ may read
+        traffic.attempts_per_day directly.
+        """
+        base = int(self.traffic["attempts_per_day"])
+        if scenario_id is None:
+            return base
+        overrides = self.scenarios[scenario_id].overrides
+        return int(overrides.get("traffic", {}).get("attempts_per_day", base))
 
     @property
     def merchant(self) -> dict[str, Any]:
@@ -184,6 +220,7 @@ def _parse_scenarios(raw: dict[str, Any]) -> dict[str, Scenario]:
             description=str(body.get("description", "")).strip(),
             faults=tuple(faults),
             implemented=bool(body.get("implemented", True)),
+            overrides=dict(body.get("overrides") or {}),
         )
     return scenarios
 

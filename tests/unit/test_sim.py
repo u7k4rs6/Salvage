@@ -150,21 +150,52 @@ def test_p_organic_value_bands(small):
 
 
 def test_hard_decline_lowers_the_organic_retry_probability(small):
-    model = ResponseModel(small, Streams(0).response)
-    soft = model.draw(amount_paise=200000, failed_at=0, error_reason="insufficient_funds")
-    hard = model.draw(amount_paise=200000, failed_at=0, error_reason="debit_instrument_blocked")
-    assert hard.p_organic < soft.p_organic
-    assert hard.p_organic == pytest.approx(
-        soft.p_organic * small.response["p_organic_hard_decline_multiplier"]
+    model = ResponseModel(small, seed=0)
+    soft = model.base_probability(amount_paise=200000, error_reason="insufficient_funds")
+    hard = model.base_probability(amount_paise=200000, error_reason="debit_instrument_blocked")
+    assert hard < soft
+    assert hard == pytest.approx(soft * small.response["p_organic_hard_decline_multiplier"])
+
+
+def test_organic_retries_are_within_twenty_four_hours_and_bounded(small):
+    model = ResponseModel(small, seed=3)
+    saw_a_retry = False
+    for order_index in range(500):
+        plan = model.organic_plan(
+            order_index=order_index,
+            amount_paise=250000,
+            first_failed_at=1000,
+            error_reason="payment_failed",
+        )
+        assert len(plan.retries) <= small.response["max_organic_retries"]
+        for retry in plan.retries:
+            assert 1000 < retry.at <= 1000 + 86400
+        if plan.retries:
+            saw_a_retry = True
+            # Retries are in time order and strictly increasing.
+            times = [retry.at for retry in plan.retries]
+            assert times == sorted(times)
+    assert saw_a_retry
+
+
+def test_the_organic_plan_depends_only_on_the_order(small):
+    """The property that lets the agent and the baselines face identical customers."""
+    model = ResponseModel(small, seed=3)
+    first = model.organic_plan(
+        order_index=42, amount_paise=250000, first_failed_at=1000, error_reason="payment_failed"
     )
-
-
-def test_organic_retry_is_within_twenty_four_hours(small):
-    model = ResponseModel(small, Streams(3).response)
-    for _ in range(500):
-        outcome = model.draw(amount_paise=250000, failed_at=1000, error_reason="payment_failed")
-        if outcome.will_retry:
-            assert 1000 < outcome.retry_at <= 1000 + 86400
+    # Draw a hundred other orders in between; order 42's plan must not move.
+    for other in range(100):
+        model.organic_plan(
+            order_index=1000 + other,
+            amount_paise=90000,
+            first_failed_at=5000,
+            error_reason="payment_failed",
+        )
+    again = model.organic_plan(
+        order_index=42, amount_paise=250000, first_failed_at=1000, error_reason="payment_failed"
+    )
+    assert first == again
 
 
 # -- full runs -------------------------------------------------------------
@@ -332,3 +363,64 @@ def test_run_appends_exactly_two_ledger_entries_and_the_chain_verifies(tmp_path,
         assert verify(conn).ok
     finally:
         conn.close()
+
+
+# -- fault variants --------------------------------------------------------
+
+
+def test_offpeak_variant_moves_the_fault_to_the_trough(tmp_path, small_params_path, small):
+    from salvage.sim.clock import IstCalendar
+
+    calendar = IstCalendar(small.ist_offset)
+    peak, offpeak = {}, {}
+    for variant, sink, name in (("peak", peak, "p.db"), ("offpeak", offpeak, "o.db")):
+        conn = open_migrated(tmp_path / name)
+        try:
+            result = run_scenario(
+                conn, scenario="S1", seed=1, params_path=small_params_path, variant=variant
+            )
+            fault = result.scheduled_faults[0]
+            sink["hour"] = calendar.hour_of_day(fault.start_ts)
+            sink["duration"] = fault.end_ts - fault.start_ts
+            sink["selector"] = fault.fault.selector
+        finally:
+            conn.close()
+
+    assert 19 <= peak["hour"] <= 22
+    assert 3 <= offpeak["hour"] <= 5
+    # Same fault, different hour. Nothing else about it changes.
+    assert peak["duration"] == offpeak["duration"]
+    assert peak["selector"] == offpeak["selector"]
+
+
+def test_an_unknown_variant_is_refused(tmp_path, small_params_path):
+    conn = open_migrated(tmp_path / "v.db")
+    try:
+        with pytest.raises(params_mod.ParamsError, match="unknown fault variant"):
+            run_scenario(
+                conn, scenario="S1", seed=0, params_path=small_params_path, variant="midnight"
+            )
+    finally:
+        conn.close()
+
+
+def test_traffic_volume_is_a_scenario_parameter_not_a_constant():
+    """M3 runs a volume sweep, so nothing may read traffic.attempts_per_day directly."""
+    import pathlib
+
+    params = params_mod.default_params()
+    assert params.attempts_per_day("S1") == params.traffic["attempts_per_day"]
+
+    raw = dict(params.raw)
+    raw["scenarios"] = dict(raw["scenarios"])
+    raw["scenarios"]["S1"] = {**raw["scenarios"]["S1"], "overrides": {"traffic": {
+        "attempts_per_day": 3000
+    }}}
+    overridden = params_mod.Params(
+        raw=raw, path=params.path, scenarios=params_mod._parse_scenarios(raw)
+    )
+    assert overridden.attempts_per_day("S1") == 3000
+    assert overridden.attempts_per_day("S0") == params.traffic["attempts_per_day"]
+
+    source = pathlib.Path("salvage/sim/traffic.py").read_text()
+    assert 'traffic["attempts_per_day"]' not in source

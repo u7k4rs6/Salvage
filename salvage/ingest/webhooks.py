@@ -29,15 +29,16 @@ import hashlib
 import hmac
 import json
 import time
-from collections.abc import Iterator
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
+from starlette.concurrency import run_in_threadpool
 
 from salvage import repo
 from salvage.config import ConfigError, Settings, get_settings
-from salvage.db import open_migrated
+from salvage.db import thread_connection
 from salvage.ingest.normalize import normalize_order_from_payment, normalize_payment_entity
 from salvage.ledger import Ledger
 
@@ -268,26 +269,25 @@ def ingest_event(
 # ---------------------------------------------------------------------------
 
 
-def get_conn() -> Iterator[Any]:
-    """One connection per request. SQLite in WAL mode, single process, so this is cheap.
+def get_connection_factory() -> Callable[[], Any]:
+    """A callable that returns the calling thread's database connection.
 
-    Declared as a dependency so tests can point the endpoint at a temporary database without
-    touching the environment or the settings cache.
+    A factory rather than a connection, and the difference matters. The endpoint reads the request
+    body on the event loop thread and then does all of its database work inside
+    run_in_threadpool, so the connection has to be acquired in the thread that will use it. A
+    dependency that returned an already-open connection would hand a connection opened on one
+    thread to code running on another, which is the bug this replaced.
     """
-    conn = open_migrated()
-    try:
-        yield conn
-    finally:
-        conn.close()
+    return thread_connection
 
 
-ConnDep = Annotated[Any, Depends(get_conn)]
+ConnFactory = Annotated[Callable[[], Any], Depends(get_connection_factory)]
 
 
 async def razorpay_webhook(
     request: Request,
     response: Response,
-    conn: ConnDep,
+    connection_factory: ConnFactory,
     x_razorpay_signature: Annotated[str | None, Header()] = None,
     x_razorpay_event_id: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any]:
@@ -316,14 +316,16 @@ async def razorpay_webhook(
     if not isinstance(event, dict):
         raise HTTPException(status_code=400, detail="body is not a JSON object")
 
-    result = ingest_event(
-        conn,
-        event=event,
-        event_id=x_razorpay_event_id,
-        raw_body=body,
-        received_at=int(time.time()),
-        verified=True,
-        settings=settings,
+    # Everything above ran on the event loop thread and touched no database. Everything below
+    # runs in the thread pool, on that thread's own connection.
+    result = await run_in_threadpool(
+        _ingest_sync,
+        connection_factory,
+        event,
+        x_razorpay_event_id,
+        body,
+        True,
+        settings,
     )
 
     response.status_code = 200
@@ -337,7 +339,7 @@ async def razorpay_webhook(
 
 async def razorpay_replay_unsigned(
     request: Request,
-    conn: ConnDep,
+    connection_factory: ConnFactory,
     x_razorpay_event_id: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any]:
     """Unsigned replay. Registered only when SALVAGE_ENV=dev; see build_router."""
@@ -352,16 +354,36 @@ async def razorpay_replay_unsigned(
         event = json.loads(body)
     except json.JSONDecodeError as exc:
         raise HTTPException(status_code=400, detail="body is not JSON") from exc
-    result = ingest_event(
-        conn,
-        event=event,
-        event_id=x_razorpay_event_id,
-        raw_body=body,
-        received_at=int(time.time()),
-        verified=False,
-        settings=settings,
+    result = await run_in_threadpool(
+        _ingest_sync,
+        connection_factory,
+        event,
+        x_razorpay_event_id,
+        body,
+        False,
+        settings,
     )
     return {"event_id": result.event_id, "duplicate": result.duplicate, "acted": result.acted}
+
+
+def _ingest_sync(
+    connection_factory: Callable[[], Any],
+    event: dict[str, Any],
+    event_id: str,
+    body: bytes,
+    verified: bool,
+    settings: Settings,
+) -> IngestResult:
+    """Runs in a thread pool thread. Acquires that thread's connection and uses it there."""
+    return ingest_event(
+        connection_factory(),
+        event=event,
+        event_id=event_id,
+        raw_body=body,
+        received_at=int(time.time()),
+        verified=verified,
+        settings=settings,
+    )
 
 
 def build_router(*, include_dev_replay: bool) -> APIRouter:

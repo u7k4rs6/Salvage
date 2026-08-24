@@ -38,6 +38,7 @@ DEFAULT_SCENARIOS = ("S0", "S1", "S2", "S3", "S4")
 class CalibrationRow:
     scenario: str
     seed: int
+    variant: str
     eval_days: int
     attempts: int
     incidents_opened: int
@@ -59,6 +60,7 @@ def run_one(
     thresholds: Thresholds = FROZEN,
     params_path: Path | str | None = None,
     workdir: Path | None = None,
+    variant: str = "peak",
 ) -> CalibrationRow:
     """One scenario at one seed, in its own database."""
     own_workdir = workdir is None
@@ -68,9 +70,17 @@ def run_one(
         conn = open_migrated(db_path)
         try:
             sim = run_scenario(
-                conn, scenario=scenario, seed=seed, days=days, params_path=params_path
+                conn,
+                scenario=scenario,
+                seed=seed,
+                days=days,
+                params_path=params_path,
+                variant=variant,
             )
-            eval_days = max(1, (sim.sim_end - sim.eval_day_start) // 86400 + 1)
+            # The detector runs over the evaluation days only. The settlement tail carries organic
+            # retries and, from M2, link payments; it creates no new orders, so evaluating the
+            # detector over it would measure a day of traffic that does not exist.
+            eval_days = days if days is not None else _params_eval_days(params_path)
             report = detect(
                 conn,
                 eval_start=sim.eval_day_start,
@@ -99,6 +109,7 @@ def run_one(
             return CalibrationRow(
                 scenario=scenario,
                 seed=seed,
+                variant=variant,
                 eval_days=eval_days,
                 attempts=sim.attempts,
                 incidents_opened=len(report.opened),
@@ -125,6 +136,7 @@ def calibrate(
     days: int | None = None,
     thresholds: Thresholds = FROZEN,
     params_path: Path | str | None = None,
+    variant: str = "peak",
 ) -> list[CalibrationRow]:
     scenarios = scenarios or list(DEFAULT_SCENARIOS)
     workdir = make_workdir()
@@ -137,12 +149,20 @@ def calibrate(
                 thresholds=thresholds,
                 params_path=params_path,
                 workdir=workdir,
+                variant=variant,
             )
             for scenario in scenarios
             for seed in seeds
         ]
     finally:
         shutil.rmtree(workdir, ignore_errors=True)
+
+
+def _params_eval_days(params_path: Path | str | None) -> int:
+    from salvage.sim.params import default_params, load
+
+    params = load(params_path) if params_path else default_params()
+    return params.eval_days
 
 
 def make_workdir() -> Path:

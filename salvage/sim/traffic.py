@@ -71,11 +71,20 @@ class GeneratedAttempt:
 
     entity: dict[str, Any]  # the Razorpay payment entity
     customer_id: str
+    order_id: str
+    order_index: int
     order_amount: int
     created_at: int
     failed: bool
     fault_caused: bool
     truth_cause: str  # a RootCause value, or "organic", or "none" for a success
+    # 0 for the first attempt on an order, 1 for the first organic retry, and so on.
+    retry_index: int = 0
+    error_reason: str | None = None
+
+    @property
+    def is_retry(self) -> bool:
+        return self.retry_index > 0
 
 
 class _ProfileSampler:
@@ -89,15 +98,24 @@ class _ProfileSampler:
         return self._entries[pick(self._table, draw)]
 
 
-def arrivals_per_minute(params: Params, day_start: int, rng: np.random.Generator) -> np.ndarray:
+def arrivals_per_minute(
+    params: Params,
+    day_start: int,
+    rng: np.random.Generator,
+    *,
+    scenario_id: str | None = None,
+) -> np.ndarray:
     """Poisson counts for each of a day's 1440 minutes.
 
     The diurnal weights are relative, so they are normalised here: the expected daily total is
     exactly attempts_per_day whatever the weights sum to.
+
+    Volume comes from params.attempts_per_day(scenario_id), never from the raw dict, because it is
+    a scenario parameter that M3's volume sweep overrides.
     """
     calendar = IstCalendar(params.ist_offset)
     weights = params.traffic["diurnal_weights"]
-    per_day = float(params.traffic["attempts_per_day"])
+    per_day = float(params.attempts_per_day(scenario_id))
     hourly = np.array([float(weights[h]) for h in range(24)])
     hourly = hourly / hourly.sum()
     minute_rate = np.empty(1440, dtype=float)
@@ -116,8 +134,10 @@ class TrafficGenerator:
         streams: Streams,
         customers: list[SimCustomer],
         catalogue: list[Sku],
+        scenario_id: str | None = None,
     ) -> None:
         self._params = params
+        self._scenario_id = scenario_id
         self._streams = streams
         self._customers = customers
         self._catalogue = catalogue
@@ -129,6 +149,7 @@ class TrafficGenerator:
         }
         self._fault_samplers: dict[int, _ProfileSampler] = {}
         self._counter = 0
+        self._order_counter = 0
 
     def _fault_sampler(self, fault: ScheduledFault) -> _ProfileSampler:
         """One sampler per fault, built once. Building it per attempt showed up as the hottest
@@ -229,7 +250,9 @@ class TrafficGenerator:
         self, day_start: int, scheduled: list[ScheduledFault]
     ) -> Iterator[GeneratedAttempt]:
         """One simulated day of attempts, in time order."""
-        arrivals = arrivals_per_minute(self._params, day_start, self._streams.arrivals)
+        arrivals = arrivals_per_minute(
+            self._params, day_start, self._streams.arrivals, scenario_id=self._scenario_id
+        )
         total = int(arrivals.sum())
         if total == 0:
             return
@@ -257,43 +280,33 @@ class TrafficGenerator:
                 )
                 index += 1
 
-    def _one(
+    def _resolve_outcome(
         self,
         *,
         ts: int,
         customer: SimCustomer,
-        sku: Sku,
-        amount_jitter: float,
         failure_draw: float,
         profile_draw: float,
         scheduled: list[ScheduledFault],
-    ) -> GeneratedAttempt:
-        self._counter += 1
-        serial = self._counter
-        payment_id = f"pay_sim{serial:012d}"
-        order_id = f"order_sim{serial:012d}"
+    ) -> tuple[bool, bool, str, ErrorProfileEntry | None]:
+        """Did this attempt fail, was the fault to blame, and with which error.
 
-        # Order value: the SKU price pulled toward the customer's typical spend, so a customer's
-        # basket has a persistent level. Clamped to the catalogue bounds.
-        merchant = self._params.merchant
-        blended = 0.6 * sku.amount + 0.4 * customer.typical_amount
-        amount = int(round(blended * float(np.exp(amount_jitter))))
-        amount = max(int(merchant["sku_min_paise"]), min(int(merchant["sku_max_paise"]), amount))
-
-        instrument = self._instrument_fields(customer)
+        Shared by first attempts and by organic retries, so a retry made while the rail is still
+        broken fails for the same reason the first attempt did. That is the behaviour that makes
+        nudging into a dead rail expensive.
+        """
+        instrument = customer.preferred
         selector_view = {
-            "method": instrument["method"],
-            "upi_handle": customer.preferred.upi_handle,
-            "card_bin": customer.preferred.card_bin,
-            "card_issuer": customer.preferred.card_issuer,
-            "card_network": customer.preferred.card_network,
-            "nb_bank": customer.preferred.nb_bank,
-            "wallet": customer.preferred.wallet,
+            "method": instrument.method,
+            "upi_handle": instrument.upi_handle,
+            "card_bin": instrument.card_bin,
+            "card_issuer": instrument.card_issuer,
+            "card_network": instrument.card_network,
+            "nb_bank": instrument.nb_bank,
+            "wallet": instrument.wallet,
         }
-
         fault = active_fault(scheduled, ts, selector_view)
-        method = instrument["method"]
-        organic_rate = float(self._organic_rate[method])
+        organic_rate = float(self._organic_rate[instrument.method])
 
         if fault is not None:
             if fault.fault.additive:
@@ -307,25 +320,8 @@ class TrafficGenerator:
         else:
             rate, fault_share = organic_rate, 0.0
 
-        failed = failure_draw < rate
-        if not failed:
-            entity = self._entity(
-                payment_id=payment_id,
-                order_id=order_id,
-                amount=amount,
-                created_at=ts,
-                instrument=instrument,
-                failure=None,
-            )
-            return GeneratedAttempt(
-                entity=entity,
-                customer_id=customer.customer_id,
-                order_amount=amount,
-                created_at=ts,
-                failed=False,
-                fault_caused=False,
-                truth_cause="none",
-            )
+        if failure_draw >= rate:
+            return False, False, "none", None
 
         # A failure inside a fault window is attributed to the fault with probability
         # fault_share, which is 1.0 for a replacing fault and the excess share for an additive
@@ -336,26 +332,110 @@ class TrafficGenerator:
             sampler = self._fault_sampler(fault)
             truth_cause = fault.fault.truth_cause
         else:
-            sampler = self._organic_samplers[method]
+            sampler = self._organic_samplers[instrument.method]
             truth_cause = "organic"
+        return True, fault_caused, truth_cause, sampler.pick(profile_draw)
 
-        failure = sampler.pick(profile_draw)
+    def _one(
+        self,
+        *,
+        ts: int,
+        customer: SimCustomer,
+        sku: Sku,
+        amount_jitter: float,
+        failure_draw: float,
+        profile_draw: float,
+        scheduled: list[ScheduledFault],
+    ) -> GeneratedAttempt:
+        self._counter += 1
+        self._order_counter += 1
+        order_index = self._order_counter
+        payment_id = f"pay_sim{self._counter:012d}"
+        order_id = f"order_sim{order_index:012d}"
+
+        # Order value: the SKU price pulled toward the customer's typical spend, so a customer's
+        # basket has a persistent level. Clamped to the catalogue bounds.
+        merchant = self._params.merchant
+        blended = 0.6 * sku.amount + 0.4 * customer.typical_amount
+        amount = int(round(blended * float(np.exp(amount_jitter))))
+        amount = max(int(merchant["sku_min_paise"]), min(int(merchant["sku_max_paise"]), amount))
+
+        failed, fault_caused, truth_cause, failure = self._resolve_outcome(
+            ts=ts,
+            customer=customer,
+            failure_draw=failure_draw,
+            profile_draw=profile_draw,
+            scheduled=scheduled,
+        )
         entity = self._entity(
             payment_id=payment_id,
             order_id=order_id,
             amount=amount,
             created_at=ts,
-            instrument=instrument,
+            instrument=self._instrument_fields(customer),
             failure=failure,
         )
         return GeneratedAttempt(
             entity=entity,
             customer_id=customer.customer_id,
+            order_id=order_id,
+            order_index=order_index,
             order_amount=amount,
             created_at=ts,
-            failed=True,
+            failed=failed,
             fault_caused=fault_caused,
             truth_cause=truth_cause,
+            retry_index=0,
+            error_reason=failure.reason if failure else None,
+        )
+
+    def retry(
+        self,
+        *,
+        ts: int,
+        customer: SimCustomer,
+        order_id: str,
+        order_index: int,
+        amount: int,
+        retry_index: int,
+        failure_draw: float,
+        profile_draw: float,
+        scheduled: list[ScheduledFault],
+    ) -> GeneratedAttempt:
+        """A later attempt on an existing order, same customer, same instrument.
+
+        This is what makes attempts exceed orders. The customer is trying the rail they always
+        use, so if that rail is still broken the retry fails for the same reason.
+        """
+        self._counter += 1
+        payment_id = f"pay_sim{self._counter:012d}"
+        failed, fault_caused, truth_cause, failure = self._resolve_outcome(
+            ts=ts,
+            customer=customer,
+            failure_draw=failure_draw,
+            profile_draw=profile_draw,
+            scheduled=scheduled,
+        )
+        entity = self._entity(
+            payment_id=payment_id,
+            order_id=order_id,
+            amount=amount,
+            created_at=ts,
+            instrument=self._instrument_fields(customer),
+            failure=failure,
+        )
+        return GeneratedAttempt(
+            entity=entity,
+            customer_id=customer.customer_id,
+            order_id=order_id,
+            order_index=order_index,
+            order_amount=amount,
+            created_at=ts,
+            failed=failed,
+            fault_caused=fault_caused,
+            truth_cause=truth_cause,
+            retry_index=retry_index,
+            error_reason=failure.reason if failure else None,
         )
 
 

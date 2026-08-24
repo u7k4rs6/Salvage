@@ -30,22 +30,33 @@ class ScheduledFault:
 
 
 def schedule(
-    scenario: Scenario, params: Params, *, eval_day_start: int, seed: int
+    scenario: Scenario,
+    params: Params,
+    *,
+    eval_day_start: int,
+    seed: int,
+    variant: str = "peak",
 ) -> list[ScheduledFault]:
     """Place a scenario's faults on the sim clock.
 
     start_minute is minutes into the evaluation day in IST, and eval_day_start is already the IST
     midnight of that day, so the arithmetic is a plain addition.
 
+    A variant moves every fault to a different time of day without changing anything else about
+    it, so the same fault can be measured at a different traffic volume. See fault_variants in
+    sim/params.yaml.
+
     The seed-dependent jitter keeps five seeds from breaking at the same minute. It is derived
     from the seed alone, not from a random stream, so it does not consume draws that the world
     streams rely on and cannot shift customers or arrivals.
     """
     jitter_span = params.fault_start_jitter_minutes
+    override = params.variant(variant).get("start_minute_override")
     scheduled: list[ScheduledFault] = []
     for index, fault in enumerate(scenario.faults):
         jitter = ((seed * 37 + index * 13) % (jitter_span + 1)) if jitter_span > 0 else 0
-        start = eval_day_start + (fault.start_minute + jitter) * 60
+        start_minute = fault.start_minute if override is None else int(override)
+        start = eval_day_start + (start_minute + jitter) * 60
         scheduled.append(
             ScheduledFault(
                 fault=fault,

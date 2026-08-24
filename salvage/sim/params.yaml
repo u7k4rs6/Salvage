@@ -23,6 +23,13 @@ clock:
   # The warm-up exists so the detector's trailing-seven-day hour-band baseline has data.
   warmup_days: 7
   eval_days: 1
+  # Settlement days after the evaluation day. No new orders are created; organic retries and, from
+  # M2, recovery-link payments that were scheduled during the evaluation day land here.
+  # Assumption: an organic retry can be up to 24 hours after the failure that caused it and a
+  # recovery link lives for the 72 hour per-order TTL, so without a settlement tail the last
+  # evening's failures would be counted as unrecovered purely because the simulation stopped. Set
+  # to 3 days so a full TTL fits.
+  settle_days: 3
 
 merchant:
   name: "Kettle and Cloth"
@@ -59,6 +66,10 @@ merchant:
   typical_amount_lognormal_sigma: 0.55
 
 traffic:
+  # attempts_per_day is a scenario parameter, never a constant: M3 runs a volume sweep over it,
+  # so nothing in salvage/sim/ may assume this value. A scenario can override it under
+  # scenarios.<id>.overrides.traffic.attempts_per_day.
+  #
   # Architecture section 9 says "about 1,500 attempts per day". This project uses 12,000.
   #
   # Why: the detector in Architecture section 5 requires at least 20 attempts in a 15-minute
@@ -229,15 +240,47 @@ response:
   organic_retry_delay_lognormal_sigma: 1.30
   organic_retry_max_minutes: 1440
 
-  # M2 only. Listed here now so the instrument is legible as a whole; nothing in M1 reads them.
-  # All four are from Architecture section 9.
+  # An organic retry is a real payment attempt on the same order, using the same instrument the
+  # customer already prefers. It therefore fails again if the rail is still broken, which is the
+  # whole reason cause-aware timing is worth anything: nudging a customer back into a dead rail
+  # spends their patience for nothing. This is also why attempts exceed orders in a run.
+  #
+  # Architecture section 9 describes a single retry probability. A real customer tries more than
+  # once, so the chain is bounded rather than singular: each failed attempt on an order draws
+  # again with the probability decayed, up to max_organic_retries, and the whole chain must fit
+  # inside organic_retry_max_minutes of the first failure.
+  # Assumption: three attempts total is the point where a customer gives up on a store. The decay
+  # is judgement, and it is one of the parameters the M3 sensitivity sweep moves.
+  max_organic_retries: 3
+  repeat_retry_decay: 0.55
+
+  # The chain's draws are keyed by order, not taken in sequence from one stream. An order that a
+  # recovery link pays never makes its organic retries, so a sequential stream would shift every
+  # later order's draws the moment a policy acted and the agent and the baselines would stop
+  # facing the same customers. Keying by order index makes the counterfactual for an order depend
+  # on the order alone. See salvage/sim/rng.py.
+
+  # Intervention multipliers, all from Architecture section 9. Applied to the organic probability
+  # for the order, then capped. The cap is on the resulting probability, not on the multiplier,
+  # because "capped at 0.8" in the document is a claim about how likely a customer can be made to
+  # come back, which is a probability.
   m2_multipliers:
-    nudge_while_method_still_failing: 0.30     # and raises opt-out probability
+    # A nudge that pushes the customer back into a rail that is still broken. It wastes the
+    # contact and annoys them, which is the behaviour the whole product is built to avoid.
+    nudge_while_method_still_failing: 0.30
+    # A nudge after the rail recovered, or one that offers a working alternate method.
     nudge_after_recovery_or_with_alternate: 2.20
     nudge_multiplier_cap: 0.80
+    # A live checkout steer during the failing session. Fixed probability, not a multiplier.
     live_checkout_steer_during_failing_session: 0.55
     second_nudge_multiplier: 0.50
     decay_time_constant_hours: 12
+    # Architecture section 9 says a nudge into a still-failing method "raises the opt-out
+    # probability" without giving numbers. Assumption: a well-timed message annoys about one
+    # customer in fifty, a badly timed one about one in eight. Both are judgement and both are in
+    # the M3 sensitivity sweep.
+    opt_out_probability_base: 0.02
+    opt_out_probability_still_failing: 0.12
   # The adversarial parameter set from docs/01_PRD.md section 12, kept here so M3 does not invent
   # its own numbers: p_organic 0.6 everywhere and every multiplier 1.0.
   m2_adversarial:
@@ -347,6 +390,24 @@ scenarios:
           - { reason: insufficient_funds, source: customer, step: payment_authorization,  weight: 0.40 }
           - { reason: incorrect_otp,      source: customer, step: payment_authentication, weight: 0.35 }
           - { reason: payment_cancelled,  source: customer, step: payment_authentication, weight: 0.25 }
+
+# Fault variants. A variant moves every fault in a scenario to a different time of day without
+# changing anything else about it, so the same fault can be measured at a different traffic volume.
+#
+# Faults are scheduled in the evening peak by default. That is the realistic case, since rail
+# degradation is most likely and most expensive when volume is highest, but it is also the
+# best case for a detector, because time to detect is a function of volume. The offpeak variant
+# exists so docs/RESULTS.md can report a range rather than a best case. Nothing is tuned against
+# it: the thresholds were frozen before it existed.
+fault_variants:
+  peak:
+    description: "Fault at its scenario's own start_minute, in the 19:00 to 21:00 IST peak."
+    start_minute_override: null
+  offpeak:
+    description: "The same fault moved to 03:30 IST, the overnight trough."
+    # 03:30 IST. The diurnal curve's minimum is the 03:00 and 04:00 hours, at 0.08 relative weight
+    # against an evening peak of 2.60, so this is about one thirtieth of the peak arrival rate.
+    start_minute_override: 210
 
 # Seed-dependent jitter applied to every fault's start_minute, so five seeds do not break at the
 # same wall-clock minute. Assumption: onset jitter tests the detector's independence from a

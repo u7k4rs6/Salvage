@@ -21,7 +21,7 @@ import hashlib
 import numpy as np
 
 # Substreams whose values must be identical across policies for the same seed.
-WORLD_STREAMS = ("customers", "arrivals", "attempts", "response")
+WORLD_STREAMS = ("customers", "arrivals", "attempts", "response", "intervention")
 
 
 def _stream_id(name: str) -> int:
@@ -33,6 +33,21 @@ def _stream_id(name: str) -> int:
 def substream(seed: int, name: str) -> np.random.Generator:
     """A generator for one named stream of one seed."""
     return np.random.default_rng([int(seed), _stream_id(name)])
+
+
+def order_stream(seed: int, name: str, order_index: int) -> np.random.Generator:
+    """A generator for one order's draws inside one named stream.
+
+    Per-order rather than sequential, and this matters. An order that a recovery link pays never
+    makes the organic retries it would have made, so a stream consumed in sequence would shift
+    every later order's draws the moment a policy acted, and the agent and the baselines would
+    stop facing the same customers. Keying on the order index makes an order's counterfactual
+    depend on that order alone, whatever any policy did to any other order.
+
+    The order index is assigned by the traffic generator in world order, so it is the same for
+    every policy at a given seed.
+    """
+    return np.random.default_rng([int(seed), _stream_id(name), int(order_index)])
 
 
 class Streams:
