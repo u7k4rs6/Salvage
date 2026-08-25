@@ -3,21 +3,20 @@
 Generated 25 August 2026 from run `main`. Every table in this document was produced by
 `salvage eval run` and its raw output is in `data/results/main.json`.
 
-Read the two limitations at the top before the numbers, because they change what the numbers mean.
+Read the provenance and the limits at the top before the numbers, because they change what the
+numbers mean.
 
-## What is measured and what is not
+## Where the agent's answers came from
 
-**The agent arm has no diagnosis model, so it takes no customer-facing action.** The action
-threshold in Architecture section 7 is a confidence of 0.6, and a rules-only diagnosis is assigned
-0.5, deliberately: the rules are good enough to describe an incident to a human and not good
-enough to act on unsupervised. With no LLM configured every incident therefore escalates and the
-agent's recovered revenue equals B0's, because both recover only what customers do on their own.
-**The agent column below is that no-model configuration, not the agent the product describes.**
+**The agent arm is measured, from fixtures recorded blind.** Rules-only against a recorded model. 82 fixture(s): 82 from gemini model `gemini-2.5-flash`.
 
-**The LLM arm is unmeasured.** M2 shipped 46 diagnosis fixtures written by the same model that was
-being evaluated, with the scenario labels visible to its author. They were deleted in M3 and no
-number was ever taken from them. Refilling `salvage/llm/fixtures/` from a live provider is a single
-command, and the isolation is enforced in the code path rather than by discipline:
+The recording is blind in the code path rather than by discipline. `prompts_for_recording` builds
+each evidence packet through `build_for_incident`, the same call the agent makes, which reads the
+`v_*` views and therefore cannot reach `truth_cause` or any `sim_truth_*` table. It hands the
+provider a `PromptForRecording`, a type carrying the prompt and its hash and nothing else, so the
+scenario label is absent rather than merely unused, and `assert_blind` refuses any prompt in which
+a scenario id, a seed or a cause name appears. The rules classifier is not run while recording, so
+the model's answer cannot be anchored on it. The commands are:
 
 ```
 export GEMINI_API_KEY=...
@@ -25,16 +24,14 @@ uv run salvage diagnose record-fixtures --scenarios S1,S2,S3,S4 --seeds 0..9 --p
 uv run salvage eval run --seeds 0..9 --policies agent,B0,B1,B2 --provider fixture --write-report
 ```
 
-Until that has been run, what this document measures honestly is the three baselines against each
-other, the detector, the policy engine and the fault-injection surface. What it does not measure is
-whether an LLM-assisted agent beats them.
-
-**The diagnosis ablation is rules-only.** The LLM column is absent rather than estimated.
+**The 46 fixtures M2 shipped are not these.** Those were written by the model being evaluated with
+the scenario labels visible to its author. They were deleted in M3, no number was ever taken from
+them, and nothing in this document descends from them.
 
 **There is no rules-only policy arm and there should not be.** The ablation below measures
 classification, not action. Reading it as a policy comparison would be a mistake: a rules-only
-diagnosis never clears the action threshold, so such an arm would escalate everything and recover
-nothing.
+diagnosis is assigned 0.5 confidence against a 0.6 action threshold, so such an arm would escalate
+everything and recover nothing.
 
 ## 1. Primary: recovered revenue over the at-risk order set
 
@@ -47,9 +44,9 @@ Revenue is never shown without contact volume beside it. A policy that recovers 
 | scenario | at-risk orders | agent | B0 | B1 | B2 |
 |---|---|---|---|---|---|
 | S0 | 0 | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg |
-| S1 | 262 | 93,946.82 / 0 msg | 93,946.82 / 0 msg | 1,47,796.78 / 164 msg | 1,75,050.25 / 261 msg |
-| S2 | 153 | 50,094.51 / 0 msg | 50,094.51 / 0 msg | 79,262.89 / 88 msg | 93,254.58 / 140 msg |
-| S3 | 551 | 3,01,759.77 / 0 msg | 3,01,759.77 / 0 msg | 4,20,743.45 / 312 msg | 4,72,828.40 / 492 msg |
+| S1 | 262 | 2,21,154.50 / 83 msg | 93,946.82 / 0 msg | 1,47,796.78 / 164 msg | 1,75,050.25 / 261 msg |
+| S2 | 153 | 1,20,064.92 / 44 msg | 50,094.51 / 0 msg | 79,262.89 / 88 msg | 93,254.58 / 140 msg |
+| S3 | 551 | 4,78,668.36 / 422 msg | 3,01,759.77 / 0 msg | 4,20,743.45 / 312 msg | 4,72,828.40 / 492 msg |
 | S4 | 300 | 90,128.09 / 0 msg | 90,128.09 / 0 msg | 1,57,696.44 / 178 msg | 1,65,041.30 / 272 msg |
 
 Opt-outs are counted over the whole run rather than over the at-risk set, and are shown separately for that reason. The simulator draws an opt-out when a message is sent, and a policy sends to orders inside and outside the at-risk set alike, so there is no honest way to attribute an opt-out to one population. Every message a policy sends can produce one, which is the number that matters when judging contact volume.
@@ -57,9 +54,9 @@ Opt-outs are counted over the whole run rather than over the at-risk set, and ar
 | scenario | agent msg / opt-out | B0 msg / opt-out | B1 msg / opt-out | B2 msg / opt-out |
 |---|---|---|---|---|
 | S0 | 0 / 0 | 0 / 0 | 878 / 19 | 1056 / 23 |
-| S1 | 0 / 0 | 0 / 0 | 1026 / 33 | 1296 / 29 |
-| S2 | 0 / 0 | 0 / 0 | 951 / 26 | 1176 / 27 |
-| S3 | 0 / 0 | 0 / 0 | 1111 / 39 | 1436 / 35 |
+| S1 | 90 / 1 | 0 / 0 | 1026 / 33 | 1296 / 29 |
+| S2 | 49 / 1 | 0 / 0 | 951 / 26 | 1176 / 27 |
+| S3 | 552 / 13 | 0 / 0 | 1111 / 39 | 1436 / 35 |
 | S4 | 0 / 0 | 0 / 0 | 1017 / 31 | 1275 / 31 |
 
 Recovery rate over the at-risk set:
@@ -67,9 +64,9 @@ Recovery rate over the at-risk set:
 | scenario | agent | B0 | B1 | B2 |
 |---|---|---|---|---|
 | S0 | 0.000 | 0.000 | 0.000 | 0.000 |
-| S1 | 0.194 | 0.194 | 0.305 | 0.364 |
-| S2 | 0.176 | 0.176 | 0.277 | 0.331 |
-| S3 | 0.296 | 0.296 | 0.411 | 0.465 |
+| S1 | 0.477 | 0.194 | 0.305 | 0.364 |
+| S2 | 0.441 | 0.176 | 0.277 | 0.331 |
+| S3 | 0.467 | 0.296 | 0.411 | 0.465 |
 | S4 | 0.152 | 0.152 | 0.272 | 0.287 |
 
 ### What a message costs here, and what it does not
@@ -91,9 +88,9 @@ This is secondary, and the S0 row says why. S0 has no fault at all, and a link-s
 | scenario | agent | B0 | B1 | B2 |
 |---|---|---|---|---|
 | S0 | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 16,06,269.96 +/- 2,36,648.25 / 878 msg / 19 opt-out | 15,92,749.07 +/- 2,33,011.34 / 1056 msg / 23 opt-out |
-| S1 | 9,71,510.97 +/- 1,49,144.62 / 0 msg / 0 opt-out | 9,71,510.97 +/- 1,49,144.62 / 0 msg / 0 opt-out | 17,20,538.42 +/- 2,58,270.52 / 1026 msg / 33 opt-out | 17,29,528.48 +/- 2,53,398.64 / 1296 msg / 29 opt-out |
-| S2 | 9,29,264.42 +/- 1,50,027.09 / 0 msg / 0 opt-out | 9,29,264.42 +/- 1,50,027.09 / 0 msg / 0 opt-out | 16,55,171.60 +/- 2,49,836.27 / 951 msg / 26 opt-out | 16,51,203.57 +/- 2,47,574.88 / 1176 msg / 27 opt-out |
-| S3 | 10,99,885.26 +/- 1,84,025.99 / 0 msg / 0 opt-out | 10,99,885.26 +/- 1,84,025.99 / 0 msg / 0 opt-out | 18,74,640.11 +/- 3,03,994.99 / 1111 msg / 39 opt-out | 18,92,941.10 +/- 2,98,122.66 / 1436 msg / 35 opt-out |
+| S1 | 11,03,478.46 +/- 1,82,018.35 / 90 msg / 1 opt-out | 9,71,510.97 +/- 1,49,144.62 / 0 msg / 0 opt-out | 17,20,538.42 +/- 2,58,270.52 / 1026 msg / 33 opt-out | 17,29,528.48 +/- 2,53,398.64 / 1296 msg / 29 opt-out |
+| S2 | 10,02,862.78 +/- 1,66,415.87 / 49 msg / 1 opt-out | 9,29,264.42 +/- 1,50,027.09 / 0 msg / 0 opt-out | 16,55,171.60 +/- 2,49,836.27 / 951 msg / 26 opt-out | 16,51,203.57 +/- 2,47,574.88 / 1176 msg / 27 opt-out |
+| S3 | 13,35,051.32 +/- 2,25,614.66 / 552 msg / 13 opt-out | 10,99,885.26 +/- 1,84,025.99 / 0 msg / 0 opt-out | 18,74,640.11 +/- 3,03,994.99 / 1111 msg / 39 opt-out | 18,92,941.10 +/- 2,98,122.66 / 1436 msg / 35 opt-out |
 | S4 | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 16,92,541.01 +/- 2,61,694.87 / 1017 msg / 31 opt-out | 16,82,976.85 +/- 2,49,252.64 / 1275 msg / 31 opt-out |
 
 ## 3. Decomposition
@@ -111,15 +108,15 @@ reading its organic column against another arm's link column compares a whole to
 | S1 | B0 | 521.5 | 0.0 | 0.0 | 521.5 | 0 |
 | S1 | B1 | 950.3 | 463.3 | 0.0 | 487.0 | 1026 |
 | S1 | B2 | 948.6 | 443.1 | 0.0 | 505.5 | 1296 |
-| S1 | agent | 521.5 | 0.0 | 0.0 | 521.5 | 0 |
+| S1 | agent | 598.0 | 18.7 | 72.4 | 506.9 | 90 |
 | S2 | B0 | 498.5 | 0.0 | 0.0 | 498.5 | 0 |
 | S2 | B1 | 914.1 | 449.6 | 0.0 | 464.5 | 951 |
 | S2 | B2 | 905.7 | 423.2 | 0.0 | 482.5 | 1176 |
-| S2 | agent | 498.5 | 0.0 | 0.0 | 498.5 | 0 |
+| S2 | agent | 540.6 | 10.3 | 38.3 | 492.0 | 49 |
 | S3 | B0 | 590.3 | 0.0 | 0.0 | 590.3 | 0 |
 | S3 | B1 | 1031.4 | 474.6 | 0.0 | 556.8 | 1111 |
 | S3 | B2 | 1036.3 | 461.2 | 0.0 | 575.1 | 1436 |
-| S3 | agent | 590.3 | 0.0 | 0.0 | 590.3 | 0 |
+| S3 | agent | 714.8 | 124.5 | 0.0 | 590.3 | 552 |
 | S4 | B0 | 503.9 | 0.0 | 0.0 | 503.9 | 0 |
 | S4 | B1 | 930.8 | 460.5 | 0.0 | 470.3 | 1017 |
 | S4 | B2 | 919.1 | 431.0 | 0.0 | 488.1 | 1275 |
@@ -136,19 +133,19 @@ reading its organic column against another arm's link column compares a whole to
 | S1 | B0 | 0.301 | 0.194 | 0.00 | 0.0 | 10/10 | 5.4 | 0 |
 | S1 | B1 | 0.549 | 0.305 | 0.61 | 0.0 | 10/10 | 5.4 | 0 |
 | S1 | B2 | 0.548 | 0.364 | 0.77 | 0.0 | 10/10 | 5.4 | 0 |
-| S1 | agent | 0.301 | 0.194 | 0.00 | 2.0 | 10/10 | 5.4 | 0 |
+| S1 | agent | 0.346 | 0.477 | 0.08 | 0.2 | 10/10 | 5.4 | 0 |
 | S2 | B0 | 0.307 | 0.176 | 0.00 | 0.0 | 10/10 | 8.6 | 0 |
 | S2 | B1 | 0.564 | 0.277 | 0.59 | 0.0 | 10/10 | 8.6 | 0 |
 | S2 | B2 | 0.558 | 0.331 | 0.73 | 0.0 | 10/10 | 8.6 | 0 |
-| S2 | agent | 0.307 | 0.176 | 0.00 | 2.0 | 10/10 | 8.6 | 0 |
+| S2 | agent | 0.333 | 0.441 | 0.05 | 0.4 | 10/10 | 8.6 | 0 |
 | S3 | B0 | 0.312 | 0.296 | 0.00 | 0.0 | 10/10 | 7.0 | 0 |
 | S3 | B1 | 0.544 | 0.411 | 0.61 | 0.0 | 10/10 | 7.0 | 0 |
 | S3 | B2 | 0.547 | 0.465 | 0.78 | 0.0 | 10/10 | 7.0 | 0 |
-| S3 | agent | 0.312 | 0.296 | 0.00 | 2.2 | 10/10 | 7.0 | 0 |
+| S3 | agent | 0.377 | 0.467 | 0.42 | 1.1 | 10/10 | 7.0 | 0 |
 | S4 | B0 | 0.291 | 0.152 | 0.00 | 0.0 | 10/10 | 9.5 | 0 |
 | S4 | B1 | 0.538 | 0.272 | 0.62 | 0.0 | 10/10 | 9.5 | 0 |
 | S4 | B2 | 0.531 | 0.287 | 0.78 | 0.0 | 10/10 | 9.5 | 0 |
-| S4 | agent | 0.291 | 0.152 | 0.00 | 2.0 | 10/10 | 9.5 | 0 |
+| S4 | agent | 0.291 | 0.152 | 0.00 | 1.0 | 10/10 | 9.5 | 0 |
 
 ## 5. Identical worlds
 
@@ -214,14 +211,25 @@ All 50 worlds identical across all 4 policy arms.
 
 ## 6. Diagnosis ablation
 
-Rules-only. The LLM column is unmeasured: the fixtures M2 shipped were written by the model being evaluated, with the scenario labels visible, and were deleted in M3. See salvage/llm/fixtures/README.md.
+Rules-only against a recorded model. 82 fixture(s): 82 from gemini model `gemini-2.5-flash`.
 
-| scenario | incidents | seeds | rules-only accuracy | LLM-assisted |
-|---|---|---|---|---|
-| S1 | 10 | 10 | 0.90 | unmeasured |
-| S2 | 10 | 10 | 0.80 | unmeasured |
-| S3 | 11 | 10 | 0.91 | unmeasured |
-| S4 | 10 | 10 | 1.00 | unmeasured |
+The reconciled column is the one the agent acts on. A rules verdict and a model verdict that agree raise confidence, a disagreement lowers it, and anything below 0.6 escalates rather than acting. Reading the LLM column alone would credit the model for an answer the agent would not have used.
+
+| scenario | incidents | seeds | rules-only | LLM | reconciled |
+|---|---|---|---|---|---|
+| S1 | 10 | 10 | 0.90 | 1.00 | 1.00 |
+| S2 | 10 | 10 | 0.80 | 1.00 | 1.00 |
+| S3 | 11 | 10 | 0.91 | 0.91 | 0.91 |
+| S4 | 10 | 10 | 1.00 | 1.00 | 1.00 |
+
+The same table over the held-out seeds 5 to 9 alone. The detector's thresholds were frozen before those seeds were ever looked at (`docs/BUILD_LOG.md`, M2 carry-over 2). The model column is held out on every seed, because nothing about the model was tuned on any of them, but reporting the same split for both columns keeps them comparable.
+
+| scenario | incidents | seeds | rules-only | LLM | reconciled |
+|---|---|---|---|---|---|
+| S1 | 5 | 5 | 0.80 | 1.00 | 1.00 |
+| S2 | 5 | 5 | 0.60 | 1.00 | 1.00 |
+| S3 | 6 | 5 | 0.83 | 0.83 | 0.83 |
+| S4 | 5 | 5 | 1.00 | 1.00 | 1.00 |
 
 Where the rules classifier falls back to `unknown`:
 
@@ -229,6 +237,10 @@ Where the rules classifier falls back to `unknown`:
 - S2 seed 8 on `card`: truth auth_failure_bin, rules said unknown
 - S2 seed 9 on `card`: truth auth_failure_bin, rules said unknown
 - S3 seed 8 on `card:card_network:Visa`: truth gateway_degradation, rules said unknown
+
+Where the model was wrong:
+
+- S3 seed 8 on `card:card_network:Visa`: truth gateway_degradation, model said unknown
 
 ## 7. Detector operating envelope
 
@@ -363,7 +375,17 @@ Every attempt, in the order the suite runs them:
 | webhook | event type outside the handled set | yes |  |
 | webhook | contact details in a webhook body reaching the ledger | yes | ledger carries ids and the outcome, never the body |
 
-## 11. The real end-to-end run
+## 11. Escalation to fix
+
+The escalation-fix sweep has not been run. It is not estimated here and no figure is given for it.
+
+To produce it:
+
+```
+uv run salvage eval escalation-fix --scenario S4 --seeds 0..4
+```
+
+## 12. The real end-to-end run
 
 Not yet run. It needs Razorpay test-mode credentials, which the build environment did not have.
 `scripts/e2e_real_link.py` is ready and refuses to run without them.
@@ -382,9 +404,11 @@ uv run salvage e2e verify
 | webhook event id | _to fill_ |
 | ledger sequence numbers | _to fill_ |
 
-## 12. Known limitations
+## 13. Known limitations
 
-- **The agent arm is unmeasured with a model.** See the top of this document. The measured agent column is the no-model configuration and equals B0 by construction.
+- **The escalation fix is modelled on the response side only.** The attempt stream is generated before any policy runs and is not rewritten, so payments the fault would have broken after a repair still fail in the recorded data and still count in the at-risk denominator. A real fix would stop them happening. Section 11 therefore understates what a fix is worth, and it understates it for the only arm that can trigger one. The alternative changes which orders exist per arm, which would break the identical order set that every comparison here rests on.
+- **Only an arm that escalates can be repaired.** B1 and B2 never escalate, so the fix curve is available to the agent and to nobody else. A real merchant might notice a dead payment method without an agent telling them, so part of that column may belong to the merchant rather than to Salvage.
+- **The LLM column is one model on one day.** Every fixture was recorded from a single provider and model, listed at the top of this document. A different model, or the same model next month, is a different measurement. Nothing here is an accuracy claim about language models in general.
 - **S2 at low segment volume attributes to `card` rather than to the failing BIN.** On held-out seeds 8 and 9 the BIN key never reaches the detector's 20-attempt minimum in a 15-minute window, so the incident is attributed to the whole card method, whose effect size is diluted by four healthy BIN ranges. Detection still happens, at 11 and 16 sim minutes rather than 5 to 8, and the rules classifier then cannot fire the `auth_failure_bin` rule because `card` is not one of the card dimensions that rule accepts. This is the operating envelope in section 6, not a separate defect.
 - **S3 seed 8 opens two incidents for one fault.** A merchant-wide gateway incident, and then a second on `card:card_network:Visa` about seventy minutes later, after the first closed. The attribution logic was left alone rather than fitted to a held-out seed. The cost is one duplicate incident in fifty runs.
 - **Time to detect is a function of segment volume, not of fault severity.** Both slow detections on the held-out seeds happened because the affected segment sat at or below the 20-attempt floor, not because the signal was weak. Section 7 gives the boundary.
