@@ -82,8 +82,8 @@ console above.
 Two things are measured and two are not, and `docs/RESULTS.md` says which is which at the top:
 
 - **Measured:** the three baselines against each other over the at-risk order set, the detector's
-  operating envelope, the policy engine (zero violations across 200 runs), and 41 fault injections
-  all refused.
+  operating envelope, the policy engine (zero violations across 200 runs), and 45 fault injection
+  attempts all refused.
 - **Not measured:** anything involving an LLM. No Gemini key and no local model were ever present
   in the build environment, the self-authored fixtures M2 shipped were deleted rather than reported
   from, and the agent arm therefore runs with no diagnosis model, escalates every incident and
