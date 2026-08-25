@@ -391,3 +391,15 @@ def test_a_fixture_miss_is_visible_afterwards_rather_than_only_at_the_call_site(
         provider._generate("system", "user", {"type": "object"}, "LLMDiagnosis")  # noqa: SLF001
     assert len(_fixture_misses(provider)) == 1
     assert _fixture_misses(None) == []
+
+
+def test_a_miss_that_has_since_been_filled_is_not_reported(tmp_path):
+    """The recording provider misses every prompt it records, by definition. Reporting those as a
+    problem would cry wolf on exactly the run whose job is to fix them."""
+    from salvage.cli import _fixture_misses
+
+    provider = FixtureProvider(tmp_path, strict=False)
+    provider.misses.append("abc123")
+    assert _fixture_misses(provider) == ["abc123"]
+    (tmp_path / "abc123.json").write_text("{}", encoding="utf-8")
+    assert _fixture_misses(provider) == []

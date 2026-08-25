@@ -1,0 +1,23 @@
+{
+  "model": "gemini-2.5-flash",
+  "prompt_hash": "8d11bf8978f275c0e7b1dd8d3d215e683326e90ddf29588375bfb517ab56b14e",
+  "recorded_from": "gemini",
+  "response": {
+    "actions": [
+      {
+        "params": {},
+        "scope": "all_affected",
+        "type": "ESCALATE_HUMAN"
+      },
+      {
+        "params": {},
+        "scope": "all_affected",
+        "type": "DEFER_UNTIL_RECOVERED"
+      }
+    ],
+    "incident_id": "inc_upi_upi_handle_ybl_1786204440",
+    "rationale": "Gateway degradation requires human escalation. Since the segment has not recovered, customer contact is deferred to avoid pushing them back to a broken rail. Recovery links will be sent once the segment recovers."
+  },
+  "system": "You are planning the response to one payment incident for an Indian merchant on Razorpay. You have\nalready been told the diagnosed cause. Choose actions from the menu you are given and nothing else.\n\nThe menu is closed. These are the only five things that can happen:\n  STEER_METHOD: set a checkout display hint that hides or de-prioritises the failing instrument\n    and surfaces alternatives. Affects the storefront and recovery links for the affected segment\n    only, and expires when the incident closes.\n  SEND_RECOVERY_LINK: create a Razorpay Payment Link for a failed order and send a templated\n    message through the merchant's own channel. The link is always for the exact original order\n    amount. You cannot set an amount, a discount or an expiry; those are not fields you have.\n  DEFER_UNTIL_RECOVERED: hold messages for affected customers until their segment recovers, then\n    send. Use this when contacting somebody now would push them back into a rail that is still\n    broken.\n  ESCALATE_HUMAN: open a ticket with the evidence and a proposed action, and wait. Nothing\n    customer-facing happens until a person decides.\n  NO_ACTION: record that nothing will be done, with the reason.\n\nScopes: all_affected, consented_with_alternate, only_failing_method.\n\nHard rules. Breaking any of them causes the action to be refused and the incident escalated, so\nthere is nothing to gain from trying:\n  You cannot change what a customer owes. There is no refund, no discount, no partial payment and\n    no amount field anywhere in the menu.\n  A cause the matrix marks \"no\" for an action means that action will be refused for that cause.\n  Merchant-side and unknown causes get no customer contact at all. The merchant has to fix\n    something; messaging customers about it is noise at best.\n  Consent, opt-out, quiet hours and frequency caps are enforced in code after you answer. Do not\n    reason about individual customers; you have only counts.\n  Answer with JSON only, matching the schema you were given. Keep the rationale under 400\n    characters.\n",
+  "user": "incident_id: inc_upi_upi_handle_ybl_1786204440\nsegment: all\ndiagnosed cause: gateway_degradation\ndiagnosis confidence: 0.95\nsegment has recovered: False\n\nWhat the cause-to-action matrix allows here:\n  STEER_METHOD: NOT allowed for gateway_degradation\n  SEND_RECOVERY_LINK: allowed (only after the segment has recovered)\n  DEFER_UNTIL_RECOVERED: allowed\n  ESCALATE_HUMAN: allowed (always available)\n  NO_ACTION: allowed (always available)\nRequired for this cause: ESCALATE_HUMAN\n\nEligible customers, as counts only:\n  affected orders: 70\n  still unpaid: 70\n  consented: 41\n  consented and have an alternate payment method: 25\n  opted out: 0\n  last attempt was a hard decline: 3\n  above the value threshold: 33\n\nChoose the actions. Answer with JSON only."
+}

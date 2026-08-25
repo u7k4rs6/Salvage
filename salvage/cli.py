@@ -589,13 +589,21 @@ def cmd_eval_run(args: argparse.Namespace) -> int:
 
 
 def _fixture_misses(provider) -> list[str]:
-    """Prompt hashes the fixture provider could not answer.
+    """Prompt hashes the fixture provider could not answer, and still cannot.
 
     FixtureMiss is an LLMError, and every caller of a provider treats an LLMError as a reason to
     escalate rather than to crash, which is right for a live provider and wrong for a sweep: a
     missing fixture would be read as a decision the agent took. So the sweep asks afterwards.
+
+    A miss that has since been filled does not count. The recording provider misses every prompt
+    it records, by definition, and reporting those as a problem would cry wolf on exactly the run
+    whose job is to fix them.
     """
-    return list(getattr(provider, "misses", []) or [])
+    misses = list(getattr(provider, "misses", []) or [])
+    directory = getattr(provider, "directory", None)
+    if directory is None:
+        return misses
+    return [key for key in misses if not (Path(directory) / f"{key}.json").exists()]
 
 
 def _digest_block(result) -> str:
