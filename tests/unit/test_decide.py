@@ -417,3 +417,94 @@ def test_gate_results_serialise_to_the_documented_shape(conn):
     payload = json.loads(json.dumps(verdict.gates_json()))
     for gate in payload:
         assert set(gate) == {"rule", "passed", "detail"}
+
+
+def test_a_planned_recovery_link_survives_validation_without_a_case_id():
+    """The planner is asked for an action and a scope, and the executor fans that out over cases.
+    A case id is therefore not something the planner can supply, and requiring one at plan time
+    dropped every SEND_RECOVERY_LINK a real model proposed. That went unnoticed for a milestone
+    because there was no model to propose one: with no provider the agent escalates instead of
+    planning, so the path was never taken."""
+
+    class _Provider:
+        name = "gemini"
+        model = "test"
+
+        def complete(self, system, user, schema, *, conn=None):
+            del system, user, conn
+            return schema.model_validate(
+                {
+                    "incident_id": "inc_1",
+                    "actions": [
+                        {"type": "SEND_RECOVERY_LINK", "scope": "consented_with_alternate"}
+                    ],
+                    "rationale": "steer the consented customers to a working rail",
+                }
+            )
+
+    plan, error = plan_incident(
+        _Provider(),
+        incident_id="inc_1",
+        segment_key="upi:upi_handle:okhdfcbank",
+        cause="issuer_outage",
+        confidence=0.9,
+        counts=EligibilityCounts(
+            affected_orders=20,
+            unpaid_orders=20,
+            consented=9,
+            consented_with_alternate=6,
+            above_value_threshold=7,
+            hard_declined=0,
+            opted_out=0,
+        ),
+        segment_recovered=False,
+        value_threshold_paise=50000,
+    )
+    assert error is None, error
+    assert [action.type for action in plan.actions] == [ActionType.SEND_RECOVERY_LINK]
+
+
+def test_a_planned_action_that_invents_a_field_is_still_dropped():
+    """The plan-time check exists to stop an invented `amount` reaching the executor, and the
+    case-id placeholder must not weaken it."""
+
+    class _Provider:
+        name = "gemini"
+        model = "test"
+
+        def complete(self, system, user, schema, *, conn=None):
+            del system, user, conn
+            return schema.model_validate(
+                {
+                    "incident_id": "inc_1",
+                    "actions": [
+                        {
+                            "type": "SEND_RECOVERY_LINK",
+                            "scope": "all_affected",
+                            "params": {"amount": 100, "discount_percent": 10},
+                        }
+                    ],
+                    "rationale": "offer a discount",
+                }
+            )
+
+    plan, error = plan_incident(
+        _Provider(),
+        incident_id="inc_1",
+        segment_key="upi",
+        cause="issuer_outage",
+        confidence=0.9,
+        counts=EligibilityCounts(
+            affected_orders=1,
+            unpaid_orders=1,
+            consented=1,
+            consented_with_alternate=1,
+            above_value_threshold=1,
+            hard_declined=0,
+            opted_out=0,
+        ),
+        segment_recovered=False,
+        value_threshold_paise=50000,
+    )
+    assert plan.actions == []
+    assert error is not None and "amount" in error

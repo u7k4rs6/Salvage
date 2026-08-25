@@ -299,6 +299,21 @@ def cmd_agent_run(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+def _accuracy_provenance(provider: str) -> str:
+    """What produced the LLM column, written into the artifact so the table carries its own
+    provenance rather than a claim made about it somewhere else."""
+    if provider == "none":
+        return (
+            "Rules-only. The LLM column is not measured in this run because no provider was "
+            "configured."
+        )
+    if provider == "fixture":
+        from salvage.llm.provider import fixture_provenance
+
+        return fixture_provenance()
+    return f"Rules-only against the live {provider} provider."
+
+
 def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
     from salvage.eval.metrics import format_accuracy_table, summarise
     from salvage.eval.run import diagnosis_sweep
@@ -316,13 +331,7 @@ def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
     print(format_accuracy_table(rows, outcomes))
 
     # Written so docs/RESULTS.md can carry the table with its provenance rather than a claim.
-    provenance = (
-        "Rules-only. The LLM column is unmeasured: the fixtures M2 shipped were written by the "
-        "model being evaluated, with the scenario labels visible, and were deleted in M3. See "
-        "salvage/llm/fixtures/README.md."
-        if args.provider == "none"
-        else f"Rules-only against the {args.provider} provider."
-    )
+    provenance = _accuracy_provenance(args.provider)
     _write_artifact(
         "diagnosis.json",
         {
@@ -338,6 +347,11 @@ def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
                     "llm_accuracy": (
                         f"{row.llm_accuracy:.2f}" if row.llm_accuracy is not None else "unmeasured"
                     ),
+                    "reconciled_accuracy": (
+                        f"{row.reconciled_accuracy:.2f}"
+                        if row.reconciled_accuracy is not None
+                        else "unmeasured"
+                    ),
                 }
                 for row in rows
             ],
@@ -346,6 +360,12 @@ def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
                 f"rules said {o.rules_cause}"
                 for o in outcomes
                 if not o.rules_correct
+            ],
+            "llm_misses": [
+                f"{o.scenario} seed {o.seed} on `{o.segment_key}`: truth {o.true_cause}, "
+                f"model said {o.llm_cause}"
+                for o in outcomes
+                if o.llm_cause is not None and not o.llm_correct
             ],
         },
     )
@@ -445,15 +465,22 @@ def cmd_diagnose_record_fixtures(args: argparse.Namespace) -> int:
         print(f"refusing to record: {exc}", file=sys.stderr)
         return 2
 
-    written, failures = record_fixtures(
-        prompts, provider, directory=args.out, pause_seconds=args.pause_seconds
+    outcome = record_fixtures(
+        prompts,
+        provider,
+        directory=args.out,
+        pause_seconds=args.pause_seconds,
+        skip_existing=not args.rerecord,
     )
-    print(f"Recorded {written} fixture(s) from {provider.name} model {provider.model}")
-    for failure in failures:
+    print(
+        f"Recorded {outcome.written} fixture(s) from {provider.name} model {provider.model}, "
+        f"{outcome.skipped} already on disk and left alone"
+    )
+    for failure in outcome.failures:
         print(f"  failed: {failure}", file=sys.stderr)
-    if failures:
-        print(f"{len(failures)} prompt(s) failed, see above", file=sys.stderr)
-    return 0 if written else 1
+    if outcome.failures:
+        print(f"{len(outcome.failures)} prompt(s) failed, see above", file=sys.stderr)
+    return 0 if outcome.written or outcome.skipped else 1
 
 
 # ---------------------------------------------------------------------------
@@ -672,6 +699,7 @@ def cmd_eval_report(args: argparse.Namespace) -> int:
         sensitivity=load_json("data/results/sensitivity.json"),
         diagnosis=load_json("data/results/diagnosis.json"),
         injection=load_json("data/results/fault_injection.json"),
+        escalation_fix=load_json(args.escalation_fix or "data/results/escalation_fix.json"),
     )
     path = write_results_md(inputs.main, inputs=inputs)
     print(f"Wrote {path}")
@@ -1082,6 +1110,11 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--provider", default="gemini", help="gemini or ollama")
     record.add_argument("--out", default=None, help="defaults to salvage/llm/fixtures/")
     record.add_argument(
+        "--rerecord",
+        action="store_true",
+        help="ask again for prompts that already have a fixture, rather than resuming",
+    )
+    record.add_argument(
         "--pause-seconds",
         dest="pause_seconds",
         type=float,
@@ -1156,6 +1189,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     eval_report.add_argument("--results", default="data/results/main.json")
     eval_report.add_argument("--offpeak", default="data/results/offpeak.json")
+    eval_report.add_argument("--escalation-fix", dest="escalation_fix", default=None)
     eval_report.set_defaults(func=cmd_eval_report)
 
     e2e = subparsers.add_parser("e2e", help="the real test-mode end-to-end run").add_subparsers(

@@ -113,18 +113,102 @@ def test_the_report_has_every_required_section(small_sweep):
         "## 8. Peak against trough detection",
         "## 9. Sensitivity and the adversarial set",
         "## 10. Fault injection",
-        "## 11. The real end-to-end run",
-        "## 12. Known limitations",
+        "## 11. Escalation to fix",
+        "## 12. The real end-to-end run",
+        "## 13. Known limitations",
     ):
         assert heading in report, heading
 
 
 def test_the_report_states_what_is_unmeasured_rather_than_estimating_it(small_sweep):
     report = build_report(ReportInputs(main=small_sweep))
-    assert "The LLM arm is unmeasured" in report
-    assert "The agent arm has no diagnosis model" in report
     assert "has not been run" in report
     assert "There is no rules-only policy arm" in report
+
+
+def test_the_report_reads_its_provenance_off_the_fixtures_rather_than_asserting_it(small_sweep):
+    """A claim about where the model answers came from that is not read off the artifact survives
+    the artifact being replaced. The report states the count, the provider and the model, and it
+    gets all three from the files."""
+    report = build_report(ReportInputs(main=small_sweep))
+    assert "The agent arm is measured, from fixtures recorded blind." in report
+    assert "The 46 fixtures M2 shipped are not these." in report
+    assert "fixture(s):" in report or "fixture directory is empty" in report
+
+
+def test_the_escalation_fix_section_states_the_asymmetry(small_sweep):
+    """B1 and B2 cannot be repaired because they never escalate, and a reader who does not know
+    that will read the curve as a like-for-like comparison."""
+    payload = {
+        "scenario": "S4",
+        "seeds": [0, 1],
+        "rows": [
+            {
+                "fix_minutes": None,
+                "policy": policy,
+                "seeds": 2,
+                "recovered_amount": 1_000_000.0,
+                "at_risk_recovered_amount": amount,
+                "at_risk_orders": 300.0,
+                "messages_sent": messages,
+                "escalations": 2.0 if policy == "agent" else 0.0,
+                "at_risk_fix_orders": 0.0,
+            }
+            for policy, amount, messages in (
+                ("agent", 9_000_000.0, 0.0),
+                ("B1", 15_000_000.0, 1000.0),
+            )
+        ]
+        + [
+            {
+                "fix_minutes": 15,
+                "policy": policy,
+                "seeds": 2,
+                "recovered_amount": 1_000_000.0,
+                "at_risk_recovered_amount": amount,
+                "at_risk_orders": 300.0,
+                "messages_sent": messages,
+                "escalations": 2.0 if policy == "agent" else 0.0,
+                "at_risk_fix_orders": 40.0 if policy == "agent" else 0.0,
+            }
+            for policy, amount, messages in (
+                ("agent", 18_000_000.0, 0.0),
+                ("B1", 15_000_000.0, 1000.0),
+            )
+        ],
+    }
+    report = build_report(ReportInputs(main=small_sweep, escalation_fix=payload))
+    assert "## 11. Escalation to fix" in report
+    assert "**Only an arm that escalates can be repaired.**" in report
+    assert "Crossover: the agent passes B1 at T = 15 minutes" in report
+
+
+def test_the_escalation_fix_section_says_so_when_there_is_no_crossover(small_sweep):
+    payload = {
+        "scenario": "S4",
+        "seeds": [0],
+        "rows": [
+            {
+                "fix_minutes": value,
+                "policy": policy,
+                "seeds": 1,
+                "recovered_amount": 1_000_000.0,
+                "at_risk_recovered_amount": amount,
+                "at_risk_orders": 300.0,
+                "messages_sent": 0.0 if policy == "agent" else 1000.0,
+                "escalations": 2.0 if policy == "agent" else 0.0,
+                "at_risk_fix_orders": 0.0,
+            }
+            for value, policy, amount in (
+                (None, "agent", 9_000_000.0),
+                (None, "B1", 15_000_000.0),
+                (15, "agent", 11_000_000.0),
+                (15, "B1", 15_000_000.0),
+            )
+        ],
+    }
+    report = build_report(ReportInputs(main=small_sweep, escalation_fix=payload))
+    assert "**There is no crossover in the swept range.**" in report
 
 
 def test_the_report_carries_a_seed_count_on_every_table(small_sweep):

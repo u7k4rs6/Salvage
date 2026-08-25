@@ -60,6 +60,7 @@ class ReportInputs:
     adversarial: SweepResult | None = None
     diagnosis: dict[str, Any] | None = None
     injection: dict[str, Any] | None = None
+    escalation_fix: dict[str, Any] | None = None
     calibration: str | None = None
 
 
@@ -503,27 +504,30 @@ def build_report(inputs: ReportInputs) -> str:
     # Local date. The documents are written in IST and a UTC date reads as a day behind.
     generated = datetime.now().astimezone().strftime("%d %B %Y")
 
+    from salvage.llm.provider import fixture_provenance
+
+    provenance = fixture_provenance()
+
     parts: list[str] = []
     parts.append(f"""# Salvage: Results
 
 Generated {generated} from run `{main.run_id}`. Every table in this document was produced by
 `salvage eval run` and its raw output is in `data/results/{main.run_id}.json`.
 
-Read the two limitations at the top before the numbers, because they change what the numbers mean.
+Read the provenance and the limits at the top before the numbers, because they change what the
+numbers mean.
 
-## What is measured and what is not
+## Where the agent's answers came from
 
-**The agent arm has no diagnosis model, so it takes no customer-facing action.** The action
-threshold in Architecture section 7 is a confidence of 0.6, and a rules-only diagnosis is assigned
-0.5, deliberately: the rules are good enough to describe an incident to a human and not good
-enough to act on unsupervised. With no LLM configured every incident therefore escalates and the
-agent's recovered revenue equals B0's, because both recover only what customers do on their own.
-**The agent column below is that no-model configuration, not the agent the product describes.**
+**The agent arm is measured, from fixtures recorded blind.** {provenance}
 
-**The LLM arm is unmeasured.** M2 shipped 46 diagnosis fixtures written by the same model that was
-being evaluated, with the scenario labels visible to its author. They were deleted in M3 and no
-number was ever taken from them. Refilling `salvage/llm/fixtures/` from a live provider is a single
-command, and the isolation is enforced in the code path rather than by discipline:
+The recording is blind in the code path rather than by discipline. `prompts_for_recording` builds
+each evidence packet through `build_for_incident`, the same call the agent makes, which reads the
+`v_*` views and therefore cannot reach `truth_cause` or any `sim_truth_*` table. It hands the
+provider a `PromptForRecording`, a type carrying the prompt and its hash and nothing else, so the
+scenario label is absent rather than merely unused, and `assert_blind` refuses any prompt in which
+a scenario id, a seed or a cause name appears. The rules classifier is not run while recording, so
+the model's answer cannot be anchored on it. The commands are:
 
 ```
 export GEMINI_API_KEY=...
@@ -531,16 +535,14 @@ uv run salvage diagnose record-fixtures --scenarios S1,S2,S3,S4 --seeds 0..9 --p
 uv run salvage eval run --seeds 0..9 --policies agent,B0,B1,B2 --provider fixture --write-report
 ```
 
-Until that has been run, what this document measures honestly is the three baselines against each
-other, the detector, the policy engine and the fault-injection surface. What it does not measure is
-whether an LLM-assisted agent beats them.
-
-**The diagnosis ablation is rules-only.** The LLM column is absent rather than estimated.
+**The 46 fixtures M2 shipped are not these.** Those were written by the model being evaluated with
+the scenario labels visible to its author. They were deleted in M3, no number was ever taken from
+them, and nothing in this document descends from them.
 
 **There is no rules-only policy arm and there should not be.** The ablation below measures
 classification, not action. Reading it as a policy comparison would be a mistake: a rules-only
-diagnosis never clears the action threshold, so such an arm would escalate everything and recover
-nothing.
+diagnosis is assigned 0.5 confidence against a 0.6 action threshold, so such an arm would escalate
+everything and recover nothing.
 
 ## 1. Primary: recovered revenue over the at-risk order set
 
@@ -593,7 +595,11 @@ nothing.
 
 {injection_section(inputs.injection)}
 
-## 11. The real end-to-end run
+## 11. Escalation to fix
+
+{escalation_fix_section(inputs.escalation_fix)}
+
+## 12. The real end-to-end run
 
 Not yet run. It needs Razorpay test-mode credentials, which the build environment did not have.
 `scripts/e2e_real_link.py` is ready and refuses to run without them.
@@ -612,7 +618,7 @@ uv run salvage e2e verify
 | webhook event id | _to fill_ |
 | ledger sequence numbers | _to fill_ |
 
-## 12. Known limitations
+## 13. Known limitations
 
 {_limitations(inputs)}
 """)
@@ -623,13 +629,19 @@ def _diagnosis_block(payload: dict[str, Any]) -> str:
     lines = [
         payload.get("provenance", ""),
         "",
-        "| scenario | incidents | seeds | rules-only accuracy | LLM-assisted |",
-        "|---|---|---|---|---|",
+        "The reconciled column is the one the agent acts on. A rules verdict and a model verdict "
+        "that agree raise confidence, a disagreement lowers it, and anything below 0.6 escalates "
+        "rather than acting. Reading the LLM column alone would credit the model for an answer "
+        "the agent would not have used.",
+        "",
+        "| scenario | incidents | seeds | rules-only | LLM | reconciled |",
+        "|---|---|---|---|---|---|",
     ]
     for row in payload["rows"]:
         lines.append(
             f"| {row['scenario']} | {row['incidents']} | {row['seeds']} | "
-            f"{row['rules_accuracy']:.2f} | {row.get('llm_accuracy', 'unmeasured')} |"
+            f"{row['rules_accuracy']:.2f} | {row.get('llm_accuracy', 'unmeasured')} | "
+            f"{row.get('reconciled_accuracy', 'unmeasured')} |"
         )
     if payload.get("misses"):
         lines.append("")
@@ -637,13 +649,133 @@ def _diagnosis_block(payload: dict[str, Any]) -> str:
         lines.append("")
         for miss in payload["misses"]:
             lines.append(f"- {miss}")
+    if payload.get("llm_misses"):
+        lines.append("")
+        lines.append("Where the model was wrong:")
+        lines.append("")
+        for miss in payload["llm_misses"]:
+            lines.append(f"- {miss}")
+    elif payload.get("provider") not in (None, "none"):
+        lines.append("")
+        lines.append("The model was not wrong on any incident in this sweep.")
     return "\n".join(lines)
+
+
+def escalation_fix_section(payload: dict[str, Any] | None) -> str:
+    """The curve, and the crossover if there is one in the swept range."""
+    if not payload:
+        return _not_run(
+            "uv run salvage eval escalation-fix --scenario S4 --seeds 0..4",
+            "The escalation-fix sweep has not been run.",
+        )
+
+    scenario = payload["scenario"]
+    seeds = len(payload["seeds"])
+    policies: list[str] = []
+    for row in payload["rows"]:
+        if row["policy"] not in policies:
+            policies.append(row["policy"])
+    values: list[Any] = []
+    for row in payload["rows"]:
+        if row["fix_minutes"] not in values:
+            values.append(row["fix_minutes"])
+    cells = {(row["fix_minutes"], row["policy"]): row for row in payload["rows"]}
+
+    lines = [
+        "An escalation is worth nothing unless somebody acts on it. `escalation_fix_minutes` is "
+        "how long that takes, and it is swept rather than defaulted, because how fast a merchant "
+        "fixes a misconfiguration is not a fact about Salvage. `never` is the pre-M5 world, in "
+        "which the escalation reaches a human and the payments keep failing anyway.",
+        "",
+        f"{scenario}, mean over {seeds} seeds. Every cell is **at-risk recovered revenue in "
+        f"rupees and messages sent**, on the same at-risk order set as section 1.",
+        "",
+        "| T | " + " | ".join(policies) + " |",
+        "|---" * (len(policies) + 1) + "|",
+    ]
+    for value in values:
+        label = "never" if value is None else f"{value} min"
+        row_cells = []
+        for policy in policies:
+            row = cells.get((value, policy))
+            if row is None:
+                row_cells.append("n/a")
+                continue
+            row_cells.append(
+                f"{rupees(row['at_risk_recovered_amount'])} / {row['messages_sent']:.0f} msg"
+            )
+        lines.append(f"| {label} | " + " | ".join(row_cells) + " |")
+
+    lines.append("")
+    lines.append(
+        "**Only an arm that escalates can be repaired.** B1 and B2 never escalate, so their rows "
+        "are flat by construction and a row that moved would be a bug rather than a finding. That "
+        "asymmetry is worth weighing rather than waving through: a real merchant may well notice a "
+        "wholly dead payment method without an agent telling them, in which case part of this "
+        "column belongs to the merchant and not to Salvage. Read the curve as the value of "
+        "escalating **sooner and with the cause already named**, not as the value of the fault "
+        "being fixed at all."
+    )
+    lines.append("")
+    lines.append(_fix_crossover(cells, values, policies))
+    return "\n".join(lines)
+
+
+def _fix_crossover(
+    cells: dict[tuple[Any, str], dict[str, Any]], values: list[Any], policies: list[str]
+) -> str:
+    """The first T at which the agent passes the best baseline, or a plain statement that it does
+    not. Named rather than left for the reader to eyeball, and not chosen as a headline."""
+    if "agent" not in policies:
+        return ""
+    rivals = [p for p in policies if p != "agent"]
+    ordered = [v for v in values if v is not None]
+    ordered.sort(key=lambda v: -int(v))
+    best_rival = None
+    best_rival_value = 0.0
+    for policy in rivals:
+        row = cells.get((None, policy))
+        if row and row["at_risk_recovered_amount"] > best_rival_value:
+            best_rival, best_rival_value = policy, row["at_risk_recovered_amount"]
+    if best_rival is None:
+        return ""
+    for value in ordered:
+        row = cells.get((value, "agent"))
+        if row and row["at_risk_recovered_amount"] > best_rival_value:
+            return (
+                f"**Crossover: the agent passes {best_rival} at T = {value} minutes**, at "
+                f"{rupees(row['at_risk_recovered_amount'])} against {rupees(best_rival_value)}, "
+                f"and it does it while sending {row['messages_sent']:.0f} messages against "
+                f"{cells[(None, best_rival)]['messages_sent']:.0f}."
+            )
+    fastest = ordered[-1] if ordered else None
+    agent_row = cells.get((fastest, "agent"))
+    fastest_amount = rupees(agent_row["at_risk_recovered_amount"]) if agent_row else "n/a"
+    return (
+        f"**There is no crossover in the swept range.** Even at T = {fastest} minutes the agent "
+        f"recovers {fastest_amount} against {best_rival}'s {rupees(best_rival_value)}. The fix "
+        f"narrows the gap and does not close it, and saying so is the point of sweeping the "
+        f"parameter rather than picking one."
+    )
 
 
 def _limitations(inputs: ReportInputs) -> str:
     items = [
-        "**The agent arm is unmeasured with a model.** See the top of this document. The measured "
-        "agent column is the no-model configuration and equals B0 by construction.",
+        "**The escalation fix is modelled on the response side only.** The attempt stream is "
+        "generated before any policy runs and is not rewritten, so payments the fault would have "
+        "broken after a repair still fail in the recorded data and still count in the at-risk "
+        "denominator. A real fix would stop them happening. Section 11 therefore understates what "
+        "a fix is worth, and it understates it for the only arm that can trigger one. The "
+        "alternative changes which orders exist per arm, which would break the identical order "
+        "set that every comparison here rests on.",
+        "**Only an arm that escalates can be repaired.** B1 and B2 never escalate, so the fix "
+        "curve is available to the agent and to nobody else. A real merchant might notice a dead "
+        "payment method without an agent telling them, so part of that column may belong to the "
+        "merchant rather than to Salvage.",
+        "**The LLM column is one model on one day.** Every fixture was recorded from a single "
+        "provider and model, listed at the top of this document. A different model, or the same "
+        "model next month, is a different measurement. Nothing here is an accuracy claim about "
+        "language models in general.",
         "**S2 at low segment volume attributes to `card` rather than to the failing BIN.** On "
         "held-out seeds 8 and 9 the BIN key never reaches the detector's 20-attempt minimum in a "
         "15-minute window, so the incident is attributed to the whole card method, whose effect "

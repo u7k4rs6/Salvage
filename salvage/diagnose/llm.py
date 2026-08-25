@@ -31,9 +31,13 @@ from salvage.diagnose.evidence import EvidencePacket
 from salvage.llm.provider import LLMError, LLMProvider
 from salvage.taxonomy import RootCause
 
-# Field names the rationale may cite. Taken from the evidence packet's own schema, so a rename
-# there cannot leave this list quietly out of date.
-EVIDENCE_FIELD_NAMES = tuple(EvidencePacket.model_fields)
+# Field names the rationale may cite. Taken from the names the packet prints, not from its
+# dataclass fields, because those are not the same list and only the printed ones are visible to
+# the model. The dataclass names are accepted as well: a model that writes `error_source_dist`
+# has still cited the evidence.
+EVIDENCE_FIELD_NAMES = tuple(
+    sorted(set(EvidencePacket.PROMPT_FIELD_NAMES) | set(EvidencePacket.model_fields))
+)
 
 MAX_RATIONALE_CHARS = 600
 MIN_CITED_FIELDS = 2
@@ -108,8 +112,8 @@ class LLMDiagnosis(BaseModel):
             raise ValueError(
                 f"rationale must name at least {MIN_CITED_FIELDS} evidence fields by their exact "
                 f"names; it named {sorted(cited) or 'none'}. Valid names include "
-                f"error_source_dist, error_step_dist, error_reason_dist, sibling_segments, "
-                f"baseline_rate, rate, trend, merchant_config_changed_recently."
+                f"error_source, error_step, error_reason, sibling_segments, failure_rate, "
+                f"baseline_failure_rate, trend, merchant_config_changed_recently."
             )
         return value
 

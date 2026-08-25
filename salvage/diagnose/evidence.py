@@ -24,7 +24,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, ClassVar, Literal
 
 from pydantic import BaseModel, Field
 
@@ -99,6 +99,32 @@ class EvidencePacket(BaseModel):
     trend: Trend = "flat"
     merchant_config_changed_recently: bool = False
     minutes_since_onset: int = 0
+
+    # The names the packet actually prints, which are the only names a model can cite. They are
+    # not the dataclass's field names: the packet renders `error_source` where the field is
+    # `error_source_dist`, and `failure_rate` where the field is `rate`. The rationale validator
+    # in salvage/diagnose/llm.py reads this list rather than `model_fields`, because it was
+    # reading `model_fields` and rejecting 16 of 41 real model answers for citing the evidence in
+    # the words the prompt had taught them.
+    PROMPT_FIELD_NAMES: ClassVar[tuple[str, ...]] = (
+        "segment_key",
+        "affected_scope",
+        "window",
+        "attempts",
+        "failures",
+        "failure_rate",
+        "baseline_failure_rate",
+        "excess_failures",
+        "share_of_merchant_volume",
+        "error_source",
+        "error_step",
+        "error_reason",
+        "error_code_top5",
+        "sibling_segments",
+        "trend",
+        "merchant_config_changed_recently",
+        "minutes_since_onset",
+    )
 
     def as_prompt_text(self) -> str:
         """The packet as the model sees it.

@@ -571,6 +571,30 @@ def write_fixture(
     return path
 
 
+def fixture_provenance(directory: Path | str = FIXTURE_DIR) -> str:
+    """One sentence describing where the fixture set on disk came from.
+
+    Read from the files rather than asserted, because a claim about provenance that is not read
+    off the artifact is the kind of claim that survives the artifact being replaced. Every fixture
+    carries `recorded_from` and `model`, and a set recorded from more than one model says so.
+    """
+    directory = Path(directory)
+    paths = sorted(directory.glob("*.json"))
+    if not paths:
+        return "The fixture directory is empty, so there is no LLM column to report."
+    seen: dict[tuple[str, str], int] = {}
+    for path in paths:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        key = (str(record.get("recorded_from", "unknown")), str(record.get("model", "unknown")))
+        seen[key] = seen.get(key, 0) + 1
+    parts = [
+        f"{count} from {source} model `{model}`" for (source, model), count in sorted(seen.items())
+    ]
+    return (
+        f"Rules-only against a recorded model. {len(paths)} fixture(s): " + ", ".join(parts) + "."
+    )
+
+
 def recording_provider(directory: Path | str = FIXTURE_DIR) -> FixtureProvider:
     """A fixture provider that records misses from a live Gemini. Local use only."""
     if os.environ.get("SALVAGE_LLM_PROVIDER") == "fixture":

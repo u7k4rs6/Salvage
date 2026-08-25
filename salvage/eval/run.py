@@ -78,6 +78,15 @@ class PromptForRecording:
     schema_name: str
 
 
+@dataclass(frozen=True)
+class RecordingResult:
+    """What one recording pass did. Skipped is not a failure and does not read as one."""
+
+    written: int
+    skipped: int
+    failures: list[str]
+
+
 class LabelLeak(RuntimeError):
     """A scenario id or a seed reached a prompt that is meant to be blind."""
 
@@ -165,11 +174,16 @@ def record_fixtures(
     *,
     directory: Path | str | None = None,
     pause_seconds: float = 0.0,
-) -> tuple[int, list[str]]:
+    skip_existing: bool = True,
+) -> RecordingResult:
     """Ask a live provider each prompt and write the answer as a fixture.
 
     Refuses a fixture or collecting provider: recording from a fixture provider would copy
     whatever is already on disk, and recording from the collector would write nothing.
+
+    `skip_existing` leaves a fixture already on disk alone, so a run that failed part way through
+    can be resumed without spending a free tier's daily quota re-asking questions that have
+    already been answered. Delete a fixture to re-record it.
 
     `pause_seconds` paces the calls. The Gemini free tier is rate limited per minute, and the
     provider answers a 429 by falling back to a smaller model, so recording flat out would split
@@ -187,8 +201,11 @@ def record_fixtures(
         )
 
     directory = Path(directory) if directory else FIXTURE_DIR
-    written, failures = 0, []
+    written, failures, skipped = 0, [], 0
     for index, prompt in enumerate(prompts):
+        if skip_existing and (directory / f"{prompt.prompt_hash}.json").exists():
+            skipped += 1
+            continue
         if pause_seconds and index:
             time.sleep(pause_seconds)
         assert_blind(prompt)
@@ -207,7 +224,7 @@ def record_fixtures(
             model=provider.model,
         )
         written += 1
-    return written, failures
+    return RecordingResult(written=written, skipped=skipped, failures=failures)
 
 
 def export_prompts(

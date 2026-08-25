@@ -29,6 +29,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from salvage.decide.menu import (
     ALWAYS_ALLOWED,
+    PARAMS_MODEL,
     ActionType,
     Scope,
     matrix_entry,
@@ -69,9 +70,19 @@ class PlannedAction(BaseModel):
             raise ValueError("params must be an object")
         return value
 
-    def validated_params(self) -> BaseModel:
-        """Params against this action's own model. Raises on an unknown field."""
-        return validate_params(self.type, self.params)
+    def validated_params(self, *, case_id: str | None = None) -> BaseModel:
+        """Params against this action's own model. Raises on an unknown field.
+
+        `case_id` is supplied by the executor, not by the planner. The planner is asked for one
+        action and a scope, and the executor fans that out over the cases the scope selects, so a
+        case id is not a thing the planner is in a position to know. What this check is for is the
+        other direction: an action whose params carry a field the menu does not have, an `amount`
+        or a `discount`, is rejected before it can reach the executor.
+        """
+        params = dict(self.params)
+        if case_id is not None and "case_id" in PARAMS_MODEL[self.type].model_fields:
+            params["case_id"] = case_id
+        return validate_params(self.type, params)
 
 
 class Plan(BaseModel):
@@ -183,6 +194,12 @@ def build_planner_prompt(
     )
 
 
+# Stands in for the case id the executor supplies when it fans a planned action out over the
+# cases a scope selects. It never reaches the database: `_apply_plan` replaces it with the real
+# case id for each target.
+PLAN_TIME_CASE_ID = "case_supplied_by_executor"
+
+
 def default_plan(incident_id: str, cause: str, detail: str = "") -> Plan:
     """The plan used when there is no model, or the model failed.
 
@@ -245,7 +262,11 @@ def plan_incident(
     kept, dropped = [], []
     for action in plan.actions:
         try:
-            action.validated_params()
+            # The placeholder stands in for the id the executor will fill per case. Validating
+            # without it dropped every SEND_RECOVERY_LINK a real model ever proposed, because
+            # SendRecoveryLinkParams requires a case id and the planner has no cases. That went
+            # unnoticed for a whole milestone because there was no model to propose one.
+            action.validated_params(case_id=PLAN_TIME_CASE_ID)
         except Exception as exc:  # noqa: BLE001 - any validation failure drops the action
             dropped.append(f"{action.type.value}: {exc}")
             continue

@@ -380,3 +380,33 @@ def test_build_for_incident_uses_the_incident_window(seeded):
     assert packet.segment_key == "upi:upi_handle:okhdfcbank"
     assert packet.window_end == window_end
     assert packet.affected_scope == ["upi:upi_handle:okhdfcbank"]
+
+
+def test_the_names_a_rationale_may_cite_are_the_names_the_packet_prints(seeded):
+    """The rationale validator used to check against `EvidencePacket.model_fields`, which is not
+    the list the model is shown: the packet prints `error_source` where the field is
+    `error_source_dist`, and `failure_rate` where the field is `rate`. Sixteen of forty-one real
+    Gemini answers were rejected for citing the evidence in the words the prompt had taught them,
+    and each one burned its documented retry being told to use names it had never seen. This test
+    walks it in both directions so the two lists cannot drift again."""
+    conn, window_start, window_end = seeded
+    packet = build_evidence(
+        conn,
+        segment_key="upi:upi_handle:okhdfcbank",
+        window_start=window_start,
+        window_end=window_end,
+    )
+    text = packet.as_prompt_text()
+    structured = text[: text.index(UNTRUSTED_OPEN)]
+
+    for name in EvidencePacket.PROMPT_FIELD_NAMES:
+        assert f"{name}:" in structured, f"{name} is declared but never printed"
+
+    printed = {
+        line.split(":", 1)[0].strip()
+        for line in structured.splitlines()
+        if ":" in line and not line.startswith(" ")
+    }
+    printed.discard("")
+    unlisted = printed - set(EvidencePacket.PROMPT_FIELD_NAMES)
+    assert unlisted == set(), f"printed but not citable: {sorted(unlisted)}"

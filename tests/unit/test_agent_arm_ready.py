@@ -177,9 +177,15 @@ def test_record_then_replay_then_run_the_agent(tmp_path, small_params):
         )
         assert_blind(prompt)
         prompts.append(prompt)
-    written, failures = record_fixtures(prompts, _fake_gemini(), directory=fixtures)
-    assert failures == []
-    assert written == len(prompts)
+    outcome = record_fixtures(prompts, _fake_gemini(), directory=fixtures)
+    assert outcome.failures == []
+    assert outcome.written == len(prompts)
+    assert outcome.skipped == 0
+
+    # Recording again asks nothing: a pass that died halfway resumes rather than spending a free
+    # tier's daily quota re-answering questions that are already answered.
+    again = record_fixtures(prompts, _fake_gemini(), directory=fixtures)
+    assert (again.written, again.skipped) == (0, len(prompts))
 
     # Every fixture records what produced it.
     for path in fixtures.glob("*.json"):

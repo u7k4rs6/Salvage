@@ -1622,3 +1622,63 @@ counted off the `gate_json` of a full pass rather than off the source, which is 
 fourteen for a baseline message and "more" for a cause-aware profile. The run time was measured
 (18.2 seconds for S1 seed 1 under B1) rather than estimated from the paced demo. The fault
 injection count in the README was 41 and is 45, corrected against `docs/RESULTS.md` section 10.
+
+## 2026-08-25, M5 step 1: the key arrived, and three things broke that only a model could break
+
+A Gemini key was supplied in `.env`. Checked first, before anything else in the brief: the key is
+present and answers, there is no `ollama` binary on `PATH` and nothing is listening on
+`localhost:11434`, so the provider is Gemini and the model is `gemini-2.5-flash`.
+
+### The recorder is paced, and it resumes
+
+The free tier is rate limited per minute and `GeminiProvider` answers a 429 by falling back to
+Flash-Lite. Recording flat out would therefore have split one fixture set across two models and the
+ablation would no longer be measuring one thing, so `record-fixtures` paces its calls with
+`--pause-seconds`, defaulting to 7. It also skips a prompt that already has a fixture, because the
+first pass died part way through and re-asking 25 answered questions spends a daily quota to learn
+nothing. `--rerecord` forces the old behaviour.
+
+### Defect 1: the rationale validator demanded names the model was never shown
+
+`LLMDiagnosis.rationale` must cite at least two evidence fields by name, and the check was written
+against `EvidencePacket.model_fields`. That is not the list the model sees. The packet prints
+`error_source`, `error_step`, `error_reason`, `failure_rate` and `baseline_failure_rate`; the
+fields behind them are `error_source_dist`, `error_step_dist`, `error_reason_dist`, `rate` and
+`baseline_rate`. The system prompt then teaches the printed vocabulary in its taxonomy section, so
+the model was being told one set of names and marked against another.
+
+**16 of 41 blind recordings failed on it**, each after spending its one documented retry being told
+to use names it had never been given. The accepted list now comes from
+`EvidencePacket.PROMPT_FIELD_NAMES`, the names the packet actually prints, with the dataclass names
+still accepted. A test walks a rendered packet in both directions so the two lists cannot drift
+apart again.
+
+This one is only visible with a real model. The 46 fixtures M2 shipped were written by a model that
+had been shown the dataclass, so they cited `error_source_dist` and passed.
+
+### Defect 2: every recovery link a model planned was silently dropped
+
+`SendRecoveryLinkParams` requires a `case_id`. The planner is asked for an action and a scope, and
+the executor fans that out over the cases the scope selects, so a case id is not a thing the
+planner can know or is ever asked for. `plan_incident` validated the planner's params against that
+model, found no `case_id`, and dropped the action, recording the drop in `planner_error` where
+nothing read it.
+
+So with a model present the agent could steer, defer, escalate and do nothing, and could never send
+a recovery link. Found on the first real agent run: the plan's own rationale said "sending a
+recovery link offers a direct path", and the run created zero links.
+
+The plan-time check now injects a placeholder case id for the actions whose params model has that
+field, and the executor fills the real one per case. The check still does what it is for: an action
+carrying an invented `amount` or `discount_percent` is still dropped, and there is a test for that
+as well as for the link surviving.
+
+The first version of this fix injected the placeholder into every action, which broke
+`STEER_METHOD`, whose params model forbids extra fields. Caught by an existing test rather than by
+me.
+
+### Defect 3, mine: the escalation fix scoped its population backwards
+
+Described under M5 step 2. Included here because it belongs to the same list: three defects in one
+day, all of them in code that had passed a green suite for two milestones, and all three found by
+running the thing rather than by testing it.

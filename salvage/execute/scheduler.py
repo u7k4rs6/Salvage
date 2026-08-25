@@ -29,12 +29,19 @@ from typing import Any, Protocol
 
 from salvage import repo, taxonomy
 from salvage.decide import policy as policy_mod
-from salvage.decide.menu import ActionType, Scope
+from salvage.decide.menu import PARAMS_MODEL, ActionType, Scope
 from salvage.decide.planner import EligibilityCounts, Plan, plan_incident, plan_json
 from salvage.decide.policy import ORDER_TTL_SECONDS, Decision
-from salvage.detect.segments import ALL_KEY, parse_key
+from salvage.detect.segments import ALL_KEY, INSTRUMENT_DIMENSIONS, parse_key
 from salvage.diagnose.reconcile import diagnose_incident, persist_diagnosis
-from salvage.eval.baselines import AGENT, EligibleOrder, PolicyProfile, eligible_orders
+from salvage.eval.baselines import (
+    AGENT,
+    EligibleOrder,
+    FaultWindow,
+    PolicyProfile,
+    at_risk_orders,
+    eligible_orders,
+)
 from salvage.execute import channels
 from salvage.execute.workflow import (
     CaseState,
@@ -520,7 +527,13 @@ class AgentRunner:
 
             targets = self._scope_targets(cases, planned.scope)
             for case in targets:
-                self._apply_case_action(incident, planned.type, planned.params, case, now)
+                # The case id is the executor's to fill, one per target, so the recorded action
+                # names the case it acted on rather than carrying the planner's incident-level
+                # params unchanged. This is the same shape B1 and B2 use.
+                params = {**planned.params}
+                if "case_id" in PARAMS_MODEL[planned.type].model_fields:
+                    params["case_id"] = str(case["id"])
+                self._apply_case_action(incident, planned.type, params, case, now)
 
     @staticmethod
     def _segment_recovered(incident: dict[str, Any], now: int) -> bool:
@@ -890,8 +903,6 @@ class AgentRunner:
         it are exactly the ones it should have prevented. That is an artefact of the frozen stream
         and not a finding, so it is not modelled that way.
         """
-        from salvage.eval.baselines import FaultWindow, at_risk_orders
-
         incident = repo.get_incident(self._conn, incident_id)
         if incident is None:
             return
@@ -1439,8 +1450,6 @@ def _fault_answers_segment(selector: dict[str, Any], segment_key: str) -> bool:
     escalation gets fixed, would make the fix curve shallower. Nothing else in the mechanism is
     generous, so the assumption is isolated here where it can be argued with.
     """
-    from salvage.detect.segments import ALL_KEY, INSTRUMENT_DIMENSIONS, parse_key
-
     if segment_key == ALL_KEY or not selector:
         return True
     method, dimension, value = parse_key(segment_key)
