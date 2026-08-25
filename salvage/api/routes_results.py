@@ -38,6 +38,15 @@ def _runs() -> list[dict[str, Any]]:
         if "rows" not in payload or "policies" not in payload:
             continue
         rows = payload.get("rows", [])
+        # A sweep row names one run: one scenario, one seed, one policy. A sweep artefact like the
+        # steer or escalation-fix curve also has "rows" and "policies", but its rows are already
+        # aggregated over seeds, and reading one as a run took the whole page down with a KeyError
+        # the first time such an artefact was written. Shape, not filename: SIDECARS above is a
+        # list somebody has to remember to update, and this is not.
+        if not all(
+            isinstance(row, dict) and {"scenario", "seed", "policy"} <= row.keys() for row in rows
+        ):
+            continue
         # Derived from the rows rather than read from the file's own header. A merge or an
         # interrupted shard can leave a header that does not describe its rows, and the run
         # selector is the one place where that would be invisible.

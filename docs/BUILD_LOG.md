@@ -1905,6 +1905,14 @@ S1's instrument-level detection depends on.
 The rest is accepted and stated: quiet hours, the flat link-payment draw, the in-session steer
 conversion, and above all that a message costs almost nothing in this model.
 
+### One more defect, found by the fix for F7
+
+The dashboard's run selector scans every JSON in `data/results` and reads each one as a sweep. The
+new curve artefacts have `rows` and `policies` too, but their rows are aggregated over seeds and
+carry no `seed` key, so `/api/results` raised a KeyError and the Results page went blank the moment
+a steer sweep was written. The filter was a hardcoded list of filenames somebody had to remember to
+extend; it is now a check on the shape of a row, which nobody has to remember.
+
 ### What M8 did not do
 
 The audit's three-day list put a hybrid arm third: the agent suppressing a background campaign

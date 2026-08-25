@@ -8,7 +8,7 @@ numbers mean.
 
 ## Where the agent's answers came from
 
-**The agent arm is measured, from fixtures recorded blind.** 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 41 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
+**The agent arm is measured, from fixtures recorded blind.** 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 81 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
 
 The recording is blind in the code path rather than by discipline. `prompts_for_recording` builds
 each evidence packet through `build_for_incident`, the same call the agent makes, which reads the
@@ -37,37 +37,41 @@ everything and recover nothing.
 
 Mean across 10 seeds. Every cell is **recovered revenue in rupees and messages sent**, both scoped to the at-risk order set.
 
-An order is at risk when its first payment attempt failed inside a fault window **and** on the instrument that fault was breaking. That is the population a recovery agent is aimed at. It is computed from the world's fault schedule and the attempt stream, neither of which any policy touches, so it is identical across all four arms and a test proves it. S0 has no fault, so its at-risk set is empty and every arm recovers nothing from it: the messages column is the whole story on that row.
+An order is at risk when its first payment attempt failed inside a fault window **and** on the instrument that fault was breaking. That is the population a recovery agent is aimed at. It is computed from the world's fault schedule and the attempt stream, neither of which any policy touches, so it is identical across every arm and a test proves it. S0 has no fault, so its at-risk set is empty and every arm recovers nothing from it: the messages column is the whole story on that row.
 
 Revenue is never shown without contact volume beside it. A policy that recovers more by messaging everybody has not obviously won.
 
-| scenario | at-risk orders | agent | B0 | B1 | B2 |
-|---|---|---|---|---|---|
-| S0 | 0 | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg |
-| S1 | 262 | 2,21,154.50 / 83 msg | 93,946.82 / 0 msg | 1,47,796.78 / 164 msg | 1,75,050.25 / 261 msg |
-| S2 | 153 | 1,20,064.92 / 44 msg | 50,094.51 / 0 msg | 79,262.89 / 88 msg | 93,254.58 / 140 msg |
-| S3 | 551 | 4,78,668.36 / 422 msg | 3,01,759.77 / 0 msg | 4,20,743.45 / 312 msg | 4,72,828.40 / 492 msg |
-| S4 | 300 | 90,128.09 / 0 msg | 90,128.09 / 0 msg | 1,57,696.44 / 178 msg | 1,65,041.30 / 272 msg |
+**This is not the whole-run number.** Scoped to every order that failed on the day, the link-sending baselines beat the agent on every scenario, because they message a thousand customers and most of a day's failures have nothing to do with the fault. Section 2 has that table and it is not a footnote. This section is primary because it is the population a recovery agent is aimed at, not because it is the flattering one.
+
+`echo` is the agent with its diagnosis model replaced by a stub that repeats the rules classifier. It is a control, not a product, and section 6 says what it measures.
+
+| scenario | at-risk orders | agent | echo | B0 | B1 | B2 |
+|---|---|---|---|---|---|---|
+| S0 | 0 | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg |
+| S1 | 262 | 2,21,154.50 / 83 msg | 2,37,220.58 / 131 msg | 93,946.82 / 0 msg | 1,47,796.78 / 164 msg | 1,75,050.25 / 261 msg |
+| S2 | 153 | 1,20,064.92 / 44 msg | 1,13,983.45 / 29 msg | 50,094.51 / 0 msg | 79,262.89 / 88 msg | 93,254.58 / 140 msg |
+| S3 | 551 | 4,78,668.36 / 422 msg | 4,63,402.82 / 379 msg | 3,01,759.77 / 0 msg | 4,20,743.45 / 312 msg | 4,72,828.40 / 492 msg |
+| S4 | 300 | 90,128.09 / 0 msg | 90,128.09 / 0 msg | 90,128.09 / 0 msg | 1,57,696.44 / 178 msg | 1,65,041.30 / 272 msg |
 
 Opt-outs are counted over the whole run rather than over the at-risk set, and are shown separately for that reason. The simulator draws an opt-out when a message is sent, and a policy sends to orders inside and outside the at-risk set alike, so there is no honest way to attribute an opt-out to one population. Every message a policy sends can produce one, which is the number that matters when judging contact volume.
 
-| scenario | agent msg / opt-out | B0 msg / opt-out | B1 msg / opt-out | B2 msg / opt-out |
-|---|---|---|---|---|
-| S0 | 0 / 0 | 0 / 0 | 878 / 19 | 1056 / 23 |
-| S1 | 90 / 1 | 0 / 0 | 1026 / 33 | 1296 / 29 |
-| S2 | 49 / 1 | 0 / 0 | 951 / 26 | 1176 / 27 |
-| S3 | 552 / 13 | 0 / 0 | 1111 / 39 | 1436 / 35 |
-| S4 | 0 / 0 | 0 / 0 | 1017 / 31 | 1275 / 31 |
+| scenario | agent msg / opt-out | echo msg / opt-out | B0 msg / opt-out | B1 msg / opt-out | B2 msg / opt-out |
+|---|---|---|---|---|---|
+| S0 | 0 / 0 | 0 / 0 | 0 / 0 | 878 / 19 | 1056 / 23 |
+| S1 | 90 / 1 | 139 / 2 | 0 / 0 | 1026 / 33 | 1296 / 29 |
+| S2 | 49 / 1 | 32 / 1 | 0 / 0 | 951 / 26 | 1176 / 27 |
+| S3 | 552 / 13 | 494 / 11 | 0 / 0 | 1111 / 39 | 1436 / 35 |
+| S4 | 0 / 0 | 0 / 0 | 0 / 0 | 1017 / 31 | 1275 / 31 |
 
 Recovery rate over the at-risk set:
 
-| scenario | agent | B0 | B1 | B2 |
-|---|---|---|---|---|
-| S0 | 0.000 | 0.000 | 0.000 | 0.000 |
-| S1 | 0.477 | 0.194 | 0.305 | 0.364 |
-| S2 | 0.441 | 0.176 | 0.277 | 0.331 |
-| S3 | 0.467 | 0.296 | 0.411 | 0.465 |
-| S4 | 0.152 | 0.152 | 0.272 | 0.287 |
+| scenario | agent | echo | B0 | B1 | B2 |
+|---|---|---|---|---|---|
+| S0 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| S1 | 0.477 | 0.508 | 0.194 | 0.305 | 0.364 |
+| S2 | 0.441 | 0.418 | 0.176 | 0.277 | 0.331 |
+| S3 | 0.467 | 0.450 | 0.296 | 0.411 | 0.465 |
+| S4 | 0.152 | 0.152 | 0.152 | 0.272 | 0.287 |
 
 ### What a message costs here, and what it does not
 
@@ -83,15 +87,19 @@ For scale: the heaviest arm in this sweep sends about 1436 messages per simulate
 
 Recovered revenue in rupees over **every** order whose first attempt failed during the evaluation day, mean plus or minus standard deviation across 10 seeds, with messages sent and opt-outs.
 
+**The agent loses this table on every scenario, by 35 to 45 percent.** Say it plainly rather than leaving it for a reader to notice: on S1 the agent recovers about 11.0 lakh against B2's 17.3 lakh. It loses because it declines to message customers whose failure has nothing to do with an incident, and most of a day's failures are exactly that.
+
 This is secondary, and the S0 row says why. S0 has no fault at all, and a link-sending baseline still shows roughly 1.8 times what doing nothing shows. That is not a recovery agent working; it is the measure being dominated by ordinary background failure that happens every day, on which a policy that messages everybody will always score well. The primary table above scopes to the orders a fault actually put at risk.
 
-| scenario | agent | B0 | B1 | B2 |
-|---|---|---|---|---|
-| S0 | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 16,06,269.96 +/- 2,36,648.25 / 878 msg / 19 opt-out | 15,92,749.07 +/- 2,33,011.34 / 1056 msg / 23 opt-out |
-| S1 | 11,03,478.46 +/- 1,82,018.35 / 90 msg / 1 opt-out | 9,71,510.97 +/- 1,49,144.62 / 0 msg / 0 opt-out | 17,20,538.42 +/- 2,58,270.52 / 1026 msg / 33 opt-out | 17,29,528.48 +/- 2,53,398.64 / 1296 msg / 29 opt-out |
-| S2 | 10,02,862.78 +/- 1,66,415.87 / 49 msg / 1 opt-out | 9,29,264.42 +/- 1,50,027.09 / 0 msg / 0 opt-out | 16,55,171.60 +/- 2,49,836.27 / 951 msg / 26 opt-out | 16,51,203.57 +/- 2,47,574.88 / 1176 msg / 27 opt-out |
-| S3 | 13,35,051.32 +/- 2,25,614.66 / 552 msg / 13 opt-out | 10,99,885.26 +/- 1,84,025.99 / 0 msg / 0 opt-out | 18,74,640.11 +/- 3,03,994.99 / 1111 msg / 39 opt-out | 18,92,941.10 +/- 2,98,122.66 / 1436 msg / 35 opt-out |
-| S4 | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 16,92,541.01 +/- 2,61,694.87 / 1017 msg / 31 opt-out | 16,82,976.85 +/- 2,49,252.64 / 1275 msg / 31 opt-out |
+Both readings are true at once and the honest summary is the trade, not either number. Inside the population a fault put at risk the agent recovers more per message by a wide margin; across the whole day a policy that contacts everybody recovers more in total and sends ten to twenty times the messages to do it. Which one a merchant should want depends on what a message costs them, which is the quantity this simulator sets to almost zero. See the note under section 1.
+
+| scenario | agent | echo | B0 | B1 | B2 |
+|---|---|---|---|---|---|
+| S0 | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 16,06,269.96 +/- 2,36,648.25 / 878 msg / 19 opt-out | 15,92,749.07 +/- 2,33,011.34 / 1056 msg / 23 opt-out |
+| S1 | 11,03,478.46 +/- 1,82,018.35 / 90 msg / 1 opt-out | 11,20,518.30 +/- 1,94,008.47 / 139 msg / 2 opt-out | 9,71,510.97 +/- 1,49,144.62 / 0 msg / 0 opt-out | 17,20,538.42 +/- 2,58,270.52 / 1026 msg / 33 opt-out | 17,29,528.48 +/- 2,53,398.64 / 1296 msg / 29 opt-out |
+| S2 | 10,02,862.78 +/- 1,66,415.87 / 49 msg / 1 opt-out | 9,96,177.32 +/- 1,69,331.66 / 32 msg / 1 opt-out | 9,29,264.42 +/- 1,50,027.09 / 0 msg / 0 opt-out | 16,55,171.60 +/- 2,49,836.27 / 951 msg / 26 opt-out | 16,51,203.57 +/- 2,47,574.88 / 1176 msg / 27 opt-out |
+| S3 | 13,35,051.32 +/- 2,25,614.66 / 552 msg / 13 opt-out | 13,14,045.88 +/- 2,47,393.32 / 494 msg / 11 opt-out | 10,99,885.26 +/- 1,84,025.99 / 0 msg / 0 opt-out | 18,74,640.11 +/- 3,03,994.99 / 1111 msg / 39 opt-out | 18,92,941.10 +/- 2,98,122.66 / 1436 msg / 35 opt-out |
+| S4 | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 16,92,541.01 +/- 2,61,694.87 / 1017 msg / 31 opt-out | 16,82,976.85 +/- 2,49,252.64 / 1275 msg / 31 opt-out |
 
 ## 3. Decomposition
 
@@ -105,22 +113,27 @@ reading its organic column against another arm's link column compares a whole to
 | S0 | B1 | 888.2 | 439.8 | 0.0 | 448.4 | 878 |
 | S0 | B2 | 873.8 | 406.9 | 0.0 | 466.9 | 1056 |
 | S0 | agent | 483.3 | 0.0 | 0.0 | 483.3 | 0 |
+| S0 | echo | 483.3 | 0.0 | 0.0 | 483.3 | 0 |
 | S1 | B0 | 521.5 | 0.0 | 0.0 | 521.5 | 0 |
 | S1 | B1 | 950.3 | 463.3 | 0.0 | 487.0 | 1026 |
 | S1 | B2 | 948.6 | 443.1 | 0.0 | 505.5 | 1296 |
 | S1 | agent | 598.0 | 18.7 | 72.4 | 506.9 | 90 |
+| S1 | echo | 606.6 | 27.3 | 72.4 | 506.9 | 139 |
 | S2 | B0 | 498.5 | 0.0 | 0.0 | 498.5 | 0 |
 | S2 | B1 | 914.1 | 449.6 | 0.0 | 464.5 | 951 |
 | S2 | B2 | 905.7 | 423.2 | 0.0 | 482.5 | 1176 |
 | S2 | agent | 540.6 | 10.3 | 38.3 | 492.0 | 49 |
+| S2 | echo | 536.7 | 6.4 | 38.3 | 492.0 | 32 |
 | S3 | B0 | 590.3 | 0.0 | 0.0 | 590.3 | 0 |
 | S3 | B1 | 1031.4 | 474.6 | 0.0 | 556.8 | 1111 |
 | S3 | B2 | 1036.3 | 461.2 | 0.0 | 575.1 | 1436 |
 | S3 | agent | 714.8 | 124.5 | 0.0 | 590.3 | 552 |
+| S3 | echo | 702.0 | 111.7 | 0.0 | 590.3 | 494 |
 | S4 | B0 | 503.9 | 0.0 | 0.0 | 503.9 | 0 |
 | S4 | B1 | 930.8 | 460.5 | 0.0 | 470.3 | 1017 |
 | S4 | B2 | 919.1 | 431.0 | 0.0 | 488.1 | 1275 |
 | S4 | agent | 503.9 | 0.0 | 0.0 | 503.9 | 0 |
+| S4 | echo | 503.9 | 0.0 | 0.0 | 503.9 | 0 |
 
 ## 4. Secondary metrics
 
@@ -130,22 +143,27 @@ reading its organic column against another arm's link column compares a whole to
 | S0 | B1 | 0.593 | 0.000 | 0.56 | 0.0 | 0/10 | n/a | 0 |
 | S0 | B2 | 0.583 | 0.000 | 0.68 | 0.0 | 0/10 | n/a | 0 |
 | S0 | agent | 0.323 | 0.000 | 0.00 | 0.0 | 0/10 | n/a | 0 |
+| S0 | echo | 0.323 | 0.000 | 0.00 | 0.0 | 0/10 | n/a | 0 |
 | S1 | B0 | 0.301 | 0.194 | 0.00 | 0.0 | 10/10 | 5.4 | 0 |
 | S1 | B1 | 0.549 | 0.305 | 0.61 | 0.0 | 10/10 | 5.4 | 0 |
 | S1 | B2 | 0.548 | 0.364 | 0.77 | 0.0 | 10/10 | 5.4 | 0 |
 | S1 | agent | 0.346 | 0.477 | 0.08 | 0.2 | 10/10 | 5.4 | 0 |
+| S1 | echo | 0.351 | 0.508 | 0.13 | 0.1 | 10/10 | 5.4 | 0 |
 | S2 | B0 | 0.307 | 0.176 | 0.00 | 0.0 | 10/10 | 8.6 | 0 |
 | S2 | B1 | 0.564 | 0.277 | 0.59 | 0.0 | 10/10 | 8.6 | 0 |
 | S2 | B2 | 0.558 | 0.331 | 0.73 | 0.0 | 10/10 | 8.6 | 0 |
 | S2 | agent | 0.333 | 0.441 | 0.05 | 0.4 | 10/10 | 8.6 | 0 |
+| S2 | echo | 0.331 | 0.418 | 0.03 | 0.2 | 10/10 | 8.6 | 0 |
 | S3 | B0 | 0.312 | 0.296 | 0.00 | 0.0 | 10/10 | 7.0 | 0 |
 | S3 | B1 | 0.544 | 0.411 | 0.61 | 0.0 | 10/10 | 7.0 | 0 |
 | S3 | B2 | 0.547 | 0.465 | 0.78 | 0.0 | 10/10 | 7.0 | 0 |
 | S3 | agent | 0.377 | 0.467 | 0.42 | 1.1 | 10/10 | 7.0 | 0 |
+| S3 | echo | 0.370 | 0.450 | 0.37 | 1.1 | 10/10 | 7.0 | 0 |
 | S4 | B0 | 0.291 | 0.152 | 0.00 | 0.0 | 10/10 | 9.5 | 0 |
 | S4 | B1 | 0.538 | 0.272 | 0.62 | 0.0 | 10/10 | 9.5 | 0 |
 | S4 | B2 | 0.531 | 0.287 | 0.78 | 0.0 | 10/10 | 9.5 | 0 |
 | S4 | agent | 0.291 | 0.152 | 0.00 | 1.0 | 10/10 | 9.5 | 0 |
+| S4 | echo | 0.291 | 0.152 | 0.00 | 1.0 | 10/10 | 9.5 | 0 |
 
 ## 5. Identical worlds
 
@@ -154,64 +172,64 @@ hashed before any policy acts, and the hash is the same across all four arms for
 scenario and seed. No policy writes a payment attempt, which is why this holds and why it
 is checked rather than assumed.
 
-| scenario / seed | agent | B0 | B1 | B2 | identical |
-|---|---|---|---|---|---|
-| S0/0 | fbb8d90238a0 | fbb8d90238a0 | fbb8d90238a0 | fbb8d90238a0 | yes |
-| S0/1 | 58490f81d586 | 58490f81d586 | 58490f81d586 | 58490f81d586 | yes |
-| S0/2 | 9c12dff6086e | 9c12dff6086e | 9c12dff6086e | 9c12dff6086e | yes |
-| S0/3 | 2257c4e8ceec | 2257c4e8ceec | 2257c4e8ceec | 2257c4e8ceec | yes |
-| S0/4 | 9b3fd2a4517a | 9b3fd2a4517a | 9b3fd2a4517a | 9b3fd2a4517a | yes |
-| S0/5 | 960629da96f8 | 960629da96f8 | 960629da96f8 | 960629da96f8 | yes |
-| S0/6 | dd66d5d8b7e8 | dd66d5d8b7e8 | dd66d5d8b7e8 | dd66d5d8b7e8 | yes |
-| S0/7 | 0a1048adf10d | 0a1048adf10d | 0a1048adf10d | 0a1048adf10d | yes |
-| S0/8 | 7667429a0076 | 7667429a0076 | 7667429a0076 | 7667429a0076 | yes |
-| S0/9 | c1d4212444a3 | c1d4212444a3 | c1d4212444a3 | c1d4212444a3 | yes |
-| S1/0 | ceef2f5f3eb5 | ceef2f5f3eb5 | ceef2f5f3eb5 | ceef2f5f3eb5 | yes |
-| S1/1 | 6a6e30230725 | 6a6e30230725 | 6a6e30230725 | 6a6e30230725 | yes |
-| S1/2 | 81e5c73c1ca2 | 81e5c73c1ca2 | 81e5c73c1ca2 | 81e5c73c1ca2 | yes |
-| S1/3 | 9d5f6f636ae2 | 9d5f6f636ae2 | 9d5f6f636ae2 | 9d5f6f636ae2 | yes |
-| S1/4 | 955a10d8ab18 | 955a10d8ab18 | 955a10d8ab18 | 955a10d8ab18 | yes |
-| S1/5 | 88342074b9bb | 88342074b9bb | 88342074b9bb | 88342074b9bb | yes |
-| S1/6 | bed6e4bca78e | bed6e4bca78e | bed6e4bca78e | bed6e4bca78e | yes |
-| S1/7 | 6325c4c036ef | 6325c4c036ef | 6325c4c036ef | 6325c4c036ef | yes |
-| S1/8 | b1319586d5f6 | b1319586d5f6 | b1319586d5f6 | b1319586d5f6 | yes |
-| S1/9 | 38c3edebc311 | 38c3edebc311 | 38c3edebc311 | 38c3edebc311 | yes |
-| S2/0 | 07a86fe85bf7 | 07a86fe85bf7 | 07a86fe85bf7 | 07a86fe85bf7 | yes |
-| S2/1 | 310eb9c16f6b | 310eb9c16f6b | 310eb9c16f6b | 310eb9c16f6b | yes |
-| S2/2 | 827b959c906c | 827b959c906c | 827b959c906c | 827b959c906c | yes |
-| S2/3 | 5f82a86d8649 | 5f82a86d8649 | 5f82a86d8649 | 5f82a86d8649 | yes |
-| S2/4 | 47a8fadb09cd | 47a8fadb09cd | 47a8fadb09cd | 47a8fadb09cd | yes |
-| S2/5 | 1a2611f73760 | 1a2611f73760 | 1a2611f73760 | 1a2611f73760 | yes |
-| S2/6 | c7328916510b | c7328916510b | c7328916510b | c7328916510b | yes |
-| S2/7 | b64b4a276691 | b64b4a276691 | b64b4a276691 | b64b4a276691 | yes |
-| S2/8 | 13292ba8f977 | 13292ba8f977 | 13292ba8f977 | 13292ba8f977 | yes |
-| S2/9 | f2fbe4242260 | f2fbe4242260 | f2fbe4242260 | f2fbe4242260 | yes |
-| S3/0 | 8123ab82ab06 | 8123ab82ab06 | 8123ab82ab06 | 8123ab82ab06 | yes |
-| S3/1 | c4a81554cf66 | c4a81554cf66 | c4a81554cf66 | c4a81554cf66 | yes |
-| S3/2 | 39c77d7da57e | 39c77d7da57e | 39c77d7da57e | 39c77d7da57e | yes |
-| S3/3 | e732ba7f77f9 | e732ba7f77f9 | e732ba7f77f9 | e732ba7f77f9 | yes |
-| S3/4 | 4ddd18a268b0 | 4ddd18a268b0 | 4ddd18a268b0 | 4ddd18a268b0 | yes |
-| S3/5 | 9a1320b6d67c | 9a1320b6d67c | 9a1320b6d67c | 9a1320b6d67c | yes |
-| S3/6 | 8d3cf58598e8 | 8d3cf58598e8 | 8d3cf58598e8 | 8d3cf58598e8 | yes |
-| S3/7 | 23755edec384 | 23755edec384 | 23755edec384 | 23755edec384 | yes |
-| S3/8 | 65265ce6aa59 | 65265ce6aa59 | 65265ce6aa59 | 65265ce6aa59 | yes |
-| S3/9 | 50ec5ef2e808 | 50ec5ef2e808 | 50ec5ef2e808 | 50ec5ef2e808 | yes |
-| S4/0 | 04048bb0b4a5 | 04048bb0b4a5 | 04048bb0b4a5 | 04048bb0b4a5 | yes |
-| S4/1 | f212d896061f | f212d896061f | f212d896061f | f212d896061f | yes |
-| S4/2 | 095e8b938020 | 095e8b938020 | 095e8b938020 | 095e8b938020 | yes |
-| S4/3 | da0f96c1f903 | da0f96c1f903 | da0f96c1f903 | da0f96c1f903 | yes |
-| S4/4 | 476ea6780646 | 476ea6780646 | 476ea6780646 | 476ea6780646 | yes |
-| S4/5 | 874fbde9d022 | 874fbde9d022 | 874fbde9d022 | 874fbde9d022 | yes |
-| S4/6 | 3de1a1dd8a1d | 3de1a1dd8a1d | 3de1a1dd8a1d | 3de1a1dd8a1d | yes |
-| S4/7 | db3c2cb9934a | db3c2cb9934a | db3c2cb9934a | db3c2cb9934a | yes |
-| S4/8 | 316af0dce957 | 316af0dce957 | 316af0dce957 | 316af0dce957 | yes |
-| S4/9 | fb77896fa30f | fb77896fa30f | fb77896fa30f | fb77896fa30f | yes |
+| scenario / seed | agent | echo | B0 | B1 | B2 | identical |
+|---|---|---|---|---|---|---|
+| S0/0 | fbb8d90238a0 | fbb8d90238a0 | fbb8d90238a0 | fbb8d90238a0 | fbb8d90238a0 | yes |
+| S0/1 | 58490f81d586 | 58490f81d586 | 58490f81d586 | 58490f81d586 | 58490f81d586 | yes |
+| S0/2 | 9c12dff6086e | 9c12dff6086e | 9c12dff6086e | 9c12dff6086e | 9c12dff6086e | yes |
+| S0/3 | 2257c4e8ceec | 2257c4e8ceec | 2257c4e8ceec | 2257c4e8ceec | 2257c4e8ceec | yes |
+| S0/4 | 9b3fd2a4517a | 9b3fd2a4517a | 9b3fd2a4517a | 9b3fd2a4517a | 9b3fd2a4517a | yes |
+| S0/5 | 960629da96f8 | 960629da96f8 | 960629da96f8 | 960629da96f8 | 960629da96f8 | yes |
+| S0/6 | dd66d5d8b7e8 | dd66d5d8b7e8 | dd66d5d8b7e8 | dd66d5d8b7e8 | dd66d5d8b7e8 | yes |
+| S0/7 | 0a1048adf10d | 0a1048adf10d | 0a1048adf10d | 0a1048adf10d | 0a1048adf10d | yes |
+| S0/8 | 7667429a0076 | 7667429a0076 | 7667429a0076 | 7667429a0076 | 7667429a0076 | yes |
+| S0/9 | c1d4212444a3 | c1d4212444a3 | c1d4212444a3 | c1d4212444a3 | c1d4212444a3 | yes |
+| S1/0 | ceef2f5f3eb5 | ceef2f5f3eb5 | ceef2f5f3eb5 | ceef2f5f3eb5 | ceef2f5f3eb5 | yes |
+| S1/1 | 6a6e30230725 | 6a6e30230725 | 6a6e30230725 | 6a6e30230725 | 6a6e30230725 | yes |
+| S1/2 | 81e5c73c1ca2 | 81e5c73c1ca2 | 81e5c73c1ca2 | 81e5c73c1ca2 | 81e5c73c1ca2 | yes |
+| S1/3 | 9d5f6f636ae2 | 9d5f6f636ae2 | 9d5f6f636ae2 | 9d5f6f636ae2 | 9d5f6f636ae2 | yes |
+| S1/4 | 955a10d8ab18 | 955a10d8ab18 | 955a10d8ab18 | 955a10d8ab18 | 955a10d8ab18 | yes |
+| S1/5 | 88342074b9bb | 88342074b9bb | 88342074b9bb | 88342074b9bb | 88342074b9bb | yes |
+| S1/6 | bed6e4bca78e | bed6e4bca78e | bed6e4bca78e | bed6e4bca78e | bed6e4bca78e | yes |
+| S1/7 | 6325c4c036ef | 6325c4c036ef | 6325c4c036ef | 6325c4c036ef | 6325c4c036ef | yes |
+| S1/8 | b1319586d5f6 | b1319586d5f6 | b1319586d5f6 | b1319586d5f6 | b1319586d5f6 | yes |
+| S1/9 | 38c3edebc311 | 38c3edebc311 | 38c3edebc311 | 38c3edebc311 | 38c3edebc311 | yes |
+| S2/0 | 07a86fe85bf7 | 07a86fe85bf7 | 07a86fe85bf7 | 07a86fe85bf7 | 07a86fe85bf7 | yes |
+| S2/1 | 310eb9c16f6b | 310eb9c16f6b | 310eb9c16f6b | 310eb9c16f6b | 310eb9c16f6b | yes |
+| S2/2 | 827b959c906c | 827b959c906c | 827b959c906c | 827b959c906c | 827b959c906c | yes |
+| S2/3 | 5f82a86d8649 | 5f82a86d8649 | 5f82a86d8649 | 5f82a86d8649 | 5f82a86d8649 | yes |
+| S2/4 | 47a8fadb09cd | 47a8fadb09cd | 47a8fadb09cd | 47a8fadb09cd | 47a8fadb09cd | yes |
+| S2/5 | 1a2611f73760 | 1a2611f73760 | 1a2611f73760 | 1a2611f73760 | 1a2611f73760 | yes |
+| S2/6 | c7328916510b | c7328916510b | c7328916510b | c7328916510b | c7328916510b | yes |
+| S2/7 | b64b4a276691 | b64b4a276691 | b64b4a276691 | b64b4a276691 | b64b4a276691 | yes |
+| S2/8 | 13292ba8f977 | 13292ba8f977 | 13292ba8f977 | 13292ba8f977 | 13292ba8f977 | yes |
+| S2/9 | f2fbe4242260 | f2fbe4242260 | f2fbe4242260 | f2fbe4242260 | f2fbe4242260 | yes |
+| S3/0 | 8123ab82ab06 | 8123ab82ab06 | 8123ab82ab06 | 8123ab82ab06 | 8123ab82ab06 | yes |
+| S3/1 | c4a81554cf66 | c4a81554cf66 | c4a81554cf66 | c4a81554cf66 | c4a81554cf66 | yes |
+| S3/2 | 39c77d7da57e | 39c77d7da57e | 39c77d7da57e | 39c77d7da57e | 39c77d7da57e | yes |
+| S3/3 | e732ba7f77f9 | e732ba7f77f9 | e732ba7f77f9 | e732ba7f77f9 | e732ba7f77f9 | yes |
+| S3/4 | 4ddd18a268b0 | 4ddd18a268b0 | 4ddd18a268b0 | 4ddd18a268b0 | 4ddd18a268b0 | yes |
+| S3/5 | 9a1320b6d67c | 9a1320b6d67c | 9a1320b6d67c | 9a1320b6d67c | 9a1320b6d67c | yes |
+| S3/6 | 8d3cf58598e8 | 8d3cf58598e8 | 8d3cf58598e8 | 8d3cf58598e8 | 8d3cf58598e8 | yes |
+| S3/7 | 23755edec384 | 23755edec384 | 23755edec384 | 23755edec384 | 23755edec384 | yes |
+| S3/8 | 65265ce6aa59 | 65265ce6aa59 | 65265ce6aa59 | 65265ce6aa59 | 65265ce6aa59 | yes |
+| S3/9 | 50ec5ef2e808 | 50ec5ef2e808 | 50ec5ef2e808 | 50ec5ef2e808 | 50ec5ef2e808 | yes |
+| S4/0 | 04048bb0b4a5 | 04048bb0b4a5 | 04048bb0b4a5 | 04048bb0b4a5 | 04048bb0b4a5 | yes |
+| S4/1 | f212d896061f | f212d896061f | f212d896061f | f212d896061f | f212d896061f | yes |
+| S4/2 | 095e8b938020 | 095e8b938020 | 095e8b938020 | 095e8b938020 | 095e8b938020 | yes |
+| S4/3 | da0f96c1f903 | da0f96c1f903 | da0f96c1f903 | da0f96c1f903 | da0f96c1f903 | yes |
+| S4/4 | 476ea6780646 | 476ea6780646 | 476ea6780646 | 476ea6780646 | 476ea6780646 | yes |
+| S4/5 | 874fbde9d022 | 874fbde9d022 | 874fbde9d022 | 874fbde9d022 | 874fbde9d022 | yes |
+| S4/6 | 3de1a1dd8a1d | 3de1a1dd8a1d | 3de1a1dd8a1d | 3de1a1dd8a1d | 3de1a1dd8a1d | yes |
+| S4/7 | db3c2cb9934a | db3c2cb9934a | db3c2cb9934a | db3c2cb9934a | db3c2cb9934a | yes |
+| S4/8 | 316af0dce957 | 316af0dce957 | 316af0dce957 | 316af0dce957 | 316af0dce957 | yes |
+| S4/9 | fb77896fa30f | fb77896fa30f | fb77896fa30f | fb77896fa30f | fb77896fa30f | yes |
 
-All 50 worlds identical across all 4 policy arms.
+All 50 worlds identical across all 5 policy arms.
 
 ## 6. Diagnosis ablation
 
-Rules-only against a recorded model. 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 41 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
+Rules-only against a recorded model. 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 81 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
 
 The reconciled column is the one the agent acts on. A rules verdict and a model verdict that agree raise confidence, a disagreement lowers it, and anything below 0.6 escalates rather than acting. Reading the LLM column alone would credit the model for an answer the agent would not have used.
 
@@ -237,6 +255,14 @@ Where the rules classifier falls back to `unknown`:
 - S2 seed 8 on `card`: truth auth_failure_bin, rules said unknown
 - S2 seed 9 on `card`: truth auth_failure_bin, rules said unknown
 - S3 seed 8 on `card:card_network:Visa`: truth gateway_degradation, rules said unknown
+
+**What that accuracy is worth in money, at this incident count, is nothing.** The `echo` arm in the tables above is the agent with its diagnosis model replaced by a stub that repeats the rules classifier at the minimum confidence that counts as agreement. Everything downstream is unchanged: same reconciliation, same 0.6 action threshold, same matrix, same live planner. Paired against the agent across ten seeds it recovers **16,066 rupees more on S1, 6,081 less on S2, 15,266 less on S3 and exactly the same on S4**. The signs disagree, no scenario clears a two-sided paired t comfortably, and the four scenarios sum to roughly minus five thousand rupees. That is a difference of zero with noise on top.
+
+The reason is structural rather than lucky. Every incident the rules get wrong, they get wrong by answering `unknown`, and the matrix allows nothing but escalation for an unknown cause. So on those incidents the agent escalates because the model disagreed with the rules and confidence collapsed to 0.5, and the echo arm escalates because the cause is unknown and the matrix forbids everything else. Different route, same decision, no money either way. On every incident where the agent acts, the rules were already right.
+
+Where the two arms do diverge, it is not the diagnosis that differs. The reconciled cause is the same in every incident the rules got right, which is 37 of 41; what differs is the confidence number, 0.95 from the model against the echo's 0.70, and that number is in the planner's prompt. So the residual gap measures a language model reacting to a different stated confidence, not a better diagnosis. It is a confound rather than a result, and it is reported rather than tuned away.
+
+That is not an argument for dropping the model. The gate converts diagnosis quality into money in one direction only: a confidently wrong cause is catastrophic, and a probe run against a provider that always returns a confident wrong answer recovers exactly what doing nothing recovers, because every action it proposes is refused by the matrix and the incident escalates. What the numbers say is narrower and duller than a pitch would like: at 41 incidents, on scenarios the rules were written for, accuracy above the gate threshold is unpurchased. A harder incident mix is where a model would earn its place, and this sweep does not contain one.
 
 Where the model was wrong:
 
@@ -280,7 +306,37 @@ Not slow. Not misattributed. **Not detected.** The diurnal curve puts the 03:00 
 
 The 15-minute promise in PRD goal G1 is a promise about the evening peak. Overnight, at this merchant size, the detector does not fire at all. The fix is volume or a longer window, not a threshold, and both trade against the zero false-alarm result.
 
-## 9. Sensitivity and the adversarial set
+## 9. Sensitivity: the constant the margin rests on
+
+The agent's margin on S1 and S2 arrives mostly by the steer route: a checkout display hint moves a customer off the failing instrument and they pay in the same session. That route is available to no other arm, costs no messages, and converts at a probability this project asserted rather than measured. The shipped value is **0.55**, taken from the architecture note as an illustration and never swept until now.
+
+Only that probability moves. The attempt stream is generated before any policy runs and does not read it, so the world, the eligible set and the at-risk set are identical at every value.
+
+Mean over 5 seeds, at-risk recovered revenue in rupees against messages sent.
+
+**S1**
+
+| steer | agent | echo | B0 | B1 | B2 |
+|---|---|---|---|---|---|
+| 0.25 | 1,97,776.44 / 137 msg | 2,13,051.16 / 191 msg | 95,282.78 / 0 msg | 1,56,222.50 / 171 msg | 1,83,430.67 / 272 msg |
+| 0.35 | 2,07,665.84 / 121 msg | 2,22,940.56 / 174 msg | 95,282.78 / 0 msg | 1,56,222.50 / 171 msg | 1,83,430.67 / 272 msg |
+| 0.45 | 2,19,113.26 / 108 msg | 2,35,100.65 / 160 msg | 95,282.78 / 0 msg | 1,56,222.50 / 171 msg | 1,83,430.67 / 272 msg |
+| 0.55 (shipped) | 2,31,072.48 / 94 msg | 2,47,166.05 / 145 msg | 95,282.78 / 0 msg | 1,56,222.50 / 171 msg | 1,83,430.67 / 272 msg |
+| 0.65 | 2,45,638.72 / 81 msg | 2,61,535.10 / 132 msg | 95,282.78 / 0 msg | 1,56,222.50 / 171 msg | 1,83,430.67 / 272 msg |
+
+**S2**
+
+| steer | agent | echo | B0 | B1 | B2 |
+|---|---|---|---|---|---|
+| 0.25 | 1,17,040.83 / 82 msg | 1,10,104.30 / 59 msg | 50,277.38 / 0 msg | 81,409.60 / 92 msg | 95,370.54 / 148 msg |
+| 0.35 | 1,27,377.21 / 73 msg | 1,19,925.02 / 50 msg | 50,277.38 / 0 msg | 81,409.60 / 92 msg | 95,370.54 / 148 msg |
+| 0.45 | 1,33,089.98 / 67 msg | 1,25,637.79 / 45 msg | 50,277.38 / 0 msg | 81,409.60 / 92 msg | 95,370.54 / 148 msg |
+| 0.55 (shipped) | 1,42,959.51 / 60 msg | 1,34,864.96 / 38 msg | 50,277.38 / 0 msg | 81,409.60 / 92 msg | 95,370.54 / 148 msg |
+| 0.65 | 1,52,390.46 / 55 msg | 1,44,295.91 / 34 msg | 50,277.38 / 0 msg | 81,409.60 / 92 msg | 95,370.54 / 148 msg |
+
+**Where the win goes.** On S1 the agent beats B2 at every value in the swept range, down to 0.25. On S2 the agent beats B2 at every value in the swept range, down to 0.25.
+
+### The adversarial set
 
 The response-model multipliers in `salvage/sim/params.yaml` are assumptions, so the
 results have to say how much the answer depends on them. Each row scales the intervention
@@ -381,13 +437,13 @@ An escalation is worth nothing unless somebody acts on it. `escalation_fix_minut
 
 S4, mean over 5 seeds. Every cell is **at-risk recovered revenue in rupees and messages sent**, on the same at-risk order set as section 1.
 
-| T | agent | B0 | B1 | B2 |
-|---|---|---|---|---|
-| never | 98,033.36 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
-| 120 min | 2,67,435.23 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
-| 60 min | 2,75,192.43 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
-| 30 min | 2,76,807.63 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
-| 15 min | 2,77,080.14 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
+| T | agent | echo | B0 | B1 | B2 |
+|---|---|---|---|---|---|
+| never | 98,033.36 / 0 msg | 98,033.36 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
+| 120 min | 2,67,435.23 / 0 msg | 2,67,435.23 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
+| 60 min | 2,75,192.43 / 0 msg | 2,75,192.43 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
+| 30 min | 2,76,807.63 / 0 msg | 2,76,807.63 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
+| 15 min | 2,77,080.14 / 0 msg | 2,77,080.14 / 0 msg | 98,033.36 / 0 msg | 1,69,016.69 / 1018 msg | 1,83,115.32 / 1280 msg |
 
 **Only an arm that escalates can be repaired.** B1 and B2 never escalate, so their rows are flat by construction and a row that moved would be a bug rather than a finding. That asymmetry is worth weighing rather than waving through: a real merchant may well notice a wholly dead payment method without an agent telling them, in which case part of this column belongs to the merchant and not to Salvage. Read the curve as the value of escalating **sooner and with the cause already named**, not as the value of the fault being fixed at all.
 
@@ -418,9 +474,12 @@ uv run salvage e2e verify
 
 - **The escalation fix is modelled on the response side only.** The attempt stream is generated before any policy runs and is not rewritten, so payments the fault would have broken after a repair still fail in the recorded data and still count in the at-risk denominator. A real fix would stop them happening. Section 11 therefore understates what a fix is worth, and it understates it for the only arm that can trigger one. The alternative changes which orders exist per arm, which would break the identical order set that every comparison here rests on.
 - **Only an arm that escalates can be repaired.** B1 and B2 never escalate, so the fix curve is available to the agent and to nobody else. A real merchant might notice a dead payment method without an agent telling them, so part of that column may belong to the merchant rather than to Salvage.
+- **The detector's card BIN key has no source in the documented payment entity.** Razorpay's published payment entity carries a card object with id, entity, name, last4, network, type, issuer, international, emi, sub_type and token_iin. There is no `iin`, and token_iin is null in the published sample and is a network token rather than the card. S2 detects a failing BIN range because the simulator supplies a BIN; a real deployment would have to fetch it, and until it does, `card_bin6` is a segment key with nothing behind it. This was found by re-verifying the checked-in fixtures against the live docs after an audit flagged them as circular. The card fixture had asserted an `iin` field and cited the docs page that does not contain one.
+- **The UPI handle may be absent on exactly the events that matter.** Razorpay's webhook documentation publishes no payment.failed sample for UPI and warns twice that the vpa parameter must not be hardcoded and may not be present on a UPI failure. Every instrument-level UPI segment key in this project is derived from vpa, so S1's detection premise depends on a field the payload is not guaranteed to carry. The normaliser tolerates its absence; the detector simply has no key to fire on when it is missing.
 - **The LLM column is one model on one day.** Every fixture was recorded from a single provider and model, listed at the top of this document. A different model, or the same model next month, is a different measurement. Nothing here is an accuracy claim about language models in general.
 - **S2 at low segment volume attributes to `card` rather than to the failing BIN.** On held-out seeds 8 and 9 the BIN key never reaches the detector's 20-attempt minimum in a 15-minute window, so the incident is attributed to the whole card method, whose effect size is diluted by four healthy BIN ranges. Detection still happens, at 11 and 16 sim minutes rather than 5 to 8, and the rules classifier then cannot fire the `auth_failure_bin` rule because `card` is not one of the card dimensions that rule accepts. This is the operating envelope in section 6, not a separate defect.
 - **S3 seed 8 opens two incidents for one fault.** A merchant-wide gateway incident, and then a second on `card:card_network:Visa` about seventy minutes later, after the first closed. The attribution logic was left alone rather than fitted to a held-out seed. The cost is one duplicate incident in fifty runs.
 - **Time to detect is a function of segment volume, not of fault severity.** Both slow detections on the held-out seeds happened because the affected segment sat at or below the 20-attempt floor, not because the signal was weak. Section 7 gives the boundary.
-- **The simulator is the instrument.** Every parameter is in `salvage/sim/params.yaml` with its assumption written beside it. The response-model multipliers are judgement, which is what section 9 exists to quantify.
+- **The simulator is the instrument.** Every parameter is in `salvage/sim/params.yaml` with its assumption written beside it. The response-model multipliers are judgement. Section 9 sweeps the one the agent's margin actually rests on, the steer conversion probability, and the win survives the whole swept range; the others remain asserted.
+- **A message costs almost nothing here.** The only penalty for contacting a customer is a 2.6 percent chance they opt out. No DLT registration, no sender reputation, no complaint cost, no fatigue. That flatters the arms that message heavily, which are the baselines, so the contact-volume gap in section 1 is if anything understated. It also means the opt-out counts carry no consequence inside the model.
 - **Traffic volume is 12,000 attempts a day, not the 1,500 in the architecture note.** At 1,500 the detector cannot meet the 15-minute target on a single-instrument fault at all. The arithmetic is in `docs/BUILD_LOG.md`.

@@ -94,6 +94,45 @@ def seed_window(conn, window_start: int) -> None:
     conn.commit()
 
 
+def test_a_sweep_artefact_in_the_results_directory_does_not_take_the_page_down(client, tmp_path):
+    """The run selector scans every JSON in data/results. A curve artefact like the steer sweep
+    also has "rows" and "policies", but its rows are aggregated over seeds and have no seed key,
+    and reading one as a run raised KeyError from the route. The filter is on shape rather than on
+    a filename list somebody has to remember to update."""
+    from salvage.api import routes_results
+
+    directory = tmp_path / "results"
+    directory.mkdir()
+    (directory / "main.json").write_text(
+        json.dumps(
+            {
+                "run_id": "main",
+                "policies": ["agent"],
+                "variant": "peak",
+                "finished_at": 10,
+                "rows": [{"scenario": "S1", "seed": 0, "policy": "agent"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (directory / "steer_sensitivity.json").write_text(
+        json.dumps(
+            {
+                "policies": ["agent"],
+                "rows": [{"scenario": "S1", "policy": "agent", "seeds": 5, "steer": 0.55}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    original = routes_results.RESULTS_DIR
+    routes_results.RESULTS_DIR = directory
+    try:
+        runs = routes_results._runs()  # noqa: SLF001
+    finally:
+        routes_results.RESULTS_DIR = original
+    assert [run["run_id"] for run in runs] == ["main"]
+
+
 def test_overview_pins_the_merchant_wide_row_first(client):
     """The decision recorded in BUILD_LOG under M2: `all` is pinned at the top of the heatmap so
     a reader sees the merchant number before the segment breakdown. It is pinned by position, not
