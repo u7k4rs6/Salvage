@@ -1770,3 +1770,48 @@ before I understood it, which is a quiet way to publish a curve nobody ran. It t
 passed because it only asserted the flag existed. The test now reads the source and requires both
 that the hardcoded name is gone and that `args.out` is what gets written. A test that checks the
 handle rather than the wire is worse than no test, because it tells you the thing is fixed.
+
+## 2026-08-26, M5 close: decisions, and what is still not measured
+
+### Decisions taken in this milestone
+
+**The planner's fixtures are recorded by running the arm, not blind.** A diagnosis prompt can be
+enumerated in advance and is the thing being scored, so it is recorded blind through the isolated
+path. A planner prompt cannot be: what the planner is asked depends on what the diagnosis said. The
+planner is not scored against ground truth anywhere in this document, so recording it during a run
+costs nothing that matters, and doing otherwise would have meant either faking a diagnosis to get a
+planner prompt or scoring the planner against a diagnosis it would never have been given.
+
+**The repair matches a fault the escalation does not contradict, rather than one it names
+exactly.** An incident attributed to `card` covers a fault on one BIN range, and an incident
+attributed to `card:card_network:Visa` does not rule out a gateway fault breaking every method.
+Only a real disagreement fails to match. This is generous to the agent, it is the only generous
+assumption in the mechanism, and it is isolated in one function with a comment saying so, because
+the stingier reading would make the curve shallower and somebody should be able to argue with it.
+
+**The ablation reports a held-out split as well as the whole set.** Seeds 5 to 9 are the seeds the
+detector's thresholds were frozen before. The model column is held out on every seed, since nothing
+about the model was tuned on any of them, but reporting the same split for both columns keeps them
+comparable rather than letting the model's column look better for a reason that has nothing to do
+with the model.
+
+**A fixture miss fails a sweep.** `FixtureMiss` is an `LLMError` and every caller treats an
+`LLMError` as a reason to escalate, which is right for a live provider and wrong for a sweep: a
+prompt with no fixture would be recorded as an agent that chose to escalate. `salvage eval run`
+reads the provider's misses afterwards and exits non-zero. A miss that has since been filled does
+not count, because the recording provider misses every prompt it records.
+
+### What is still not measured, after M5
+
+- **The real Razorpay test-mode run.** `scripts/e2e_real_link.py` is written and refuses to run
+  without credentials, which the build environment still does not have. Section 12 of
+  `docs/RESULTS.md` is a template with the fields it would fill.
+- **What a message costs.** Every contact-efficiency number here is measured in a world where a
+  message costs nothing but a 2.6 percent chance of an opt-out. That pricing flatters the
+  baselines rather than the agent, so the contact-volume gap is if anything understated, but it is
+  still the assumption most worth attacking.
+- **Whether any of this generalises past one model on one day.** All 41 diagnosis fixtures come
+  from `gemini-2.5-flash` recorded over a single afternoon. A different model is a different
+  measurement.
+- **The overnight case, still.** Zero of twenty faults detected at 03:30, unchanged by anything in
+  M5, and the reason is arithmetic rather than a threshold.
