@@ -4,7 +4,7 @@ Every defect in this list was found and fixed during the build. They are ordered
 and the ones that cost the most were not crashes. They were bugs that produced a number.
 
 A crash announces itself. A measurement bug hands you a plausible table, and you put it in a
-report. Ten of the defects below were of that kind, and most of them flattered somebody.
+report. Twelve of the defects below were of that kind, and most of them flattered somebody.
 
 ## Bugs that produced wrong numbers
 
@@ -107,6 +107,62 @@ still failing payments. Caught by reading a collected prompt rather than by a te
 
 `case.no_open_link` forbade second nudges rather than second links, conflating two different PRD
 limits, so B2's second nudge never happened and B2 was silently measured as a slightly noisier B1.
+
+## Three more, on the day a real model arrived
+
+A Gemini key turned up in M5, after two milestones in which the agent arm had never once run with
+a model. Three defects surfaced in a single afternoon, all in code that a green test suite had been
+passing for weeks, and all three found by running the thing rather than by testing it.
+
+### 10. The rationale validator demanded names the model was never shown
+
+A diagnosis must cite at least two evidence fields by name, and the check was written against
+`EvidencePacket.model_fields`. That is not the list the model sees. The packet prints
+`error_source`, `error_step`, `error_reason`, `failure_rate` and `baseline_failure_rate`; the
+fields behind them are `error_source_dist`, `error_step_dist`, `error_reason_dist`, `rate` and
+`baseline_rate`. The system prompt then teaches the printed vocabulary in its taxonomy section.
+The model was being told one set of names and marked against another.
+
+**16 of 41 blind recordings failed on it**, each after spending its one documented retry being
+told to use names it had never been given. Left alone, the LLM column would have been a model that
+looks incapable of following an instruction, and the incidents behind those sixteen would have
+escalated and read as an agent choosing restraint.
+
+Only a real model could find this. The 46 fixtures M2 shipped were written by a model that had
+been shown the dataclass, so they cited `error_source_dist` and sailed through.
+
+### 11. Every recovery link a model planned was silently dropped
+
+`SendRecoveryLinkParams` requires a `case_id`. The planner is asked for one action and a scope, and
+the executor fans that out over the cases the scope selects, so a case id is not something the
+planner can know or is ever asked for. `plan_incident` validated the planner's params against that
+model, found no `case_id`, dropped the action, and recorded the drop in a `planner_error` field
+that nothing read.
+
+With a model present the agent could steer, defer, escalate and do nothing, and could never send a
+recovery link. It was found on the first real agent run, where the plan's own rationale said
+"sending a recovery link offers a direct path to complete their payment" and the run created zero
+links.
+
+The plan-time check now injects a placeholder case id for the actions whose params model has that
+field, and the executor fills the real one per case. It still drops an action carrying an invented
+`amount` or `discount_percent`, which is what it was for. The first version of the fix injected the
+placeholder into every action and broke `STEER_METHOD`, whose params model forbids extra fields;
+an existing test caught that within a minute.
+
+### 12. The escalation fix scoped its population backwards, and this one is mine
+
+The M5 mechanism gives every order a repaired fault put at risk one further chance to come back.
+The first version gave it only to orders that had already failed when the repair landed, which
+seemed obviously right and made a 15 minute fix score worse than a 120 minute one. A fast fix
+simply has fewer failures behind it, and the failures in front of it are precisely the ones it
+should have prevented; the simulator cannot show them not happening, because the attempt stream is
+generated before any policy runs.
+
+Scoping it that way turned a limitation of the instrument into an inverted curve, which is worse
+than a missing result: it would have said an operator should respond to escalations slowly. The
+monotonicity test caught it. The mechanism now covers the fault's whole at-risk set, and
+`docs/RESULTS.md` says plainly that it still understates what a fix is worth.
 
 ## Bugs that would have hurt a customer
 

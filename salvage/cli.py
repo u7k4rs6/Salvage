@@ -330,6 +330,14 @@ def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
     rows = summarise(outcomes)
     print(format_accuracy_table(rows, outcomes))
 
+    # The detector's thresholds were frozen before seeds 5 to 9 were ever looked at
+    # (docs/BUILD_LOG.md, M2 carry-over 2), so those seeds are the held-out set for anything
+    # downstream of detection. The model column is held out on every seed, because nothing about
+    # the model was tuned on any of them, but reporting the same split for both keeps the two
+    # columns comparable.
+    held_out = set(_parse_seeds(args.held_out_seeds)) & set(seeds)
+    held_out_rows = summarise([o for o in outcomes if o.seed in held_out]) if held_out else []
+
     # Written so docs/RESULTS.md can carry the table with its provenance rather than a claim.
     provenance = _accuracy_provenance(args.provider)
     _write_artifact(
@@ -338,6 +346,24 @@ def cmd_diagnose_accuracy(args: argparse.Namespace) -> int:
             "provenance": provenance,
             "provider": args.provider,
             "seeds": seeds,
+            "held_out_seeds": sorted(held_out),
+            "held_out_rows": [
+                {
+                    "scenario": row.scenario,
+                    "incidents": row.incidents,
+                    "seeds": len(held_out),
+                    "rules_accuracy": row.rules_accuracy,
+                    "llm_accuracy": (
+                        f"{row.llm_accuracy:.2f}" if row.llm_accuracy is not None else "unmeasured"
+                    ),
+                    "reconciled_accuracy": (
+                        f"{row.reconciled_accuracy:.2f}"
+                        if row.reconciled_accuracy is not None
+                        else "unmeasured"
+                    ),
+                }
+                for row in held_out_rows
+            ],
             "rows": [
                 {
                     "scenario": row.scenario,
@@ -1090,6 +1116,12 @@ def build_parser() -> argparse.ArgumentParser:
     accuracy.add_argument("--scenarios", default="S1,S2,S3,S4")
     accuracy.add_argument("--seeds", default="0..4", help="'0..4' or '0,1,2'")
     accuracy.add_argument("--variant", default="peak")
+    accuracy.add_argument(
+        "--held-out-seeds",
+        dest="held_out_seeds",
+        default="5..9",
+        help="seeds the detector's thresholds were frozen before, reported separately",
+    )
     accuracy.add_argument(
         "--provider",
         default="none",

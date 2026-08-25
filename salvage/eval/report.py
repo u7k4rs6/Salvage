@@ -643,6 +643,25 @@ def _diagnosis_block(payload: dict[str, Any]) -> str:
             f"{row['rules_accuracy']:.2f} | {row.get('llm_accuracy', 'unmeasured')} | "
             f"{row.get('reconciled_accuracy', 'unmeasured')} |"
         )
+    if payload.get("held_out_rows"):
+        held = payload["held_out_seeds"]
+        lines.append("")
+        lines.append(
+            f"The same table over the held-out seeds {min(held)} to {max(held)} alone. The "
+            f"detector's thresholds were frozen before those seeds were ever looked at "
+            f"(`docs/BUILD_LOG.md`, M2 carry-over 2). The model column is held out on every seed, "
+            f"because nothing about the model was tuned on any of them, but reporting the same "
+            f"split for both columns keeps them comparable."
+        )
+        lines.append("")
+        lines.append("| scenario | incidents | seeds | rules-only | LLM | reconciled |")
+        lines.append("|---|---|---|---|---|---|")
+        for row in payload["held_out_rows"]:
+            lines.append(
+                f"| {row['scenario']} | {row['incidents']} | {row['seeds']} | "
+                f"{row['rules_accuracy']:.2f} | {row.get('llm_accuracy', 'unmeasured')} | "
+                f"{row.get('reconciled_accuracy', 'unmeasured')} |"
+            )
     if payload.get("misses"):
         lines.append("")
         lines.append("Where the rules classifier falls back to `unknown`:")
