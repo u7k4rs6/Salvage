@@ -737,7 +737,46 @@ def escalation_fix_section(payload: dict[str, Any] | None) -> str:
     )
     lines.append("")
     lines.append(_fix_crossover(cells, values, policies))
+    lines.append("")
+    lines.append(_fix_range_caveat(values, payload))
     return "\n".join(lines)
+
+
+def _fix_range_caveat(values: list[Any], payload: dict[str, Any]) -> str:
+    """Why a flat curve here does not mean speed is free.
+
+    Every T in the swept range lands while the fault is still failing payments, so the population
+    a repair can help is the same at every value and only the response model's time decay
+    separates them. The cliff is at T equal to the fault's own duration, where the repair arrives
+    after the world has recovered on its own and does nothing at all. Saying "the curve is nearly
+    flat" without saying that would read as "responding slowly is free", which is the opposite of
+    what the mechanism does.
+    """
+    swept = sorted(v for v in values if v is not None)
+    if not swept:
+        return ""
+    tail = payload.get("beyond_the_fault")
+    extra = ""
+    if tail:
+        rows = ", ".join(
+            f"T = {row['fix_minutes']} min: {rupees(row['at_risk_recovered_amount'])}"
+            for row in tail
+        )
+        extra = (
+            f" Probed past it on the agent arm alone, same five seeds: {rows}. Compare "
+            f"{rupees(tail[0]['never'])} for never."
+        )
+    return (
+        f"**The curve is shallow between {min(swept)} and {max(swept)} minutes, and that is a fact "
+        f"about the fault rather than about response times.** The S4 misconfiguration fails "
+        f"payments for 180 simulated minutes, so every value in this range repairs it while it is "
+        f"still breaking things, the population a repair can reach is the same at each value, and "
+        f"only the response model's 12 hour decay separates them. The drop is at T equal to the "
+        f"fault's own duration, where the fix arrives after the world has recovered on its own and "
+        f"buys nothing.{extra} Read the flatness as "
+        f'"any response inside the outage is worth about the same", not as "responding slowly '
+        f'is free".'
+    )
 
 
 def _fix_crossover(

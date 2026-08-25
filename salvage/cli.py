@@ -719,7 +719,9 @@ def cmd_eval_escalation_fix(args: argparse.Namespace) -> int:
         values=tuple(values),
         provider=_make_provider(args),
     )
-    _write_artifact("escalation_fix.json", payload)
+    # Named, because a follow-up probe over different values is a different result and must not
+    # overwrite the one the report reads. It did exactly that, twice, before this existed.
+    _write_artifact(args.out, payload)
 
     print(
         f"Escalation to fix on {payload['scenario']}, "
@@ -1246,6 +1248,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="none, fixture, gemini, ollama, or collect",
     )
     eval_fix.add_argument("--collect-out", dest="collect_out", default="data/prompts_fix.jsonl")
+    eval_fix.add_argument(
+        "--out",
+        default="escalation_fix.json",
+        help="artifact name under data/results, so a probe cannot overwrite a reported sweep",
+    )
     eval_fix.set_defaults(func=cmd_eval_escalation_fix)
 
     eval_report = evaluation.add_parser(

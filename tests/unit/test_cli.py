@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from pathlib import Path
 
 import pytest
 
@@ -88,6 +89,24 @@ def test_no_subcommand_shadows_the_global_db_flag():
 
     walk(parser, "")
     assert offenders == []
+
+
+def test_the_escalation_fix_sweep_can_name_its_artifact():
+    """A follow-up probe over different values is a different result. It wrote to the same file
+    as the sweep the report reads, and overwrote it, which is a quiet way to publish a curve
+    nobody ran."""
+    parser = build_parser()
+    groups = parser._subparsers._group_actions[0].choices  # noqa: SLF001
+    fix = groups["eval"]._subparsers._group_actions[0].choices["escalation-fix"]  # noqa: SLF001
+    out = next(a for a in fix._actions if "--out" in (a.option_strings or []))  # noqa: SLF001
+    assert out.default == "escalation_fix.json"
+
+    # The flag existing is not the point. It has to be the thing the command writes to: the first
+    # version added the flag and left the filename hardcoded, so the probe overwrote the reported
+    # curve again while a passing test said the flag was there.
+    source = Path("salvage/cli.py").read_text(encoding="utf-8")
+    assert '_write_artifact("escalation_fix.json"' not in source
+    assert "_write_artifact(args.out, payload)" in source
 
 
 def test_seed_spec_parsing():
