@@ -71,23 +71,19 @@ Seven pages, in the build order of `docs/04_FRONTEND_SPEC.md` section 9.
 
 ## Status
 
-M1 to M4 are built: migrations and repository layer, hash-chained ledger with an offline verifier
+M1 to M5 are built: migrations and repository layer, hash-chained ledger with an offline verifier
 and a commitment to the event stream, simulator with scenarios S0 to S4 and organic customer
 retries, webhook ingest with signature verification, detector with frozen calibrated thresholds,
 evidence packets, a rules classifier, an LLM provider layer, the allowlisted action menu and policy
 engine, the per-order state machine and executor, the simulated channel, three baselines, a fault
-injection suite, the evaluation sweep that writes `docs/RESULTS.md`, the dashboard API and the
-console above.
+injection suite, the evaluation sweep that writes `docs/RESULTS.md`, the dashboard API, the console
+above, and the escalation-to-fix sweep.
 
-Two things are measured and two are not, and `docs/RESULTS.md` says which is which at the top:
-
-- **Measured:** the three baselines against each other over the at-risk order set, the detector's
-  operating envelope, the policy engine (zero violations across 200 runs), and 45 fault injection
-  attempts all refused.
-- **Not measured:** anything involving an LLM. No Gemini key and no local model were ever present
-  in the build environment, the self-authored fixtures M2 shipped were deleted rather than reported
-  from, and the agent arm therefore runs with no diagnosis model, escalates every incident and
-  recovers exactly what B0 recovers. One command with a key fills that in.
+**The agent arm is measured.** Its diagnosis fixtures were recorded blind from Gemini: the recorder
+builds each evidence packet through the same call the agent makes, which cannot reach the
+ground-truth tables, hands the model a type carrying the prompt and its hash and nothing else, and
+refuses any prompt in which a scenario id, a seed or a cause name appears. `docs/RESULTS.md` reads
+its provenance line out of the fixture files rather than asserting it.
 
 ## Documents
 
