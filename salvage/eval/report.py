@@ -129,12 +129,21 @@ def primary_table(result: SweepResult) -> str:
         "An order is at risk when its first payment attempt failed inside a fault window **and** "
         "on the instrument that fault was breaking. That is the population a recovery agent is "
         "aimed at. It is computed from the world's fault schedule and the attempt stream, neither "
-        "of which any policy touches, so it is identical across all four arms and a test proves "
-        "it. S0 has no fault, so its at-risk set is empty and every arm recovers nothing from it: "
+        "of which any policy touches, so it is identical across every arm and a test proves it. "
+        "S0 has no fault, so its at-risk set is empty and every arm recovers nothing from it: "
         "the messages column is the whole story on that row.",
         "",
         "Revenue is never shown without contact volume beside it. A policy that recovers more by "
         "messaging everybody has not obviously won.",
+        "",
+        "**This is not the whole-run number.** Scoped to every order that failed on the day, the "
+        "link-sending baselines beat the agent on every scenario, because they message a thousand "
+        "customers and most of a day's failures have nothing to do with the fault. Section 2 has "
+        "that table and it is not a footnote. This section is primary because it is the population "
+        "a recovery agent is aimed at, not because it is the flattering one.",
+        "",
+        "`echo` is the agent with its diagnosis model replaced by a stub that repeats the rules "
+        "classifier. It is a control, not a product, and section 6 says what it measures.",
         "",
     ]
     header = "| scenario | at-risk orders | " + " | ".join(policies) + " |"
@@ -203,11 +212,23 @@ def whole_run_table(result: SweepResult) -> str:
         f"evaluation day, mean plus or minus standard deviation across {seeds} seeds, with "
         "messages sent and opt-outs.",
         "",
+        "**The agent loses this table on every scenario, by 35 to 45 percent.** Say it plainly "
+        "rather than leaving it for a reader to notice: on S1 the agent recovers about 11.0 lakh "
+        "against B2's 17.3 lakh. It loses because it declines to message customers whose failure "
+        "has nothing to do with an incident, and most of a day's failures are exactly that.",
+        "",
         "This is secondary, and the S0 row says why. S0 has no fault at all, and a link-sending "
         "baseline still shows roughly 1.8 times what doing nothing shows. That is not a recovery "
         "agent working; it is the measure being dominated by ordinary background failure that "
         "happens every day, on which a policy that messages everybody will always score well. The "
         "primary table above scopes to the orders a fault actually put at risk.",
+        "",
+        "Both readings are true at once and the honest summary is the trade, not either number. "
+        "Inside the population a fault put at risk the agent recovers more per message by a wide "
+        "margin; across the whole day a policy that contacts everybody recovers more in total and "
+        "sends ten to twenty times the messages to do it. Which one a merchant should want depends "
+        "on what a message costs them, which is the quantity this simulator sets to almost zero. "
+        "See the note under section 1.",
         "",
     ]
     header = "| scenario | " + " | ".join(policies) + " |"
@@ -802,6 +823,47 @@ def _diagnosis_block(payload: dict[str, Any]) -> str:
         lines.append("")
         for miss in payload["misses"]:
             lines.append(f"- {miss}")
+    lines.append("")
+    lines.append(
+        "**What that accuracy is worth in money, at this incident count, is nothing.** The `echo` "
+        "arm in the tables above is the agent with its diagnosis model replaced by a stub that "
+        "repeats the rules classifier at the minimum confidence that counts as agreement. "
+        "Everything downstream is unchanged: same reconciliation, same 0.6 action threshold, same "
+        "matrix, same live planner. Paired against the agent across ten seeds it recovers "
+        "**16,066 rupees more on S1, 6,081 less on S2, 15,266 less on S3 and exactly the same on "
+        "S4**. The signs disagree, no scenario clears a two-sided paired t comfortably, and the "
+        "four scenarios sum to roughly minus five thousand rupees. That is a difference of zero "
+        "with noise on top."
+    )
+    lines.append("")
+    lines.append(
+        "The reason is structural rather than lucky. Every incident the rules get wrong, they get "
+        "wrong by answering `unknown`, and the matrix allows nothing but escalation for an unknown "
+        "cause. So on those incidents the agent escalates because the model disagreed with the "
+        "rules and confidence collapsed to 0.5, and the echo arm escalates because the cause is "
+        "unknown and the matrix forbids everything else. Different route, same decision, no money "
+        "either way. On every incident where the agent acts, the rules were already right."
+    )
+    lines.append("")
+    lines.append(
+        "Where the two arms do diverge, it is not the diagnosis that differs. The reconciled cause "
+        "is the same in every incident the rules got right, which is 37 of 41; what differs is the "
+        "confidence number, 0.95 from the model against the echo's 0.70, and that number is in the "
+        "planner's prompt. So the residual gap measures a language model reacting to a different "
+        "stated confidence, not a better diagnosis. It is a confound rather than a result, and it "
+        "is reported rather than tuned away."
+    )
+    lines.append("")
+    lines.append(
+        "That is not an argument for dropping the model. The gate converts diagnosis quality into "
+        "money in one direction only: a confidently wrong cause is catastrophic, and a probe run "
+        "against a provider that always returns a confident wrong answer recovers exactly what "
+        "doing nothing recovers, because every action it proposes is refused by the matrix and the "
+        "incident escalates. What the numbers say is narrower and duller than a pitch would like: "
+        "at 41 incidents, on scenarios the rules were written for, accuracy above the gate "
+        "threshold is unpurchased. A harder incident mix is where a model would earn its place, "
+        "and this sweep does not contain one."
+    )
     if payload.get("llm_misses"):
         lines.append("")
         lines.append("Where the model was wrong:")
@@ -964,6 +1026,21 @@ def _limitations(inputs: ReportInputs) -> str:
         "curve is available to the agent and to nobody else. A real merchant might notice a dead "
         "payment method without an agent telling them, so part of that column may belong to the "
         "merchant rather than to Salvage.",
+        "**The detector's card BIN key has no source in the documented payment entity.** "
+        "Razorpay's published payment entity carries a card object with id, entity, name, last4, "
+        "network, type, issuer, international, emi, sub_type and token_iin. There is no `iin`, and "
+        "token_iin is null in the published sample and is a network token rather than the card. "
+        "S2 detects a failing BIN range because the simulator supplies a BIN; a real deployment "
+        "would have to fetch it, and until it does, `card_bin6` is a segment key with nothing "
+        "behind it. This was found by re-verifying the checked-in fixtures against the live docs "
+        "after an audit flagged them as circular. The card fixture had asserted an `iin` field and "
+        "cited the docs page that does not contain one.",
+        "**The UPI handle may be absent on exactly the events that matter.** Razorpay's webhook "
+        "documentation publishes no payment.failed sample for UPI and warns twice that the vpa "
+        "parameter must not be hardcoded and may not be present on a UPI failure. Every "
+        "instrument-level UPI segment key in this project is derived from vpa, so S1's detection "
+        "premise depends on a field the payload is not guaranteed to carry. The normaliser "
+        "tolerates its absence; the detector simply has no key to fire on when it is missing.",
         "**The LLM column is one model on one day.** Every fixture was recorded from a single "
         "provider and model, listed at the top of this document. A different model, or the same "
         "model next month, is a different measurement. Nothing here is an accuracy claim about "
@@ -983,8 +1060,14 @@ def _limitations(inputs: ReportInputs) -> str:
         "detections on the held-out seeds happened because the affected segment sat at or below "
         "the 20-attempt floor, not because the signal was weak. Section 7 gives the boundary.",
         "**The simulator is the instrument.** Every parameter is in `salvage/sim/params.yaml` with "
-        "its assumption written beside it. The response-model multipliers are judgement, which is "
-        "what section 9 exists to quantify.",
+        "its assumption written beside it. The response-model multipliers are judgement. Section 9 "
+        "sweeps the one the agent's margin actually rests on, the steer conversion probability, "
+        "and the win survives the whole swept range; the others remain asserted.",
+        "**A message costs almost nothing here.** The only penalty for contacting a customer is a "
+        "2.6 percent chance they opt out. No DLT registration, no sender reputation, no complaint "
+        "cost, no fatigue. That flatters the arms that message heavily, which are the baselines, "
+        "so the contact-volume gap in section 1 is if anything understated. It also means the "
+        "opt-out counts carry no consequence inside the model.",
         "**Traffic volume is 12,000 attempts a day, not the 1,500 in the architecture note.** At "
         "1,500 the detector cannot meet the 15-minute target on a single-instrument fault at all. "
         "The arithmetic is in `docs/BUILD_LOG.md`.",

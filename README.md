@@ -94,11 +94,19 @@ Recovered revenue in rupees over the at-risk order set against messages sent, me
 | S3 gateway degradation | **4,78,668 / 422 msg** | 3,01,760 / 0 msg | 4,20,743 / 312 msg | 4,72,828 / 492 msg |
 | S4 merchant misconfiguration | 90,128 / 0 msg | 90,128 / 0 msg | 1,57,696 / 178 msg | 1,65,041 / 272 msg |
 
-The agent wins S1 to S3 on both axes at once, recovering more from between a third and a half of
-the contacts. **It loses S4 in that table**, and that row is the one worth reading: the cause is a
-merchant misconfiguration, so it contacts nobody and escalates, recovering exactly what doing
+The agent wins S1 by 26 percent on 32 percent of B2's messages, and S2 by 29 percent on 31 percent
+of its messages. **S3 is a tie, not a win:** 5,840 rupees on a paired standard deviation of 15,993
+across ten seeds, with the agent losing some seeds outright, and 86 percent of B2's message count
+rather than a third. **It loses S4 outright**, and that row is the one worth reading: the cause is
+a merchant misconfiguration, so it contacts nobody and escalates, recovering exactly what doing
 nothing recovers while both baselines message around two hundred customers about something none of
 them can fix.
+
+**Scoped to the whole day rather than to the at-risk set, the baselines beat the agent on every
+scenario by 35 to 45 percent** (section 2 of the results). They win by messaging a thousand
+customers a day, most of whose failures have nothing to do with an incident. Both readings are
+true; which one matters depends on what a message costs, and this simulator charges almost nothing
+for one.
 
 That is restraint measured against no benefit, because an escalation used to reach a human and
 change nothing in the world. `escalation_fix_minutes` now models the repair as a swept parameter,
@@ -109,8 +117,20 @@ exactly nothing, because the world has already recovered on its own. Only an arm
 be repaired, which is an asymmetry the results state plainly rather than assume in the agent's
 favour.
 
-Diagnosis accuracy over 41 incidents: rules-only 0.902, model 0.976, reconciled 0.976. Zero policy
-violations across all 200 runs, and 45 fault injection attempts all refused.
+Diagnosis accuracy over 41 incidents: rules-only 0.902, model 0.976, reconciled 0.976. **That
+seven-point edge is worth nothing in this sweep.** The `echo` arm is the agent with its model
+replaced by a stub repeating the rules verdict, everything else identical; paired across ten seeds
+it recovers 16,066 rupees more on S1, 6,081 less on S2, 15,266 less on S3 and the same on S4. Every
+incident the rules get wrong they get wrong by answering `unknown`, and an unknown cause is allowed
+nothing but escalation, so both arms escalate the same incidents. The gate still earns its place in
+the other direction: a model returning a confident wrong cause recovers exactly what doing nothing
+recovers.
+
+The steer conversion probability, the constant the S1 and S2 margins mostly rest on, is swept from
+0.25 to 0.65 in section 9. The win survives the whole range and narrows by about three quarters at
+the bottom of it.
+
+Zero policy violations across all 250 runs, and 45 fault injection attempts all refused.
 
 ## Documents
 

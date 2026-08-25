@@ -1815,3 +1815,102 @@ not count, because the recording provider misses every prompt it records.
   measurement.
 - **The overnight case, still.** Zero of twenty faults detected at 03:30, unchanged by anything in
   M5, and the reason is arithmetic rather than a threshold.
+
+## 2026-08-26, M8: acting on the audit
+
+`docs/AUDIT.md` was written by reading this repository adversarially and treating every document
+as a claim. What follows is its finding list with a verdict on each: fixed, accepted as a stated
+limitation, or open. The rule for this milestone was that a fix which makes the agent look worse
+is the correct outcome and ships, and three of them did.
+
+### F1, the pitch omits the whole-run loss and misstates the message ratio: FIXED
+
+The baselines beat the agent on whole-run revenue on every scenario by 35 to 45 percent. That is
+now stated in the pitch, in the README and at the head of the primary table, not left in section 2
+for a reader to find. The "between a third and a half as many messages" claim covered a case where
+the true figure was 86 percent; every ratio is now per scenario and the S3 figure is stated on its
+own.
+
+### F2, the headline rests on an unswept constant: FIXED
+
+The steer conversion probability is swept from 0.25 to 0.65. The win survives the whole range and
+narrows by about three quarters at the bottom of it, and as steering converts less the agent sends
+more links instead, so it degrades into a targeted link sender rather than falling over. The old
+sensitivity sweep, which scaled two nudge multipliers and compared B1 against B0, no longer carries
+the claim that it quantifies the agent's assumptions; it stays under the adversarial heading where
+it belongs.
+
+### F3, the LLM's accuracy edge buys zero revenue: FIXED, and the finding is stronger than the audit said
+
+The `echo` arm is now a measured arm in the primary table: the agent with its diagnosis model
+replaced by a stub repeating the rules verdict, same reconciliation, same gate, same matrix, same
+live planner. Paired over ten seeds it recovers 16,066 rupees more on S1, 6,081 less on S2, 15,266
+less on S3 and exactly the same on S4. The signs disagree and the four sum to about minus five
+thousand rupees.
+
+Two things the sweep taught that the analysis had not. The residual differences are not diagnosis
+differences at all: the reconciled cause is identical in the 37 of 41 incidents the rules get
+right, and what actually differs is the confidence number in the planner's prompt, 0.95 against the
+echo's 0.70. So the gap measures a model reacting to a different stated confidence. And on S1 the
+echo arm is ahead, which is the opposite of the direction anyone would have guessed. The claim that
+the ablation explains where the recovery comes from is deleted from every document.
+
+### F4, the ablation's difficulty is manufactured: ACCEPTED, stated
+
+The simulator's error profiles are written from the same taxonomy the prompt teaches, so the six
+classes are separable by construction and the rules classifier's 0.902 is the difficulty floor.
+Nothing was leaked and nothing was tuned, and the fix is to say so rather than to invent a harder
+scenario after the fact, which would be fitting the instrument to the result.
+
+### F5, S3 is inside the noise: FIXED
+
+Demoted everywhere. Paired t is 1.15 across ten seeds, the agent loses some seeds outright, and its
+message count is 86 percent of B2's. It is reported as a tie reached with slightly fewer contacts.
+"Wins S1 to S3" is gone from every document.
+
+### F6, the circuit breaker trips without escalating: FIXED, and it never fired
+
+PRD section 9 requires pause and escalate; only the pause existed. It escalates now, with a test
+that fails against the old code. The audit also asked whether any run in the sweep had tripped it,
+which would have meant restating the zero-violations claim for those runs. **No run tripped it:**
+B1 and B2 record zero escalations across all 250 runs of the regenerated sweep, and a trip is now
+the only way a baseline can produce one. So the claim stands unchanged, and the breaker remains
+exercised by unit tests rather than by the sweep.
+
+### F7, stale artifacts presented beside fresh ones: FIXED
+
+`salvage eval report` refuses to write from any artifact older than the primary sweep, because an
+artifact older than the sweep was produced by code that no longer exists. Every input was
+regenerated on current code for this milestone. `--allow-stale` exists for a deliberate mixture and
+requires saying so in the document.
+
+### F8, the escalation-fix crossover leans on compounding assumptions: OPEN
+
+Both assumptions are still disclosed and neither is resolved. There is still no counterfactual for
+a merchant who notices a wholly dead payment method without an agent telling them, and the audit's
+suggested B0-plus-fix row is not implemented. The curve is still the value of escalating with the
+cause already named, measured against a world where nobody else looks at a dashboard, and the
+document says so.
+
+### F9, payments realism: PART FIXED, part accepted
+
+The contract half is fixed and it went badly for the repo, which is the right outcome. Both webhook
+fixtures cited the docs for shapes the docs do not contain: there is no published payment.failed
+sample for UPI, and the documented payment entity's card object has no `iin` at all. Two real
+consequences are now limitations rather than passing tests. The detector's `card_bin6` key has no
+source in the documented payment entity, so S2 detects a failing BIN because the simulator supplies
+one. And Razorpay warns twice that `vpa` may be absent on a UPI failure, which is exactly the event
+S1's instrument-level detection depends on.
+
+The rest is accepted and stated: quiet hours, the flat link-payment draw, the in-session steer
+conversion, and above all that a message costs almost nothing in this model.
+
+### What M8 did not do
+
+The audit's three-day list put a hybrid arm third: the agent suppressing a background campaign
+inside incident scope, run against B1 outside it. That is the answer to the panel's best question,
+which is why the merchant should not simply run B1, and it is not built. It is the single largest
+gap left in the evaluation and it is open.
+
+The real Razorpay test-mode run is also still not done, so claim 8 remains transcription verified
+against the live docs rather than verified against the live API.
