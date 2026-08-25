@@ -37,12 +37,16 @@ def _runs() -> list[dict[str, Any]]:
             continue
         if "rows" not in payload or "policies" not in payload:
             continue
+        rows = payload.get("rows", [])
+        # Derived from the rows rather than read from the file's own header. A merge or an
+        # interrupted shard can leave a header that does not describe its rows, and the run
+        # selector is the one place where that would be invisible.
         runs.append(
             {
                 "run_id": payload.get("run_id", path.stem),
-                "scenarios": payload.get("scenarios", []),
-                "seeds": payload.get("seeds", []),
-                "policies": payload.get("policies", []),
+                "scenarios": sorted({row["scenario"] for row in rows}),
+                "seeds": sorted({row["seed"] for row in rows}),
+                "policies": list(dict.fromkeys(row["policy"] for row in rows)),
                 "variant": payload.get("variant", "peak"),
                 "finished_at": payload.get("finished_at", 0),
                 "runs": len(payload.get("rows", [])),
@@ -67,7 +71,7 @@ def list_runs() -> dict[str, Any]:
 def _notes() -> list[str]:
     from salvage.llm.provider import FIXTURE_DIR
 
-    notes = []
+    notes: list[str] = []
     if not list(FIXTURE_DIR.glob("*.json")):
         notes.append(
             "The agent arm ran with no diagnosis model, so it took no customer-facing action and "
@@ -85,6 +89,11 @@ def get_run(run_id: str) -> dict[str, Any]:
     from salvage.eval.report import rows_from_json
 
     result = rows_from_json(payload)
+    # A results file written before the at-risk metrics existed has no at-risk fields, and the
+    # metrics dataclass would default them to zero. A zero that means "not measured" reading as
+    # "recovered nothing" is exactly the kind of quiet wrong number this project keeps finding,
+    # so the page is told and the columns are suppressed rather than rendered as zeros.
+    at_risk_measured = all("at_risk_orders" in row for row in payload.get("rows", []))
     aggregates = [
         {
             "scenario": row.scenario,
@@ -112,17 +121,24 @@ def get_run(run_id: str) -> dict[str, Any]:
         for row in aggregate(result.rows)
     ]
     identical = all(len(set(d.values())) <= 1 for d in result.digests.values())
+    notes = _notes() + list(result.notes)
+    if not at_risk_measured:
+        notes.append(
+            "This run predates the at-risk order set, so its at-risk columns are not measured "
+            "and are not shown. Re-run `salvage eval run` to populate them."
+        )
     return {
         "run_id": result.run_id,
-        "scenarios": result.scenarios,
-        "seeds": result.seeds,
-        "policies": result.policies,
+        "scenarios": sorted({row.scenario for row in result.rows}),
+        "seeds": sorted({row.seed for row in result.rows}),
+        "policies": list(dict.fromkeys(row.policy for row in result.rows)),
+        "at_risk_measured": at_risk_measured,
         "variant": result.variant,
         "aggregates": aggregates,
         "worlds": len(result.digests),
         "worlds_identical": identical,
         "violations": sum(row.policy_violations for row in result.rows),
-        "notes": _notes() + list(result.notes),
+        "notes": notes,
         "diagnosis": load_json(RESULTS_DIR / "diagnosis.json"),
         "volume_sweep": load_json(RESULTS_DIR / "volume_sweep.json"),
         "sensitivity": load_json(RESULTS_DIR / "sensitivity.json"),

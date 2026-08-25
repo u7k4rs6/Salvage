@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family:
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
+  }
+  body {
+    @apply bg-white text-neutral-900;
+  }
+  /* Every number, id and hash is monospace with tabular figures, per spec section 6. */
+  .num {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent ring-offset-1;
+  }
+}
+
+@layer components {
+  .cell-pad {
+    @apply px-3 py-[6px];
+  }
+  /* 150 ms highlight when an SSE event inserts a row. The only motion in the console. */
+  .flash {
+    animation: flash 150ms ease-out;
+  }
+  @keyframes flash {
+    from {
+      background-color: #ccfbf1;
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+}

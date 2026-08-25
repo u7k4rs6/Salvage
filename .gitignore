@@ -19,6 +19,10 @@ __pycache__/
 # Node and frontend build output (web/ lands in M4)
 node_modules/
 web/dist/
+*.tsbuildinfo
+
+# Browser driver scratch and screenshots taken while checking the console by hand.
+.playwright-mcp/
 
 # Editors and OS
 .vscode/

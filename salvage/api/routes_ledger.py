@@ -108,11 +108,15 @@ def export(
     connection_factory: ConnFactory,
     since: int | None = Query(default=None),
     until: int | None = Query(default=None),
+    ref_id: str | None = Query(default=None),
 ) -> str:
     """JSONL with the hashes included, byte-identical to `salvage ledger export`.
 
     Served as text so the browser downloads it and so a reviewer can pipe it straight into
     scripts/verify_ledger.py, which is the whole point of the format.
+
+    A slice filtered by ref_id will not verify as a chain on its own, and that is correct: the
+    hashes commit to the entries between, so a subset is evidence about entries, not a chain.
     """
     conn = connection_factory()
     header = canonical_json(
@@ -123,6 +127,11 @@ def export(
         if since is not None and entry.ts < since:
             continue
         if until is not None and entry.ts > until:
+            continue
+        # A slice for one incident. Sequence numbers stay as they are, so an exported slice is a
+        # subset of the chain rather than a renumbered chain of its own, and a reader can see the
+        # gaps where other incidents' entries sit.
+        if ref_id is not None and entry.ref_id != ref_id:
             continue
         lines.append(json.dumps(entry.to_dict(), sort_keys=True))
     return "\n".join(lines) + "\n"
