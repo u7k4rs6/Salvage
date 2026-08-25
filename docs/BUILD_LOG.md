@@ -1682,3 +1682,44 @@ me.
 Described under M5 step 2. Included here because it belongs to the same list: three defects in one
 day, all of them in code that had passed a green suite for two milestones, and all three found by
 running the thing rather than by testing it.
+
+## 2026-08-25, M5 step 1 results: what the measured agent arm says
+
+41 diagnosis fixtures, all from `gemini-2.5-flash`, all recorded blind. 41 planner fixtures
+recorded by running the arm, because a planner prompt cannot be enumerated in advance: what the
+planner is asked depends on what the diagnosis said. The main sweep then runs from fixtures alone,
+with no network and no key, and `salvage eval run` fails if any prompt has no fixture, because a
+`FixtureMiss` is an `LLMError` and every caller treats an `LLMError` as a reason to escalate. A
+missing fixture would have been recorded as an agent that chose to escalate.
+
+### The agent wins on both axes where a customer can act, and loses where they cannot
+
+Over the at-risk order set, mean of 10 seeds, revenue in rupees against messages sent:
+
+| scenario | agent | B0 | B1 | B2 |
+| --- | --- | --- | --- | --- |
+| S1 | 2,21,154 / 83 | 93,947 / 0 | 1,47,797 / 164 | 1,75,050 / 261 |
+| S2 | 1,20,065 / 44 | 50,095 / 0 | 79,263 / 88 | 93,255 / 140 |
+| S3 | 4,78,668 / 422 | 3,01,760 / 0 | 4,20,743 / 312 | 4,72,828 / 492 |
+| S4 | 90,128 / 0 | 90,128 / 0 | 1,57,696 / 178 | 1,65,041 / 272 |
+
+Whole-run message counts make the gap wider than the at-risk column shows: on S1 the agent sends 90
+messages against B2's 1,296, and on S0, the day nothing breaks, the baselines send 878 and 1,056
+while the agent sends none. There is no incident on S0, so there is nothing for a cause-aware
+policy to act on, which is the whole difference between acting on a cause and acting on a calendar.
+
+**S4 is a loss and it is reported as one.** The agent recovers exactly B0's number because it
+contacts nobody and escalates. That is the correct behaviour and it costs 67,568 rupees against B2
+on the at-risk set. Step 2 exists to price what the escalation is worth once somebody acts on it.
+
+### The ablation
+
+41 incidents. Rules-only 0.902, model 0.976, reconciled 0.976. The four rules misses are all
+`unknown` fallbacks where the detector attributed the incident to a whole method rather than to the
+failing instrument, so the rule that needs an instrument dimension cannot fire. The model reads the
+same packet and gets three of the four. Its single miss is on S3 seed 8, where rules and model
+agree and are both wrong, which is the case the reconciliation cannot catch: agreement raises
+confidence whether or not the agreement is correct.
+
+Worth stating plainly: this is one model on one day. A different model, or the same model next
+month, is a different measurement, and nothing here is a claim about language models in general.
