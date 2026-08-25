@@ -346,7 +346,12 @@ class AgentRunner:
         incident_id = str(incident["id"])
         now = int(incident["opened_at"])
 
-        diagnosis, packet = diagnose_incident(self._conn, incident, provider=self._provider)
+        diagnosis, packet = diagnose_incident(
+            self._conn,
+            incident,
+            provider=self._provider,
+            echo_rules=self._profile.echoes_rules,
+        )
         persist_diagnosis(self._conn, diagnosis, packet, self._ledger)
         self.stats.diagnosed += 1
         incident = repo.get_incident(self._conn, incident_id) or incident
@@ -1380,6 +1385,18 @@ class AgentRunner:
             self._escalate(
                 incident_id,
                 reason=f"matrix refusal: {verdict.refusing_rule}",
+                packet=None,
+                proposed={"type": action_type.value, "params": params},
+                now=now,
+            )
+        elif policy_mod.refused_for_circuit(verdict):
+            # PRD section 9: a tripped breaker pauses the incident **and escalates**. Only the
+            # pause was implemented, so the agent used to stop on its own and tell nobody.
+            # Deduplicated on the reason inside _escalate, so a breaker that refuses a thousand
+            # actions opens one ticket rather than a thousand.
+            self._escalate(
+                incident_id,
+                reason="circuit breaker tripped, incident paused",
                 packet=None,
                 proposed={"type": action_type.value, "params": params},
                 now=now,

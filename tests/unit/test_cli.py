@@ -61,6 +61,7 @@ def test_every_documented_command_is_registered():
         "run",
         "volume",
         "sensitivity",
+        "steer-sensitivity",
         "escalation-fix",
         "report",
     }

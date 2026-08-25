@@ -64,11 +64,38 @@ class ReportInputs:
     calibration: str | None = None
 
 
+class StaleArtifact(RuntimeError):
+    """An input to the report was produced by older code than the sweep it sits beside."""
+
+
 def load_json(path: Path | str) -> dict[str, Any] | None:
     path = Path(path)
     if not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def check_freshness(paths: dict[str, Path | str], primary: Path | str) -> list[str]:
+    """Artifacts older than the primary sweep, by modification time.
+
+    The rule is blunt on purpose. The primary sweep is regenerated whenever the code that produces
+    a number changes, so anything older than it was produced by code that no longer exists, and a
+    report that renders both in one document is quietly mixing two builds. This shipped for a
+    milestone: three sections were rendered from files written before the agent arm was ever
+    measured, and nothing said so.
+
+    Returns the stale names. The caller decides whether to refuse; `salvage eval report` does.
+    """
+    primary = Path(primary)
+    if not primary.exists():
+        return []
+    cutoff = primary.stat().st_mtime
+    stale = []
+    for name, path in paths.items():
+        path = Path(path)
+        if path.exists() and path.stat().st_mtime < cutoff:
+            stale.append(name)
+    return sorted(stale)
 
 
 # ---------------------------------------------------------------------------

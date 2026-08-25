@@ -574,3 +574,42 @@ def test_a_plan_whose_actions_are_all_dropped_escalates_rather_than_falling_sile
     assert error is not None and "amount" in error
     assert [action.type for action in plan.actions] == [ActionType.ESCALATE_HUMAN]
     assert plan.actions[0].params["reason"]
+
+
+def test_a_tripped_circuit_breaker_escalates_rather_than_stopping_silently():
+    """PRD section 9: a trip must "pause that incident and escalate". Only the pause was
+    implemented, so the agent stopped acting on an incident and told nobody it had stopped.
+    Against the old code this fails: refused_for_circuit did not exist and _refuse escalated on
+    matrix refusals only."""
+    from salvage.decide.policy import (
+        CIRCUIT_GATE,
+        GateResult,
+        PolicyVerdict,
+        refused_for_circuit,
+        refused_for_matrix,
+    )
+
+    tripped = PolicyVerdict(
+        decision=Decision.REFUSE,
+        gates=[
+            GateResult("matrix.action_allowed_for_cause", True, "allowed"),
+            GateResult(CIRCUIT_GATE, False, "pay rate below 2 percent after 50 sends"),
+        ],
+    )
+    assert not tripped.allowed
+    assert refused_for_circuit(tripped)
+    assert not refused_for_matrix(tripped)
+
+    matrix_refusal = PolicyVerdict(
+        decision=Decision.REFUSE,
+        gates=[GateResult("matrix.action_allowed_for_cause", False, "not allowed")],
+    )
+    assert refused_for_matrix(matrix_refusal)
+    assert not refused_for_circuit(matrix_refusal)
+
+    passing = PolicyVerdict(
+        decision=Decision.ALLOW,
+        gates=[GateResult(CIRCUIT_GATE, True, "circuit breaker closed")],
+    )
+    assert passing.allowed
+    assert not refused_for_circuit(passing)

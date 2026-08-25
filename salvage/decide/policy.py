@@ -446,6 +446,21 @@ def refused_for_matrix(verdict: PolicyVerdict) -> bool:
     return bool(gate and gate.rule.startswith("matrix."))
 
 
+CIRCUIT_GATE = "global.circuit_breaker_closed"
+
+
+def refused_for_circuit(verdict: PolicyVerdict) -> bool:
+    """Whether the refusal was a tripped circuit breaker.
+
+    docs/01_PRD.md section 9 says a trip must "pause that incident and escalate". The pause was
+    implemented and the escalation was not, so a tripped breaker stopped the agent silently and no
+    human was told that it had stopped. A safety control that fires without telling anybody is
+    half a safety control.
+    """
+    gate = verdict.first_failure
+    return bool(gate and gate.rule == CIRCUIT_GATE)
+
+
 # ---------------------------------------------------------------------------
 # Circuit breaker
 # ---------------------------------------------------------------------------

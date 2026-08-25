@@ -555,6 +555,100 @@ def sensitivity_sweep(
     return {"scenario": scenario, "rows": rows}
 
 
+DEFAULT_STEER_VALUES: tuple[float, ...] = (0.25, 0.35, 0.45, 0.55, 0.65)
+
+# The dotted path of the one constant this sweep exists for. Named once so the command, the
+# report and the tests cannot drift apart about which parameter is being swept.
+STEER_PARAM = "response.m2_multipliers.live_checkout_steer_during_failing_session"
+
+
+def steer_sensitivity_sweep(
+    *,
+    scenarios: list[str],
+    seeds: list[int],
+    policies: tuple[str, ...] = DEFAULT_POLICY_ORDER,
+    values: tuple[float, ...] = DEFAULT_STEER_VALUES,
+    provider=None,
+) -> dict[str, Any]:
+    """Recovered revenue and messages per arm as the steer conversion probability moves.
+
+    The shipped value is 0.55, taken from the architecture note as an illustration and never
+    swept until now. It is the single constant the agent's S1 and S2 margins depend on most: the
+    majority of its at-risk recoveries on both scenarios arrive by the steer route, which is
+    available to no other arm and costs no messages. A headline that rests on an unswept assumed
+    constant is a headline with an unmeasured error bar, which is what this sweep removes.
+
+    Only the steer probability moves. The attempt stream is generated before any policy runs and
+    does not read this parameter, so the world, the eligible set and the at-risk set are identical
+    at every value, and the diagnosis prompts are unchanged, which is why the recorded fixtures
+    still answer.
+    """
+    rows: list[dict[str, Any]] = []
+    workdir = make_workdir()
+    try:
+        for value in values:
+            params_path = params_with({STEER_PARAM: float(value)}, workdir / f"steer_{value}")
+            for scenario in scenarios:
+                for policy in policies:
+                    totals: dict[str, list[float]] = {
+                        "at_risk_recovered": [],
+                        "at_risk_orders": [],
+                        "at_risk_messages": [],
+                        "at_risk_steer_orders": [],
+                        "recovered": [],
+                        "messages": [],
+                    }
+                    for seed in seeds:
+                        db_path = workdir / f"steer_{value}_{scenario}_{policy}_{seed}.db"
+                        conn = open_migrated(db_path)
+                        try:
+                            run = run_policy_scenario(
+                                conn,
+                                scenario=scenario,
+                                seed=seed,
+                                policy=policy,
+                                provider=provider,
+                                params_path=params_path,
+                            )
+                            m = run.metrics
+                            totals["at_risk_recovered"].append(float(m.at_risk_recovered_amount))
+                            totals["at_risk_orders"].append(float(m.at_risk_orders))
+                            totals["at_risk_messages"].append(float(m.at_risk_messages))
+                            totals["at_risk_steer_orders"].append(
+                                float(m.at_risk_by_route_orders.get("steer", 0))
+                            )
+                            totals["recovered"].append(float(m.recovered_amount))
+                            totals["messages"].append(float(m.messages_sent))
+                        finally:
+                            conn.close()
+                            for suffix in ("", "-wal", "-shm"):
+                                Path(str(db_path) + suffix).unlink(missing_ok=True)
+                    rows.append(
+                        {
+                            "steer": float(value),
+                            "scenario": scenario,
+                            "policy": policy,
+                            "seeds": len(seeds),
+                            "at_risk_recovered_amount": _mean(totals["at_risk_recovered"]),
+                            "at_risk_orders": _mean(totals["at_risk_orders"]),
+                            "at_risk_messages": _mean(totals["at_risk_messages"]),
+                            "at_risk_steer_orders": _mean(totals["at_risk_steer_orders"]),
+                            "recovered_amount": _mean(totals["recovered"]),
+                            "messages_sent": _mean(totals["messages"]),
+                        }
+                    )
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+    return {
+        "parameter": STEER_PARAM,
+        "shipped_value": 0.55,
+        "scenarios": list(scenarios),
+        "seeds": list(seeds),
+        "policies": list(policies),
+        "rows": rows,
+    }
+
+
 DEFAULT_FIX_MINUTES: tuple[int | None, ...] = (None, 120, 60, 30, 15)
 
 

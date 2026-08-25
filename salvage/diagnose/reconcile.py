@@ -125,17 +125,32 @@ def reconcile(
     )
 
 
+# The confidence a rules-echo stub reports. It is the agreement floor and not a point more: the
+# stub contributes no information beyond the rules, so it claims none. Reconciliation then lifts
+# agreement to max(reported, 0.7), which lands on exactly this number, clears the 0.6 action
+# threshold, and makes the echo arm differ from the agent only in what it knows.
+ECHO_CONFIDENCE = AGREEMENT_FLOOR
+
+
 def diagnose_incident(
     conn,
     incident: dict[str, Any],
     *,
     provider: Any | None = None,
     packet: EvidencePacket | None = None,
+    echo_rules: bool = False,
 ) -> tuple[Diagnosis, EvidencePacket]:
     """Build the evidence, run the rules, optionally ask the model, reconcile.
 
     provider is an LLMProvider or None. With None this is the rules-only ablation floor, which is
     the mode the accuracy table in docs/RESULTS.md compares the model against.
+
+    echo_rules replaces the model's half of the diagnosis with the rules verdict itself. It is the
+    control arm: everything downstream, the reconciliation, the confidence gate, the matrix and
+    the planner, runs unchanged, so a difference in recovered revenue between the echo arm and the
+    agent is the model's diagnosis accuracy priced in rupees. The provider is still used for
+    planning, because the question is what the diagnosis is worth and not what the planner is
+    worth.
     """
     packet = packet or build_for_incident(conn, incident)
     rules = classify(packet)
@@ -143,7 +158,11 @@ def diagnose_incident(
     llm_cause = llm_confidence = llm_rationale = None
     llm_failed = False
     llm_failure_detail = None
-    if provider is not None:
+    if echo_rules:
+        llm_cause = rules.cause
+        llm_confidence = ECHO_CONFIDENCE
+        llm_rationale = f"rules echo: {rules.detail}"
+    elif provider is not None:
         from salvage.diagnose.llm import diagnose_with_model
 
         outcome = diagnose_with_model(provider, packet)

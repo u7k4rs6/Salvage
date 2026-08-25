@@ -48,6 +48,11 @@ class PolicyProfile:
     # For the fixed-schedule baselines: seconds after the order's first failure at which a nudge is
     # attempted. Empty for the agent, whose timing comes from its plan and its gates.
     nudge_offsets: tuple[int, ...] = ()
+    # Does the "model" half of the diagnosis just repeat the rules verdict? Only the echo arm.
+    # Everything downstream is unchanged: the echo goes through the same reconciliation, the same
+    # confidence gate, the same matrix and the same live planner. The arm exists to price the
+    # model's diagnosis accuracy in rupees rather than in accuracy points.
+    echoes_rules: bool = False
 
     @property
     def is_agent(self) -> bool:
@@ -65,6 +70,22 @@ AGENT = PolicyProfile(
     defers_while_degraded=True,
     allows_steer=True,
     sends_links=True,
+)
+
+ECHO = PolicyProfile(
+    name="echo",
+    description=(
+        "The agent with its diagnosis model replaced by a stub that repeats the rules "
+        "classifier's verdict at the minimum confidence that counts as agreement. Same "
+        "reconciliation, same gate, same matrix, same planner. It exists to answer what the "
+        "model's accuracy is worth in money rather than in accuracy points."
+    ),
+    diagnoses=True,
+    applies_matrix=True,
+    defers_while_degraded=True,
+    allows_steer=True,
+    sends_links=True,
+    echoes_rules=True,
 )
 
 B0 = PolicyProfile(
@@ -91,7 +112,11 @@ B2 = PolicyProfile(
     nudge_offsets=(3600, 6 * 3600),
 )
 
-POLICIES: dict[str, PolicyProfile] = {profile.name: profile for profile in (AGENT, B0, B1, B2)}
+POLICIES: dict[str, PolicyProfile] = {
+    profile.name: profile for profile in (AGENT, ECHO, B0, B1, B2)
+}
+# The echo arm is not in the default order. It is a control, reported beside the agent in its own
+# right, and putting it in the default sweep order would quietly change every existing command.
 DEFAULT_POLICY_ORDER = ("agent", "B0", "B1", "B2")
 
 

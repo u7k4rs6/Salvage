@@ -265,3 +265,24 @@ def test_params_with_reaches_nested_keys(tmp_path):
 
     path = params_with({"clock.settle_days": 1}, tmp_path)
     assert load(path).settle_days == 1
+
+
+def test_the_report_refuses_inputs_older_than_the_sweep(tmp_path):
+    """Three sections of a shipped report were rendered from files written before the agent arm
+    was ever measured, and nothing in the document said so. An artifact older than the primary
+    sweep was produced by code that no longer exists."""
+    from salvage.eval.report import check_freshness
+
+    primary = tmp_path / "main.json"
+    primary.write_text("{}", encoding="utf-8")
+    old = tmp_path / "old.json"
+    old.write_text("{}", encoding="utf-8")
+    import os
+
+    os.utime(old, (0, 0))
+    fresh = tmp_path / "fresh.json"
+    fresh.write_text("{}", encoding="utf-8")
+
+    stale = check_freshness({"old": old, "fresh": fresh, "absent": tmp_path / "no.json"}, primary)
+    assert stale == ["old"]
+    assert check_freshness({"old": old}, tmp_path / "missing.json") == []

@@ -701,6 +701,36 @@ def cmd_eval_sensitivity(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_eval_steer_sensitivity(args: argparse.Namespace) -> int:
+    """Sweep the steer conversion probability and print every arm at every value."""
+    from salvage.eval.sweep import steer_sensitivity_sweep
+
+    payload = steer_sensitivity_sweep(
+        scenarios=[s.strip() for s in args.scenarios.split(",") if s.strip()],
+        seeds=_parse_seeds(args.seeds),
+        policies=tuple(p.strip() for p in args.policies.split(",") if p.strip()),
+        values=tuple(float(v) for v in args.values.split(",") if v.strip()),
+        provider=_make_provider(args),
+    )
+    _write_artifact(args.out, payload)
+
+    print(f"Steer sensitivity on {', '.join(payload['scenarios'])}, {len(payload['seeds'])} seeds")
+    print(f"Parameter: {payload['parameter']}, shipped value {payload['shipped_value']}")
+    header = (
+        f"{'steer':>7}{'scenario':>10}{'policy':>8}{'at-risk revenue':>18}"
+        f"{'steer orders':>14}{'messages':>10}"
+    )
+    print(header)
+    print("-" * len(header))
+    for row in payload["rows"]:
+        print(
+            f"{row['steer']:>7.2f}{row['scenario']:>10}{row['policy']:>8}"
+            f"{row['at_risk_recovered_amount']:>18,.0f}{row['at_risk_steer_orders']:>14.1f}"
+            f"{row['at_risk_messages']:>10.1f}"
+        )
+    return 0
+
+
 def cmd_eval_escalation_fix(args: argparse.Namespace) -> int:
     """Sweep escalation_fix_minutes and print recovered revenue and messages per arm."""
     from salvage.eval.sweep import escalation_fix_sweep
@@ -745,12 +775,44 @@ def cmd_eval_escalation_fix(args: argparse.Namespace) -> int:
 
 def cmd_eval_report(args: argparse.Namespace) -> int:
     """Regenerate docs/RESULTS.md from the artifacts already on disk."""
-    from salvage.eval.report import ReportInputs, load_json, rows_from_json, write_results_md
+    from salvage.eval.report import (
+        ReportInputs,
+        check_freshness,
+        load_json,
+        rows_from_json,
+        write_results_md,
+    )
 
     main_payload = load_json(Path(args.results))
     if main_payload is None:
         print(f"no results file at {args.results}", file=sys.stderr)
         return 2
+    # An artifact older than the primary sweep was written by code that no longer exists. The
+    # report used to render those beside fresh ones with nothing to say which was which, and three
+    # sections shipped that way for a milestone.
+    stale = check_freshness(
+        {
+            "offpeak": args.offpeak,
+            "volume_sweep": "data/results/volume_sweep.json",
+            "steer_sensitivity": "data/results/steer_sensitivity.json",
+            "diagnosis": "data/results/diagnosis.json",
+            "fault_injection": "data/results/fault_injection.json",
+            "escalation_fix": args.escalation_fix or "data/results/escalation_fix.json",
+        },
+        args.results,
+    )
+    if stale and not args.allow_stale:
+        print(
+            "refusing to write a report from artifacts older than the sweep: " + ", ".join(stale),
+            file=sys.stderr,
+        )
+        print(
+            "regenerate them, or pass --allow-stale if you are deliberately reporting a mixture "
+            "and will say so in the document.",
+            file=sys.stderr,
+        )
+        return 2
+
     offpeak_payload = load_json(Path(args.offpeak)) if args.offpeak else None
     inputs = ReportInputs(
         main=rows_from_json(main_payload),
@@ -1231,6 +1293,23 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sensitivity.add_argument("--adversarial", action="store_true")
     eval_sensitivity.set_defaults(func=cmd_eval_sensitivity)
 
+    eval_steer = evaluation.add_parser(
+        "steer-sensitivity",
+        help="sweep the steer conversion probability, the constant the agent's margin rests on",
+    )
+    eval_steer.add_argument("--scenarios", default="S1,S2")
+    eval_steer.add_argument("--seeds", default="0..4")
+    eval_steer.add_argument("--policies", default="agent,B0,B1,B2")
+    eval_steer.add_argument("--values", default="0.25,0.35,0.45,0.55,0.65")
+    eval_steer.add_argument("--provider", default="fixture")
+    eval_steer.add_argument("--collect-out", dest="collect_out", default="data/prompts_steer.jsonl")
+    eval_steer.add_argument(
+        "--out",
+        default="steer_sensitivity.json",
+        help="artifact name under data/results",
+    )
+    eval_steer.set_defaults(func=cmd_eval_steer_sensitivity)
+
     eval_fix = evaluation.add_parser(
         "escalation-fix", help="sweep escalation_fix_minutes: what an escalation is worth"
     )
@@ -1261,6 +1340,12 @@ def build_parser() -> argparse.ArgumentParser:
     eval_report.add_argument("--results", default="data/results/main.json")
     eval_report.add_argument("--offpeak", default="data/results/offpeak.json")
     eval_report.add_argument("--escalation-fix", dest="escalation_fix", default=None)
+    eval_report.add_argument(
+        "--allow-stale",
+        dest="allow_stale",
+        action="store_true",
+        help="write the report even though an input predates the sweep. Say so in the document.",
+    )
     eval_report.set_defaults(func=cmd_eval_report)
 
     e2e = subparsers.add_parser("e2e", help="the real test-mode end-to-end run").add_subparsers(
