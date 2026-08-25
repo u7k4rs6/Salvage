@@ -4,7 +4,7 @@ Every defect in this list was found and fixed during the build. They are ordered
 and the ones that cost the most were not crashes. They were bugs that produced a number.
 
 A crash announces itself. A measurement bug hands you a plausible table, and you put it in a
-report. Twelve of the defects below were of that kind, and most of them flattered somebody.
+report. Thirteen of the defects below were of that kind, and most of them flattered somebody.
 
 ## Bugs that produced wrong numbers
 
@@ -108,11 +108,11 @@ still failing payments. Caught by reading a collected prompt rather than by a te
 `case.no_open_link` forbade second nudges rather than second links, conflating two different PRD
 limits, so B2's second nudge never happened and B2 was silently measured as a slightly noisier B1.
 
-## Three more, on the day a real model arrived
+## Four more, on the day a real model arrived
 
 A Gemini key turned up in M5, after two milestones in which the agent arm had never once run with
-a model. Three defects surfaced in a single afternoon, all in code that a green test suite had been
-passing for weeks, and all three found by running the thing rather than by testing it.
+a model. Four defects surfaced in a single afternoon, all in code that a green test suite had been
+passing for weeks, and all four found by running the thing rather than by testing it.
 
 ### 10. The rationale validator demanded names the model was never shown
 
@@ -150,7 +150,34 @@ field, and the executor fills the real one per case. It still drops an action ca
 placeholder into every action and broke `STEER_METHOD`, whose params model forbids extra fields;
 an existing test caught that within a minute.
 
-### 12. The escalation fix scoped its population backwards, and this one is mine
+### 12. The agent answered a merchant misconfiguration with total silence
+
+The worst of the four, and the one that had already reached a published table before it was found.
+
+On S4 the model diagnosed the misconfiguration correctly at 0.95 confidence and planned an
+`ESCALATE_HUMAN`. It wrote its reasoning in the plan's `rationale` field: "Merchant-side
+configuration issue. Hard rules dictate no customer contact for merchant-side causes. Escalating
+internally for resolution." It left the action's own `params` empty. `EscalateHumanParams` requires
+a `reason`, so the action failed validation and was dropped, and the plan came back with no actions
+at all.
+
+The agent then did nothing. No customer contact, which is correct and is the whole point of S4. And
+no escalation, which is the one response the design does not allow: a merchant misconfiguration is
+precisely the case where a human has to be told, because nothing a customer does will fix it.
+
+On the sweep this read as an agent equalling B0 through principled restraint. It was equalling B0
+by saying nothing, and the S4 row of a completed 200-run sweep had already been written up that way
+before an escalation count of zero looked wrong enough to chase.
+
+Two fixes. An absent `reason` on `ESCALATE_HUMAN` or `NO_ACTION` is filled from the plan's own
+rationale, because an action is not wrong for putting its explanation in the field next door, and
+the model's own words are more use to the human reading the escalation than a generated
+placeholder. And a plan whose actions are all dropped now falls back to `default_plan`, which is
+what that function has always documented itself as being for: "a planner that cannot plan must not
+fall back to doing something to customers; it falls back to asking a person." It had only ever been
+reached when the provider was absent or raised, never when validation threw everything away.
+
+### 13. The escalation fix scoped its population backwards, and this one is mine
 
 The M5 mechanism gives every order a repaired fault put at risk one further chance to come back.
 The first version gave it only to orders that had already failed when the repair landed, which
@@ -230,8 +257,15 @@ checked against a planted copy of the bug before it was trusted.
 
 Most of these were found by changing the frame rather than by running the tests: by asking what a
 number means, by reading a prompt the model would see, by rehearsing a control instead of asserting
-it, by injecting a fault at the one moment a check does not cover. The test suite was green through
-almost all of them, and it was green because every component was doing its job correctly.
+it, by injecting a fault at the one moment a check does not cover, by plugging in a real model and
+watching what it actually did. The test suite was green through almost all of them, and it was
+green because every component was doing its job correctly.
+
+Three of the four in that last group share a shape worth naming: a validator rejecting a well
+formed answer for a superficial reason, and the rejection being handled so gracefully that it
+looked like a decision. A dropped action, a failed diagnosis and an empty plan all degrade quietly
+into "the agent escalated" or "the agent did nothing", which are legitimate outcomes. Graceful
+degradation and silent failure are the same code path viewed from two distances.
 
 That is the argument for the two things this project spends the most effort on. The ledger, because
 a decision that was recorded can be re-read later by someone who suspects the frame. And the

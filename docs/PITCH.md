@@ -47,22 +47,48 @@ Then flip the kill switch and run the same seed again. Identical world, same 282
 ledger entry, and recovery falls to what customers manage on their own. Detection, diagnosis and
 escalation keep running, because suspending an agent should not blind it.
 
-## What is measured, and what is not
+## What is measured, and what it says
 
 Zero policy violations across 200 runs. 45 fault injection attempts, 45 refused. Detection at 5 to
 10 simulated minutes on the peak, with zero false alarms on the no-fault scenario across all seeds.
 
-**The agent arm is unmeasured.** There was never a language model in this build environment, and a
-rules-only diagnosis is deliberately assigned 0.5 confidence, below the 0.6 action threshold. So
-the agent escalated every incident, took no customer-facing action, and recovered exactly what
-doing nothing recovers. That column in the results is the no-model configuration, not the product.
-The comparison it exists to make, cause-aware timing against blunt link-sending, has not been made.
+**The agent arm is measured now**, against a live Gemini, from diagnosis fixtures recorded blind:
+the recorder builds each evidence packet through the same call the agent makes, which cannot reach
+the ground-truth tables, hands the model a type carrying the prompt and its hash and nothing else,
+and refuses any prompt in which a scenario id, a seed or a cause name appears.
 
-What has been measured is the blunt baselines against each other, and they do well: about 1.8 times
-the recovery of doing nothing, bought with roughly a thousand messages per simulated day. That
-number is real and it is reported. It is also bought in a simulator that charges nothing for a
-message except a 2.6 percent chance of an opt-out. No regulatory cost, no sender reputation, no
-fatigue. The advantage of messaging everybody is priced at almost zero here, and a real merchant
+Over the at-risk order set, mean of 10 seeds, revenue in rupees against messages sent:
+
+| scenario | agent | best baseline | 
+|---|---|---|
+| S1 issuer outage | **2,21,154 from 83 messages** | 1,75,050 from 261 (B2) |
+| S2 BIN auth failure | **1,20,065 from 44 messages** | 93,255 from 140 (B2) |
+| S3 gateway degradation | **4,78,668 from 422 messages** | 4,72,828 from 492 (B2) |
+| S4 merchant misconfiguration | 90,128 from 0 messages | 1,65,041 from 272 (B2) |
+
+On the three scenarios where a customer can do something about the failure, the agent recovers more
+money than the best blunt baseline while sending between a third and a half as many messages. Over
+the whole run rather than the at-risk set the gap is wider still: on S1 the agent sends 90 messages
+where B2 sends 1,296. On S0, the day nothing breaks, the baselines send about a thousand messages
+each and the agent sends none, because there is no incident to act on.
+
+The diagnosis ablation says where that comes from. Over 41 incidents, the rules classifier alone is
+right 90.2 percent of the time and the model-assisted diagnosis 97.6 percent. The rules fall back
+to `unknown` when the detector attributes an incident to a whole method rather than the failing
+instrument; the model reads the same evidence packet and gets three of those four right.
+
+**S4 is a loss and it is the most useful row in the table.** The cause is a merchant
+misconfiguration, no customer can pay their way around it, so the agent contacts nobody and files
+an escalation. It therefore recovers exactly what doing nothing recovers, and both link-sending
+baselines beat it by messaging around two hundred customers about something none of them can fix.
+That is the cost of restraint, and until this milestone the simulator charged the agent for it
+without ever paying out: an escalation reached a human and the world carried on failing. Section 11
+of `docs/RESULTS.md` now sweeps how long a merchant takes to act on one, and reports the curve
+rather than picking a number off it.
+
+Everything above is bought in a simulator that charges nothing for a message except a 2.6 percent
+chance of an opt-out. No regulatory cost, no sender reputation, no fatigue. That pricing flatters
+the baselines, not the agent, so the contact-volume gap is if anything understated: a real merchant
 sending 1,436 messages a day would be having a different conversation before they had this one.
 
 ## The number worth taking away
@@ -88,12 +114,18 @@ this that claims to work everywhere has not looked.
 
 ## Why the ledger is the load-bearing part
 
-Ten of the defects found in this build produced a number rather than a crash. Policies that could
-see the future and declined to act on the customers who were about to pay anyway. Baselines that
-were handed the agent's steering for free. A circuit breaker that measured a cap instead of a
+Thirteen of the defects found in this build produced a number rather than a crash. Policies that
+could see the future and declined to act on the customers who were about to pay anyway. Baselines
+that were handed the agent's steering for free. A circuit breaker that measured a cap instead of a
 policy. Evaluation fixtures written by the model being evaluated. The test suite was green through
 almost all of it, because every component was doing its job correctly and the frame around them was
 wrong.
+
+Four of them surfaced in a single afternoon, the first time a real model was ever plugged in. The
+worst: on S4 the model diagnosed the misconfiguration correctly and planned an escalation, wrote
+its reasoning in the plan's rationale rather than in the action's params, and a validator threw the
+action away for it. The plan came back empty and the agent did nothing at all. On the sweep that
+read as an agent choosing restraint. It was equalling B0 by saying nothing.
 
 That is the case for recording decisions in a form that can be re-read by someone who suspects the
 frame, and for a results document that names what it has not measured before it shows a table.
@@ -101,8 +133,13 @@ frame, and for a results document that names what it has not measured before it 
 
 ## What comes next
 
-One command with a model key fills in the agent arm, and the same sweep produces the comparison
-this project was built to make. The two things after that are the ones this milestone could not
-buy: a real Razorpay test-mode run end to end, which is written and refuses to run without
-credentials, and a cost model for messages, so that contact volume is priced instead of assumed
-free.
+Two things this build could not buy. A real Razorpay test-mode run end to end, which is written and
+refuses to run without credentials. And a cost model for messages, so that contact volume is priced
+rather than assumed free: every contact-efficiency number here is measured in a world where the
+only thing a message costs is a small chance of losing the customer, which is the assumption most
+worth attacking.
+
+Beyond that, the honest next step is not a feature. It is the operating envelope: this detector
+works at the evening peak on a merchant doing around 12,000 attempts a day, and the results say
+plainly where it stops working. Making it work overnight, or at 1,500 attempts a day, means a
+longer window or a lower attempt floor, and both trade against the zero false alarms.

@@ -85,6 +85,24 @@ ground-truth tables, hands the model a type carrying the prompt and its hash and
 refuses any prompt in which a scenario id, a seed or a cause name appears. `docs/RESULTS.md` reads
 its provenance line out of the fixture files rather than asserting it.
 
+Recovered revenue in rupees over the at-risk order set against messages sent, mean of 10 seeds:
+
+| scenario | agent | B0 | B1 | B2 |
+|---|---|---|---|---|
+| S1 issuer outage | **2,21,154 / 83 msg** | 93,947 / 0 msg | 1,47,797 / 164 msg | 1,75,050 / 261 msg |
+| S2 BIN auth failure | **1,20,065 / 44 msg** | 50,095 / 0 msg | 79,263 / 88 msg | 93,255 / 140 msg |
+| S3 gateway degradation | **4,78,668 / 422 msg** | 3,01,760 / 0 msg | 4,20,743 / 312 msg | 4,72,828 / 492 msg |
+| S4 merchant misconfiguration | 90,128 / 0 msg | 90,128 / 0 msg | 1,57,696 / 178 msg | 1,65,041 / 272 msg |
+
+The agent wins S1 to S3 on both axes at once, recovering more from between a third and a half of
+the contacts. **It loses S4**, and that row is the one worth reading: the cause is a merchant
+misconfiguration, so it contacts nobody and escalates, recovering exactly what doing nothing
+recovers while both baselines message around two hundred customers about something none of them can
+fix. `docs/RESULTS.md` section 11 sweeps what an escalation is worth once somebody acts on it.
+
+Diagnosis accuracy over 41 incidents: rules-only 0.902, model 0.976, reconciled 0.976. Zero policy
+violations across all 200 runs, and 45 fault injection attempts all refused.
+
 ## Documents
 
 - `docs/01_PRD.md` product requirements, scenarios, metrics, milestones
