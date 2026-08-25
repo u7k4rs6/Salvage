@@ -18,30 +18,87 @@ proposed action against an allowlisted menu, and an append-only hash-chained led
 it. The agent can create Razorpay Payment Links and set checkout display hints. It cannot do
 anything else with money.
 
+## Run the demo
+
+Two processes, both on loopback. Backend first:
+
+```
+uv sync --all-extras
+cp .env.example .env
+uv run salvage db migrate
+SALVAGE_DASHBOARD_TOKEN=demo-token uv run salvage serve
+```
+
+Then the console, in a second terminal:
+
+```
+cd web
+npm install
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`, paste `demo-token` into the token box in the top bar, and go to
+Scenario Runner. Pick a scenario, a seed and a policy, and press run. The run resets the database
+first, because a scenario is a whole world and two worlds in one database collide on the first
+customer they share.
+
+The token lives in React state and is never written to `localStorage`, so a page reload asks for it
+again. Read routes are open on loopback; every mutating route requires the bearer token. The API
+binds to 127.0.0.1 and CORS is limited to the Vite dev and preview origins.
+
+The whole demo also runs without a browser:
+
+```
+uv run salvage agent run --scenario S1 --seed 1 --policy B1
+uv run salvage ledger verify
+```
+
+## The console
+
+Seven pages, in the build order of `docs/04_FRONTEND_SPEC.md` section 9.
+
+- **Overview** merchant-wide success rate, the segment heatmap with the merchant row pinned at the
+  top, open incidents and today's recovery.
+- **Incidents** the list, filtered by state.
+- **Incident detail** the evidence packet the diagnosis saw, the rules and model verdicts side by
+  side, the action timeline, and a ledger slice for that incident alone.
+- **Escalations** the queue, with an approve or reject decision that requires a written note.
+- **Ledger** browse, verify the chain, and export JSONL that the offline verifier reads.
+- **Results** the sweep tables, served from the same JSON that produced `docs/RESULTS.md`.
+- **Storefront** a checkout page that shows what a customer sees when the agent sets a display
+  hint. It says plainly when it cannot take a real order because no Razorpay key is configured.
+- **Scenario Runner** start a run, watch it over server-sent events, and flip the kill switch.
+
 ## Status
 
-M1 to M3 are built: migrations and repository layer, hash-chained ledger with an offline verifier
+M1 to M4 are built: migrations and repository layer, hash-chained ledger with an offline verifier
 and a commitment to the event stream, simulator with scenarios S0 to S4 and organic customer
 retries, webhook ingest with signature verification, detector with frozen calibrated thresholds,
-evidence packets, a rules classifier, an LLM provider layer, the allowlisted action menu and
-policy engine, the per-order state machine and executor, the simulated channel, three baselines,
-a fault injection suite and the evaluation sweep that writes `docs/RESULTS.md`.
+evidence packets, a rules classifier, an LLM provider layer, the allowlisted action menu and policy
+engine, the per-order state machine and executor, the simulated channel, three baselines, a fault
+injection suite, the evaluation sweep that writes `docs/RESULTS.md`, the dashboard API and the
+console above.
 
 Two things are measured and two are not, and `docs/RESULTS.md` says which is which at the top:
 
-- **Measured:** the three baselines against each other, the detector's operating envelope, the
-  policy engine (zero violations across the sweep), and 41 fault injections all refused.
-- **Not measured:** anything involving an LLM. There was no Gemini key in the build environment,
-  the self-authored fixtures M2 shipped were deleted rather than reported from, and the agent arm
-  therefore runs with no diagnosis model, escalates every incident and recovers what B0 recovers.
-  One command with a key fills that in.
+- **Measured:** the three baselines against each other over the at-risk order set, the detector's
+  operating envelope, the policy engine (zero violations across 200 runs), and 41 fault injections
+  all refused.
+- **Not measured:** anything involving an LLM. No Gemini key and no local model were ever present
+  in the build environment, the self-authored fixtures M2 shipped were deleted rather than reported
+  from, and the agent arm therefore runs with no diagnosis model, escalates every incident and
+  recovers exactly what B0 recovers. One command with a key fills that in.
 
 ## Documents
 
 - `docs/01_PRD.md` product requirements, scenarios, metrics, milestones
 - `docs/02_TECHNICAL_ARCHITECTURE.md` components, data model, detector, simulator, tooling
 - `docs/03_SECURITY_AND_ACCESS.md` threat model, secrets, webhook security, ledger integrity
-- `docs/04_FRONTEND_SPEC.md` dashboard specification (M4)
+- `docs/04_FRONTEND_SPEC.md` dashboard specification
+- `docs/RESULTS.md` the sweep, with the two limitations stated before the first table
+- `docs/results_by_run.csv` one row per run, so any table above can be recomputed
+- `docs/WHAT_BROKE.md` the defects worth reading about, measurement bugs first
+- `docs/PITCH.md` the three-minute version
 - `docs/BUILD_LOG.md` dated build log: decisions, thresholds, what broke and what fixed it
 
 ## Setup
@@ -75,6 +132,9 @@ uv run salvage eval sensitivity --seeds 0..4 --adversarial
 uv run salvage eval report
 uv run salvage e2e verify
 uv run salvage agent run --scenario S1 --seed 1 --policy B1
+uv run salvage agent run --scenario S1 --seed 1 --policy B1 --kill-switch
+uv run salvage demo reset
+uv run salvage demo kill-switch on
 uv run salvage ledger verify
 uv run salvage ledger export --out data/ledger.jsonl
 uv run salvage webhooks record --out data/webhooks
@@ -84,6 +144,18 @@ uv run python scripts/verify_ledger.py data/ledger.jsonl
 uv run pytest -q
 uv run ruff check .
 ```
+
+`salvage demo reset` empties every table and prints the database path before it does. It takes the
+global `--db` flag like every other command.
+
+## The kill switch
+
+`SALVAGE_KILL_SWITCH=1`, or the switch in the console top bar, suspends every outbound action. It
+is checked in the policy engine, so a suspended agent still detects, still diagnoses and still
+files escalations; it just stops calling out. On S1 seed 1 under B1 the same world produces 1,038
+messages with the switch off and zero with it on, and recovery falls to what customers manage on
+their own. `docs/BUILD_LOG.md` has the rehearsal, including the two defects the rehearsal found in
+the wiring around the switch.
 
 ## A note on the LLM fixtures
 
