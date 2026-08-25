@@ -61,6 +61,7 @@ class ReportInputs:
     diagnosis: dict[str, Any] | None = None
     injection: dict[str, Any] | None = None
     escalation_fix: dict[str, Any] | None = None
+    steer_sensitivity: dict[str, Any] | None = None
     calibration: str | None = None
 
 
@@ -427,6 +428,108 @@ def offpeak_section(peak: SweepResult, offpeak: SweepResult | None) -> str:
     return "\n".join(lines)
 
 
+def steer_sensitivity_section(payload: dict[str, Any] | None) -> str:
+    """The constant the agent's margin actually rests on, swept.
+
+    Replaces a sweep that scaled two nudge multipliers and compared B1 against B0. That sweep
+    quantified a comparison the headline does not depend on, and left untouched the one parameter
+    it depends on most.
+    """
+    if not payload:
+        return _not_run(
+            "uv run salvage eval steer-sensitivity --scenarios S1,S2 --seeds 0..4",
+            "The steer sensitivity sweep has not been run.",
+        )
+
+    rows = payload["rows"]
+    policies: list[str] = []
+    for row in rows:
+        if row["policy"] not in policies:
+            policies.append(row["policy"])
+    values = sorted({row["steer"] for row in rows})
+    scenarios = payload["scenarios"]
+    cells = {(row["steer"], row["scenario"], row["policy"]): row for row in rows}
+
+    lines = [
+        "The agent's margin on S1 and S2 arrives mostly by the steer route: a checkout display "
+        "hint moves a customer off the failing instrument and they pay in the same session. That "
+        "route is available to no other arm, costs no messages, and converts at a probability "
+        f"this project asserted rather than measured. The shipped value is "
+        f"**{payload['shipped_value']}**, taken from the architecture note as an illustration and "
+        "never swept until now.",
+        "",
+        "Only that probability moves. The attempt stream is generated before any policy runs and "
+        "does not read it, so the world, the eligible set and the at-risk set are identical at "
+        "every value.",
+        "",
+        f"Mean over {len(payload['seeds'])} seeds, at-risk recovered revenue in rupees against "
+        "messages sent.",
+    ]
+    for scenario in scenarios:
+        lines.append("")
+        lines.append(f"**{scenario}**")
+        lines.append("")
+        lines.append("| steer | " + " | ".join(policies) + " |")
+        lines.append("|---" * (len(policies) + 1) + "|")
+        for value in values:
+            cell_texts = []
+            for policy in policies:
+                row = cells.get((value, scenario, policy))
+                if row is None:
+                    cell_texts.append("n/a")
+                    continue
+                cell_texts.append(
+                    f"{rupees(row['at_risk_recovered_amount'])} / {row['at_risk_messages']:.0f} msg"
+                )
+            marker = " (shipped)" if value == payload["shipped_value"] else ""
+            lines.append(f"| {value:.2f}{marker} | " + " | ".join(cell_texts) + " |")
+
+    lines.append("")
+    lines.append(_steer_crossovers(cells, values, scenarios, policies))
+    return "\n".join(lines)
+
+
+def _steer_crossovers(
+    cells: dict[tuple[float, str, str], dict[str, Any]],
+    values: list[float],
+    scenarios: list[str],
+    policies: list[str],
+) -> str:
+    """The value below which the agent stops beating the best baseline, per scenario."""
+    if "agent" not in policies:
+        return ""
+    rivals = [p for p in policies if p not in ("agent", "echo")]
+    out = []
+    for scenario in scenarios:
+        best_rival, best_amount = None, 0.0
+        for policy in rivals:
+            row = cells.get((max(values), scenario, policy))
+            if row and row["at_risk_recovered_amount"] > best_amount:
+                best_rival, best_amount = policy, row["at_risk_recovered_amount"]
+        if best_rival is None:
+            continue
+        losing = [
+            value
+            for value in values
+            if (row := cells.get((value, scenario, "agent")))
+            and (rival := cells.get((value, scenario, best_rival)))
+            and row["at_risk_recovered_amount"] <= rival["at_risk_recovered_amount"]
+        ]
+        if losing:
+            out.append(
+                f"On {scenario} the agent stops beating {best_rival} at or below a steer "
+                f"probability of **{max(losing):.2f}**, against a shipped value of 0.55."
+            )
+        else:
+            out.append(
+                f"On {scenario} the agent beats {best_rival} at every value in the swept range, "
+                f"down to {min(values):.2f}."
+            )
+    if not out:
+        return ""
+    return "**Where the win goes.** " + " ".join(out)
+
+
 def sensitivity_section(payload: dict[str, Any] | None) -> str:
     if not payload:
         return _not_run(
@@ -614,7 +717,11 @@ everything and recover nothing.
 
 {offpeak_section(main, inputs.offpeak)}
 
-## 9. Sensitivity and the adversarial set
+## 9. Sensitivity: the constant the margin rests on
+
+{steer_sensitivity_section(inputs.steer_sensitivity)}
+
+### The adversarial set
 
 {sensitivity_section(inputs.sensitivity)}
 

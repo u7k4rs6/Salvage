@@ -822,6 +822,7 @@ def cmd_eval_report(args: argparse.Namespace) -> int:
         diagnosis=load_json("data/results/diagnosis.json"),
         injection=load_json("data/results/fault_injection.json"),
         escalation_fix=load_json(args.escalation_fix or "data/results/escalation_fix.json"),
+        steer_sensitivity=load_json("data/results/steer_sensitivity.json"),
     )
     path = write_results_md(inputs.main, inputs=inputs)
     print(f"Wrote {path}")
