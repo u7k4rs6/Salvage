@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import re
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -163,11 +164,17 @@ def record_fixtures(
     provider,
     *,
     directory: Path | str | None = None,
+    pause_seconds: float = 0.0,
 ) -> tuple[int, list[str]]:
     """Ask a live provider each prompt and write the answer as a fixture.
 
     Refuses a fixture or collecting provider: recording from a fixture provider would copy
     whatever is already on disk, and recording from the collector would write nothing.
+
+    `pause_seconds` paces the calls. The Gemini free tier is rate limited per minute, and the
+    provider answers a 429 by falling back to a smaller model, so recording flat out would split
+    one fixture set across two models and the ablation would no longer be measuring one thing.
+    Pacing keeps the provenance single valued; it is not a politeness feature.
     """
     from salvage.diagnose.llm import LLMDiagnosis
     from salvage.llm.provider import FIXTURE_DIR, LLMError, write_fixture
@@ -181,7 +188,9 @@ def record_fixtures(
 
     directory = Path(directory) if directory else FIXTURE_DIR
     written, failures = 0, []
-    for prompt in prompts:
+    for index, prompt in enumerate(prompts):
+        if pause_seconds and index:
+            time.sleep(pause_seconds)
         assert_blind(prompt)
         try:
             answer = provider.complete(prompt.system, prompt.user, LLMDiagnosis)

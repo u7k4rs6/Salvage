@@ -150,6 +150,8 @@ class RunStats:
     steer_recoveries: int = 0
     steer_amount: int = 0
     organic_recoveries: int = 0
+    fixes_applied: int = 0
+    fix_recoveries: int = 0
 
     def as_dict(self) -> dict[str, Any]:
         return dict(self.__dict__)
@@ -180,6 +182,7 @@ class AgentRunner:
         profile: PolicyProfile = AGENT,
         seed: int = 0,
         world_faults: list[dict[str, Any]] | None = None,
+        escalation_fix_minutes: int | None = None,
     ) -> None:
         self._conn = conn
         self._response = response
@@ -195,6 +198,11 @@ class AgentRunner:
         # incidents, which made a baseline's outcome depend on whether the agent had detected
         # anything. Each entry is {"start", "end", "selector"}.
         self._world_faults = list(world_faults or [])
+        # Escalation to fix, from sim/params.yaml. None means never, which is the pre-M5
+        # behaviour: the agent files an escalation and the world carries on failing. Also world
+        # state rather than agent state, and read in exactly one place, _repair_world.
+        self._escalation_fix_minutes = escalation_fix_minutes
+        self._repaired_incidents: set[str] = set()
         self._calendar = calendar or IstCalendar()
         self._ledger = Ledger(conn)
         self._timers: list[_Timer] = []
@@ -850,6 +858,93 @@ class AgentRunner:
                 return True
         return False
 
+    # -- escalation to fix -------------------------------------------------
+
+    def _repair_world(self, incident_id: str, fixed_at: int) -> None:
+        """The world repairs what the escalation was about, escalation_fix_minutes later.
+
+        World state, like `_world_faults`, and for the same reason: whether the rail a customer
+        failed on has since been fixed is a fact about the world, not a decision Salvage takes.
+        Nothing here is ledgered, because the ledger records what Salvage did and Salvage did not
+        do this. What Salvage did was file the escalation, and that entry is already written.
+
+        Two effects, and the second is deliberately the smaller of the two available:
+
+          the repaired faults stop counting as broken, so a message after the repair is scored as
+          landing on a working rail;
+
+          every order the fault put at risk, that is still unpaid and still inside the model's
+          organic horizon, gets one further chance to come back at its own organic probability,
+          decayed for the time it has been waiting.
+
+        The attempt stream was generated before any policy ran and is not rewritten, so payments
+        the fault would have broken after the repair still fail in the recorded data. A real fix
+        would have stopped them failing at all; here they get the same single chance to come back
+        that everyone else the fault hit gets. That is less credit than a real fix earns, so the
+        mechanism understates what a fix is worth, and it understates it for the only arm that can
+        trigger one.
+
+        The population is every order the fault put at risk, not only the ones that failed before
+        the repair landed. Scoping it to the earlier ones made a fast fix score worse than a slow
+        one, because a fast fix simply has fewer failures behind it, and the failures in front of
+        it are exactly the ones it should have prevented. That is an artefact of the frozen stream
+        and not a finding, so it is not modelled that way.
+        """
+        from salvage.eval.baselines import FaultWindow, at_risk_orders
+
+        incident = repo.get_incident(self._conn, incident_id)
+        if incident is None:
+            return
+        segment_key = str(incident["segment_key"])
+
+        windows: list[FaultWindow] = []
+        for index, fault in enumerate(self._world_faults):
+            start, end = int(fault["start"]), int(fault["end"])
+            if end <= fixed_at:
+                # Already over. The world fixed it without anybody being told, and crediting the
+                # escalation for that would be crediting it for the clock.
+                continue
+            selector = dict(fault.get("selector") or {})
+            if not _fault_answers_segment(selector, segment_key):
+                continue
+            self._world_faults[index] = {**fault, "end": fixed_at}
+            windows.append(FaultWindow(start=start, end=end, selector=selector))
+
+        if not windows:
+            return
+        self.stats.fixes_applied += 1
+
+        horizon = self._response.organic_horizon_seconds
+        for order in at_risk_orders(self._conn, windows):
+            if fixed_at - order.failed_at > horizon:
+                # Repaired long after this customer stopped waiting. The model gives nobody a
+                # retry beyond organic_retry_max_minutes and the repair does not get an exception.
+                continue
+            # An order that failed after the repair landed hears about it at the moment it fails,
+            # not before, so its second chance starts from its own failure.
+            starts_at = max(fixed_at, order.failed_at)
+            row = repo.get_order(self._conn, order.order_id) or {}
+            if _paid_by(row, starts_at):
+                continue
+            plan = self._response.repair_plan(
+                order_index=_order_index(order.order_id),
+                amount_paise=order.amount,
+                error_reason=order.error_reason,
+                first_failed_at=order.failed_at,
+                fixed_at=starts_at,
+            )
+            if not plan.returns or plan.at is None:
+                continue
+            repo.mark_order_paid(self._conn, order.order_id, plan.at)
+            if repo.record_recovery_route(
+                self._conn,
+                order_id=order.order_id,
+                route="fix",
+                paid_at=plan.at,
+                policy=self._profile.name,
+            ):
+                self.stats.fix_recoveries += 1
+
     def _alternate_offer(
         self, incident: dict[str, Any], customer: dict[str, Any], now: int
     ) -> str | None:
@@ -951,6 +1046,9 @@ class AgentRunner:
                 continue
             if timer.kind == "steer_sweep":
                 self._steer_sweep(timer.incident_id, timer.at, timer.payload)
+                continue
+            if timer.kind == "merchant_fix":
+                self._repair_world(timer.incident_id, timer.at)
                 continue
             case = repo.get_case(self._conn, timer.case_id)
             if case is None or is_terminal(case["state"]):
@@ -1308,6 +1406,17 @@ class AgentRunner:
         )
         self._conn.execute("UPDATE incidents SET status = 'escalated' WHERE id = ?", (incident_id,))
         self.stats.escalations += 1
+        # An escalation reaches a human, and in the world the human eventually fixes the thing.
+        # How long that takes is the swept parameter; `never` schedules nothing at all.
+        if self._escalation_fix_minutes is not None and incident_id not in self._repaired_incidents:
+            self._repaired_incidents.add(incident_id)
+            self._schedule(
+                now + self._escalation_fix_minutes * 60,
+                "merchant_fix",
+                "",
+                incident_id,
+                {"escalated_at": now},
+            )
         self._ledger.append(
             "escalation.opened",
             "escalation",
@@ -1315,6 +1424,34 @@ class AgentRunner:
             {"incident_id": incident_id, "reason": reason, "proposed_action": proposed},
             ts=now,
         )
+
+
+def _fault_answers_segment(selector: dict[str, Any], segment_key: str) -> bool:
+    """Whether an escalation about `segment_key` would lead a human to this fault.
+
+    The rule is "not contradicted", not "exactly equal". An incident attributed to `card` covers a
+    fault on one BIN range, and an incident attributed to `card:card_network:Visa` does not rule
+    out a gateway fault that was breaking every method. Only a genuine disagreement, an escalation
+    about UPI against a fault on cards, fails to match.
+
+    This is generous to the agent and docs/RESULTS.md says so: it assumes that a human pointed at
+    the right incident finds the actual fault. The stingier reading, that only an exactly matching
+    escalation gets fixed, would make the fix curve shallower. Nothing else in the mechanism is
+    generous, so the assumption is isolated here where it can be argued with.
+    """
+    from salvage.detect.segments import ALL_KEY, INSTRUMENT_DIMENSIONS, parse_key
+
+    if segment_key == ALL_KEY or not selector:
+        return True
+    method, dimension, value = parse_key(segment_key)
+    if selector.get("method") not in (None, method):
+        return False
+    if dimension is None:
+        return True
+    selector_key = dict(INSTRUMENT_DIMENSIONS).get(dimension)
+    if selector_key is None or selector_key not in selector:
+        return True
+    return str(selector[selector_key]) == str(value)
 
 
 def _paid_by(order: dict[str, Any], now: int) -> bool:

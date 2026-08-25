@@ -409,6 +409,44 @@ fault_variants:
     # against an evening peak of 2.60, so this is about one thirtieth of the peak arrival rate.
     start_minute_override: 210
 
+# Escalation to fix. M5, and it is a swept parameter rather than a default.
+#
+# Until M5 an escalation had no effect on the world: the agent filed it, a human was notionally
+# told, and the misconfiguration in S4 kept failing payments for its full 180 minutes. That makes
+# S4 measure the cost of the agent's restraint with none of its benefit, which is not a fair test
+# of "escalate instead of messaging customers about something they cannot fix".
+#
+# escalation_fix_minutes is T. When an escalation is filed at time t, the faults the escalated
+# incident is about are treated as repaired from t + T. `never` means no repair, which reproduces
+# the pre-M5 numbers exactly and is the check that the mechanism is additive.
+#
+# What a repair does, and it is deliberately the smaller of the two things it could do:
+#
+#   It stops the rail counting as broken from t + T, so a message sent after the repair is scored
+#   as landing on a working rail rather than a failing one.
+#
+#   It gives every order that the fault put at risk and that is still unpaid and inside its TTL
+#   one further chance to come back, drawn from its own random stream so no existing draw moves.
+#   The probability is the order's own organic probability, decayed by the same 12 hour constant
+#   the intervention multipliers use, and the delay is drawn from the same organic retry delay
+#   distribution. No new tunable number is introduced: a repair makes a customer no more likely to
+#   return than they were when their payment first failed.
+#
+# What a repair does NOT do: the attempt stream is generated before any policy runs, so payments
+# that the fault would have broken after t + T still fail in the recorded data. A real repair
+# would also stop new failures. This mechanism therefore understates what a fix is worth, and it
+# understates it for the arm that escalates, which is the agent. That direction was chosen on
+# purpose: the alternative changes which orders exist per arm and would break the identical order
+# set that every comparison in docs/RESULTS.md rests on.
+#
+# Only arms that escalate can benefit. B1 and B2 never escalate, so they never get a repair.
+# A real merchant might notice a broken method without an agent telling them, so read the curve
+# as an upper bound on the value of the agent's escalation and not as a merchant's only route to
+# a fix.
+#
+# The value here is the default for a single run. `salvage eval escalation-fix` sweeps it.
+escalation_fix_minutes: never
+
 # Seed-dependent jitter applied to every fault's start_minute, so five seeds do not break at the
 # same wall-clock minute. Assumption: onset jitter tests the detector's independence from a
 # particular minute of the day without moving the fault out of the evening peak.

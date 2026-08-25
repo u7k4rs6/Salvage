@@ -143,6 +143,22 @@ class Params:
         return int(self.raw["fault_start_jitter_minutes"])
 
     @property
+    def escalation_fix_minutes(self) -> int | None:
+        """Minutes from an escalation to the fault being repaired, or None for never.
+
+        `never` in the file and None here mean the same thing: an escalation tells a human and
+        the world does not change. That is the pre-M5 behaviour and the baseline the sweep is
+        measured against.
+        """
+        value = self.raw.get("escalation_fix_minutes", "never")
+        if value is None or (isinstance(value, str) and value.strip().lower() == "never"):
+            return None
+        minutes = int(value)
+        if minutes < 0:
+            raise ParamsError("escalation_fix_minutes must be 'never' or a non-negative integer")
+        return minutes
+
+    @property
     def params_hash(self) -> str:
         """Hash of the file as bytes. Stored on every sim run so a result names its instrument."""
         return hashlib.sha256(self.path.read_bytes()).hexdigest()

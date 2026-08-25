@@ -555,6 +555,81 @@ def sensitivity_sweep(
     return {"scenario": scenario, "rows": rows}
 
 
+DEFAULT_FIX_MINUTES: tuple[int | None, ...] = (None, 120, 60, 30, 15)
+
+
+def escalation_fix_sweep(
+    *,
+    scenario: str = "S4",
+    seeds: list[int],
+    policies: tuple[str, ...] = DEFAULT_POLICY_ORDER,
+    values: tuple[int | None, ...] = DEFAULT_FIX_MINUTES,
+    provider=None,
+) -> dict[str, Any]:
+    """Recovered revenue and messages per arm at each escalation_fix_minutes.
+
+    The parameter is swept rather than defaulted, because how long a merchant takes to act on an
+    escalation is not a fact about Salvage and picking one value would smuggle an assumption into
+    the headline. `None` is `never` and reproduces the numbers a run with no fix mechanism at all
+    produces, which is the check that the mechanism is additive rather than a rewrite.
+
+    Only arms that escalate can be affected. B1 and B2 never escalate, so their rows must be flat
+    across the sweep, and a row that is not flat is a bug rather than a finding.
+    """
+    rows: list[dict[str, Any]] = []
+    workdir = make_workdir()
+    try:
+        for value in values:
+            for policy in policies:
+                totals: dict[str, list[float]] = {
+                    "recovered": [],
+                    "at_risk_recovered": [],
+                    "at_risk_orders": [],
+                    "messages": [],
+                    "escalations": [],
+                    "fix_orders": [],
+                }
+                for seed in seeds:
+                    db_path = workdir / f"fix_{value}_{policy}_{seed}.db"
+                    conn = open_migrated(db_path)
+                    try:
+                        run = run_policy_scenario(
+                            conn,
+                            scenario=scenario,
+                            seed=seed,
+                            policy=policy,
+                            provider=provider,
+                            escalation_fix_minutes=value,
+                        )
+                        m = run.metrics
+                        totals["recovered"].append(float(m.recovered_amount))
+                        totals["at_risk_recovered"].append(float(m.at_risk_recovered_amount))
+                        totals["at_risk_orders"].append(float(m.at_risk_orders))
+                        totals["messages"].append(float(m.messages_sent))
+                        totals["escalations"].append(float(m.escalations))
+                        totals["fix_orders"].append(float(m.at_risk_by_route_orders.get("fix", 0)))
+                    finally:
+                        conn.close()
+                        for suffix in ("", "-wal", "-shm"):
+                            Path(str(db_path) + suffix).unlink(missing_ok=True)
+                rows.append(
+                    {
+                        "fix_minutes": value,
+                        "policy": policy,
+                        "seeds": len(seeds),
+                        "recovered_amount": _mean(totals["recovered"]),
+                        "at_risk_recovered_amount": _mean(totals["at_risk_recovered"]),
+                        "at_risk_orders": _mean(totals["at_risk_orders"]),
+                        "messages_sent": _mean(totals["messages"]),
+                        "escalations": _mean(totals["escalations"]),
+                        "at_risk_fix_orders": _mean(totals["fix_orders"]),
+                    }
+                )
+    finally:
+        shutil.rmtree(workdir, ignore_errors=True)
+    return {"scenario": scenario, "seeds": list(seeds), "rows": rows}
+
+
 def adversarial_sweep(
     *,
     scenarios: list[str],

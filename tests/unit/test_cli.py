@@ -60,6 +60,7 @@ def test_every_documented_command_is_registered():
         "run",
         "volume",
         "sensitivity",
+        "escalation-fix",
         "report",
     }
     assert set(groups["e2e"]._subparsers._group_actions[0].choices) == {"verify"}  # noqa: SLF001

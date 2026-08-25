@@ -522,6 +522,14 @@ def build_provider(name: str | None = None, **kwargs: Any) -> LLMProvider:
         return CollectingProvider(**kwargs)
     if name == "fixture-collect":
         return FixtureThenCollectProvider(**kwargs)
+    if name == "record":
+        # Fixtures where they exist, a live Gemini where they do not, and the answer written to
+        # disk. The diagnosis fixtures are recorded blind by `diagnose record-fixtures`, which is
+        # the one that has to be blind because it is the one being scored. A planner prompt cannot
+        # be enumerated in advance, because what the planner is asked depends on what the
+        # diagnosis said, so the agent arm's planner fixtures are recorded by running the arm.
+        # Local tooling: CI has no network and uses the strict fixture provider.
+        return recording_provider(**kwargs)
     raise ValueError(f"unknown LLM provider {name!r}")
 
 

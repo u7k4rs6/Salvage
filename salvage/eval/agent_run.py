@@ -31,6 +31,18 @@ from salvage.sim.response import ResponseModel
 from salvage.sim.runner import SimResult, run_scenario
 
 
+class _Unset:
+    """Distinguishes "the caller said nothing" from "the caller said never".
+
+    None is a meaningful value here: it is `never`. A sweep that passes None must get no repair,
+    and a caller that passes nothing must get whatever the parameter file says, so the two cases
+    cannot share a sentinel.
+    """
+
+
+UNSET = _Unset()
+
+
 @dataclass
 class PolicyRunResult:
     sim: SimResult
@@ -59,10 +71,21 @@ def run_policy_scenario(
     provider=None,
     params_path: Path | str | None = None,
     kill_switch: bool = False,
+    escalation_fix_minutes: int | None | _Unset = UNSET,
 ) -> PolicyRunResult:
-    """Simulate, detect, run one policy, settle, measure."""
+    """Simulate, detect, run one policy, settle, measure.
+
+    `escalation_fix_minutes` defaults to whatever sim/params.yaml says, which is `never`. It is
+    an argument as well as a parameter so the sweep can vary it without rewriting the file it is
+    supposed to be measuring.
+    """
     profile = get_policy(policy)
     params = load(params_path) if params_path else default_params()
+    fix_minutes = (
+        params.escalation_fix_minutes
+        if isinstance(escalation_fix_minutes, _Unset)
+        else escalation_fix_minutes
+    )
 
     sim = run_scenario(conn, scenario=scenario, seed=seed, variant=variant, params_path=params_path)
     window_start = sim.eval_day_start
@@ -85,6 +108,7 @@ def run_policy_scenario(
             {"start": f.start_ts, "end": f.end_ts, "selector": dict(f.fault.selector)}
             for f in sim.scheduled_faults
         ],
+        escalation_fix_minutes=fix_minutes,
     )
     stats = runner.run(until=sim.sim_end, window_start=window_start, window_end=window_end)
 

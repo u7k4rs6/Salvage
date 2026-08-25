@@ -22,7 +22,12 @@ from salvage.eval.baselines import FaultWindow, at_risk_orders, eligible_orders
 ROUTE_LINK = "link"
 ROUTE_STEER = "steer"
 ROUTE_ORGANIC = "organic"
-ROUTES = (ROUTE_LINK, ROUTE_STEER, ROUTE_ORGANIC)
+# M5. An order paid after the world repaired the fault the agent escalated. It is a route rather
+# than a bonus applied to the organic column because it has to be visible: a reader comparing arms
+# needs to see how much of an arm's recovery came from a fix that only an escalating arm can
+# trigger. sim/params.yaml explains the mechanism and its limits.
+ROUTE_FIX = "fix"
+ROUTES = (ROUTE_LINK, ROUTE_STEER, ROUTE_ORGANIC, ROUTE_FIX)
 
 
 @dataclass
@@ -196,7 +201,7 @@ def format_metrics_table(rows: list[RunMetrics], *, title: str = "") -> str:
     """
     header = (
         f"{'scenario':<9}{'seed':>5}{'policy':>7}{'eligible':>10}{'recovered':>11}"
-        f"{'rate':>7}{'revenue (paise)':>17}{'link':>7}{'steer':>7}{'organic':>9}"
+        f"{'rate':>7}{'revenue (paise)':>17}{'link':>7}{'steer':>7}{'organic':>9}{'fix':>6}"
         f"{'msgs':>7}{'viol':>6}"
     )
     lines = [line for line in (title, "") if title] + [header, "-" * len(header)]
@@ -205,7 +210,8 @@ def format_metrics_table(rows: list[RunMetrics], *, title: str = "") -> str:
             f"{row.scenario:<9}{row.seed:>5}{row.policy:>7}{row.eligible_orders:>10}"
             f"{row.recovered_orders:>11}{row.recovery_rate:>7.3f}{row.recovered_amount:>17}"
             f"{row.by_route_orders.get('link', 0):>7}{row.by_route_orders.get('steer', 0):>7}"
-            f"{row.by_route_orders.get('organic', 0):>9}{row.messages_sent:>7}"
+            f"{row.by_route_orders.get('organic', 0):>9}{row.by_route_orders.get('fix', 0):>6}"
+            f"{row.messages_sent:>7}"
             f"{row.policy_violations:>6}"
         )
     return "\n".join(lines)

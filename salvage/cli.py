@@ -274,7 +274,7 @@ def cmd_agent_run(args: argparse.Namespace) -> int:
         + ", ".join(
             f"{route}={metrics.by_route_orders.get(route, 0)}"
             f"/{metrics.by_route_amount.get(route, 0)}p"
-            for route in ("link", "steer", "organic")
+            for route in ("link", "steer", "organic", "fix")
         )
         + "\n"
         f"at risk: {metrics.at_risk_recovered_orders}/{metrics.at_risk_orders} "
@@ -445,7 +445,9 @@ def cmd_diagnose_record_fixtures(args: argparse.Namespace) -> int:
         print(f"refusing to record: {exc}", file=sys.stderr)
         return 2
 
-    written, failures = record_fixtures(prompts, provider, directory=args.out)
+    written, failures = record_fixtures(
+        prompts, provider, directory=args.out, pause_seconds=args.pause_seconds
+    )
     print(f"Recorded {written} fixture(s) from {provider.name} model {provider.model}")
     for failure in failures:
         print(f"  failed: {failure}", file=sys.stderr)
@@ -611,6 +613,46 @@ def cmd_eval_sensitivity(args: argparse.Namespace) -> int:
         for row in adv["rows"]:
             cells = "".join(f"{row['by_policy'][p]:>16,.0f}" for p in adv["policies"])
             print(f"{row['scenario']:>10}{row['seeds']:>7}{cells}")
+    return 0
+
+
+def cmd_eval_escalation_fix(args: argparse.Namespace) -> int:
+    """Sweep escalation_fix_minutes and print recovered revenue and messages per arm."""
+    from salvage.eval.sweep import escalation_fix_sweep
+
+    values: list[int | None] = []
+    for raw in args.values.split(","):
+        token = raw.strip().lower()
+        if not token:
+            continue
+        values.append(None if token == "never" else int(token))
+
+    payload = escalation_fix_sweep(
+        scenario=args.scenario,
+        seeds=_parse_seeds(args.seeds),
+        policies=tuple(p.strip() for p in args.policies.split(",") if p.strip()),
+        values=tuple(values),
+        provider=_make_provider(args),
+    )
+    _write_artifact("escalation_fix.json", payload)
+
+    print(
+        f"Escalation to fix on {payload['scenario']}, "
+        f"{len(payload['seeds'])} seed(s). Only arms that escalate can be affected."
+    )
+    header = (
+        f"{'T':>8}{'policy':>8}{'at-risk orders':>16}{'at-risk revenue':>18}"
+        f"{'fix orders':>12}{'messages':>10}{'escalations':>13}"
+    )
+    print(header)
+    print("-" * len(header))
+    for row in payload["rows"]:
+        label = "never" if row["fix_minutes"] is None else f"{row['fix_minutes']} min"
+        print(
+            f"{label:>8}{row['policy']:>8}{row['at_risk_orders']:>16.1f}"
+            f"{row['at_risk_recovered_amount']:>18,.0f}{row['at_risk_fix_orders']:>12.1f}"
+            f"{row['messages_sent']:>10.0f}{row['escalations']:>13.1f}"
+        )
     return 0
 
 
@@ -1039,6 +1081,14 @@ def build_parser() -> argparse.ArgumentParser:
     record.add_argument("--variant", default="peak")
     record.add_argument("--provider", default="gemini", help="gemini or ollama")
     record.add_argument("--out", default=None, help="defaults to salvage/llm/fixtures/")
+    record.add_argument(
+        "--pause-seconds",
+        dest="pause_seconds",
+        type=float,
+        default=7.0,
+        help="seconds between calls, to stay under the free tier's per-minute limit so the "
+        "whole fixture set comes from one model",
+    )
     record.set_defaults(func=cmd_diagnose_record_fixtures)
 
     evaluation = subparsers.add_parser("eval", help="evaluation sweeps").add_subparsers(
@@ -1081,6 +1131,25 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sensitivity.add_argument("--scales", default="0.5,0.75,1.0,1.5,2.0")
     eval_sensitivity.add_argument("--adversarial", action="store_true")
     eval_sensitivity.set_defaults(func=cmd_eval_sensitivity)
+
+    eval_fix = evaluation.add_parser(
+        "escalation-fix", help="sweep escalation_fix_minutes: what an escalation is worth"
+    )
+    eval_fix.add_argument("--scenario", default="S4")
+    eval_fix.add_argument("--seeds", default="0..4")
+    eval_fix.add_argument("--policies", default="agent,B0,B1,B2")
+    eval_fix.add_argument(
+        "--values",
+        default="never,120,60,30,15",
+        help="escalation_fix_minutes values, 'never' for no repair",
+    )
+    eval_fix.add_argument(
+        "--provider",
+        default="none",
+        help="none, fixture, gemini, ollama, or collect",
+    )
+    eval_fix.add_argument("--collect-out", dest="collect_out", default="data/prompts_fix.jsonl")
+    eval_fix.set_defaults(func=cmd_eval_escalation_fix)
 
     eval_report = evaluation.add_parser(
         "report", help="regenerate docs/RESULTS.md from the artifacts on disk"

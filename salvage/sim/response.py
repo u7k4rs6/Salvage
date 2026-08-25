@@ -27,6 +27,10 @@ from salvage.sim.rng import order_stream
 
 ORGANIC_STREAM = "response"
 INTERVENTION_STREAM = "intervention"
+# The repair draw has its own stream so that turning the escalation fix on cannot shift a single
+# draw any other part of the model takes. That is what makes the T = never row reproduce the
+# pre-M5 numbers exactly rather than approximately.
+REPAIR_STREAM = "repair"
 
 
 @dataclass(frozen=True)
@@ -56,6 +60,15 @@ class OrganicPlan:
     @property
     def first_retry_at(self) -> int | None:
         return self.retries[0].at if self.retries else None
+
+
+@dataclass(frozen=True)
+class RepairPlan:
+    """Whether an at-risk customer comes back after the rail is repaired, and when."""
+
+    probability: float
+    returns: bool
+    at: int | None
 
 
 def p_organic_for_amount(params: Params, amount_paise: int) -> float:
@@ -90,6 +103,15 @@ class ResponseModel:
         self._decay_hours = float(multipliers["decay_time_constant_hours"])
         self._opt_out_base = float(multipliers["opt_out_probability_base"])
         self._opt_out_still_failing = float(multipliers["opt_out_probability_still_failing"])
+
+    @property
+    def organic_horizon_seconds(self) -> int:
+        """How long after a failure the model still lets a customer come back at all.
+
+        organic_retry_max_minutes, reused rather than re-invented. A repair that lands after this
+        is a repair nobody was still waiting for.
+        """
+        return self._max_minutes * 60
 
     # -- organic -----------------------------------------------------------
 
@@ -194,6 +216,41 @@ class ResponseModel:
         if self._decay_hours <= 0:
             return 1.0
         return math.exp(-max(0.0, hours_since_failure) / self._decay_hours)
+
+    # -- escalation to fix -------------------------------------------------
+
+    def repair_plan(
+        self,
+        *,
+        order_index: int,
+        amount_paise: int,
+        error_reason: str | None,
+        first_failed_at: int,
+        fixed_at: int,
+    ) -> RepairPlan:
+        """What one at-risk customer does when the rail they failed on is repaired.
+
+        One further chance to come back, and no more than that. The probability is the order's
+        own organic probability decayed by the same time constant the intervention multipliers
+        use, so a fix that lands eight hours later is worth less than one that lands in twenty
+        minutes, and a fix never makes a customer more likely to return than they were at the
+        moment their payment failed. No new tunable number: every input is a parameter that
+        already existed before the fix mechanism did.
+        """
+        base = self.base_probability(amount_paise=amount_paise, error_reason=error_reason)
+        hours = max(0.0, (fixed_at - first_failed_at) / 3600.0)
+        probability = base * self._time_decay(hours)
+        rng = order_stream(self._seed, REPAIR_STREAM, order_index)
+        comes_back = float(rng.random())
+        delay = float(rng.normal(self._mu, self._sigma))
+        if comes_back >= probability:
+            return RepairPlan(probability=probability, returns=False, at=None)
+        minutes = min(float(np.exp(delay)), float(self._max_minutes))
+        return RepairPlan(
+            probability=probability,
+            returns=True,
+            at=fixed_at + int(round(minutes * 60)),
+        )
 
     def intervention_draw(
         self, *, order_index: int, nudge_number: int
