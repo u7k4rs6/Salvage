@@ -30,6 +30,7 @@ def test_every_documented_command_is_registered():
         "e2e",
         "webhooks",
         "serve",
+        "demo",
     }
     assert set(groups["db"]._subparsers._group_actions[0].choices) == {"migrate"}  # noqa: SLF001
     assert set(groups["ledger"]._subparsers._group_actions[0].choices) == {  # noqa: SLF001
@@ -62,6 +63,30 @@ def test_every_documented_command_is_registered():
         "report",
     }
     assert set(groups["e2e"]._subparsers._group_actions[0].choices) == {"verify"}  # noqa: SLF001
+    assert set(groups["demo"]._subparsers._group_actions[0].choices) == {  # noqa: SLF001
+        "reset",
+        "kill-switch",
+    }
+
+
+def test_no_subcommand_shadows_the_global_db_flag():
+    """A subparser option named --db parses fine and then overwrites the global one with its
+    own default of None, so the command runs against the default database. That is how
+    "salvage --db scratch.db demo reset" emptied the wrong file during the kill-switch
+    rehearsal. Nothing below the top level may define --db."""
+    parser = build_parser()
+    offenders: list[str] = []
+
+    def walk(p, path: str) -> None:
+        for action in p._actions:  # noqa: SLF001
+            if getattr(action, "choices", None) and hasattr(action, "_name_parser_map"):
+                for name, sub in action._name_parser_map.items():  # noqa: SLF001
+                    walk(sub, f"{path} {name}".strip())
+            elif path and "--db" in (action.option_strings or []):
+                offenders.append(f"{path} defines --db")
+
+    walk(parser, "")
+    assert offenders == []
 
 
 def test_seed_spec_parsing():

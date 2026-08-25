@@ -815,6 +815,80 @@ def cmd_serve(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# demo
+# ---------------------------------------------------------------------------
+
+
+def cmd_demo_reset(args: argparse.Namespace) -> int:
+    """Empty the database so the next scenario starts from nothing."""
+    from salvage.demo import reset
+
+    # Named before anything is deleted. A destructive command that does not say which file it
+    # is about to empty is one flag away from emptying the wrong one, which is exactly what
+    # happened while rehearsing this.
+    path = _db_path(args) or get_settings().salvage_db_path
+    print(f"database: {path}")
+    conn = open_migrated(_db_path(args))
+    try:
+        if not args.yes:
+            counts = {
+                table: conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]
+                for table in ("payment_attempts", "incidents", "ledger")
+            }
+            print(
+                "About to delete every row. Currently "
+                f"{counts['payment_attempts']} attempts, {counts['incidents']} incidents, "
+                f"{counts['ledger']} ledger entries."
+            )
+            if input("Type yes to continue: ").strip().lower() != "yes":
+                print("Nothing was deleted.")
+                return 1
+        removed = reset(conn, keep_ledger=args.keep_ledger)
+        if not removed:
+            print("Already empty.")
+        for table, count in removed.items():
+            print(f"{table}: {count} rows deleted")
+        if args.keep_ledger:
+            kept = conn.execute("SELECT COUNT(*) AS n FROM ledger").fetchone()["n"]
+            print(f"ledger: {kept} entries kept")
+    finally:
+        conn.close()
+    return 0
+
+
+def cmd_demo_kill_switch(args: argparse.Namespace) -> int:
+    """Flip the switch from the command line and write the decision down.
+
+    The environment variable is what a fresh process reads; this writes the ledger entry so the
+    record of who suspended the agent exists whether the switch was flipped here or from the
+    dashboard.
+    """
+    import time as _time
+
+    from salvage.ledger import Ledger
+
+    enabled = args.state == "on"
+    conn = open_migrated(_db_path(args))
+    try:
+        entry = Ledger(conn).append(
+            "control.kill_switch",
+            "control",
+            "kill_switch",
+            {"enabled": enabled, "source": "cli"},
+            ts=int(_time.time()),
+        )
+    finally:
+        conn.close()
+    print(f"ledger seq={entry.seq} hash={entry.hash[:12]} kill_switch={'on' if enabled else 'off'}")
+    print(
+        "Set SALVAGE_KILL_SWITCH="
+        + ("1" if enabled else "0")
+        + " in the environment (or .env) so a fresh process reads the same state."
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="salvage", description="Salvage command line interface.")
     parser.add_argument("--db", help="database path, overrides SALVAGE_DB_PATH")
@@ -1022,6 +1096,27 @@ def build_parser() -> argparse.ArgumentParser:
         "verify", help="check and print the ledger entries the real run produced"
     )
     e2e_verify.set_defaults(func=cmd_e2e_verify)
+
+    demo = subparsers.add_parser("demo", help="demo helpers").add_subparsers(
+        dest="command", required=True
+    )
+    # No --db here. The global --db is the only one: a subparser option of the same name
+    # shadows it with its own default of None, so "salvage --db scratch.db demo reset" quietly
+    # emptied the default database instead. Found by running the rehearsal.
+    demo_reset = demo.add_parser("reset", help="empty every table so a scenario starts clean")
+    demo_reset.add_argument(
+        "--keep-ledger",
+        action="store_true",
+        help="leave the ledger in place (used when rehearsing the kill switch)",
+    )
+    demo_reset.add_argument("--yes", action="store_true", help="do not ask")
+    demo_reset.set_defaults(func=cmd_demo_reset)
+
+    demo_kill = demo.add_parser(
+        "kill-switch", help="set or clear the kill switch and record it in the ledger"
+    )
+    demo_kill.add_argument("state", choices=["on", "off"])
+    demo_kill.set_defaults(func=cmd_demo_kill_switch)
 
     webhooks = subparsers.add_parser("webhooks", help="webhook capture and replay").add_subparsers(
         dest="command", required=True

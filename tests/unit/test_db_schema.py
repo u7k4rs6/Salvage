@@ -210,6 +210,18 @@ def test_only_the_evaluation_runner_reads_ground_truth():
             # repo.py holds the ground-truth accessors themselves, grouped under a heading that
             # names the evaluation runner as their only caller. What matters is who imports them.
             continue
+        if relative.as_posix() == "demo.py":
+            # The reset names both ground-truth tables in its delete list. Deleting a table is not
+            # reading it, and a reset that skipped them would leave the next scenario's detector
+            # looking at the previous world's answers. The exemption is narrow: the only lines
+            # allowed to mention them are the bare table names in the TABLES tuple.
+            for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+                if forbidden.search(line) and line.strip() not in {
+                    '"sim_truth_attempts",',
+                    '"sim_truth_incidents",',
+                }:
+                    findings.append(f"{relative}:{lineno}: {line.strip()}")
+            continue
         if relative.as_posix() == "ingest/normalize.py":
             # The normaliser takes truth_cause as a write-through parameter, because the simulator
             # and the webhook receiver share it and the simulator has the value. It never reads it

@@ -1498,3 +1498,87 @@ B1 and B2 stay about 30 percent ahead of B0 with every multiplier at 1.0 and p_o
 0.60. That is not the set failing: setting the multipliers to 1.0 removes any advantage from timing
 or steering, not the second occasion to pay that a link provides. The comparison the set exists for
 is agent against B1, and it cannot be made until the agent arm has a model.
+
+## 2026-08-25, M4 steps 5 to 7: the console, its API, and the kill-switch rehearsal
+
+### Decisions
+
+**CORS is a four-entry allow list, not a wildcard.** `http://127.0.0.1:5173` and
+`http://localhost:5173` for the dev server and the `:4173` pair for `vite preview`, because a
+reviewer who builds the frontend and previews it would otherwise hit a wall with no explanation.
+Credentials are off and the allowed methods are GET and POST only. Security doc section 4 asks for
+the Vite origin; the browser treats `localhost` and `127.0.0.1` as different origins, so naming one
+and not the other is a footgun rather than a tighter policy.
+
+**The Scenario Runner resets the database by default.** A scenario is a whole world: 8,000
+customers with deterministic reference hashes. Running a second scenario into a populated database
+fails on `UNIQUE constraint failed: customers.ref_hash` at the first customer the two worlds share,
+which is what happened on the first UI-driven run. `reset` defaults to true on the request and can
+be unset to inspect a failed world.
+
+**The reset deletes rows, it does not unlink the file.** The API runs simulator work in a thread
+pool and every worker thread holds its own SQLite connection. Unlinking the database would leave
+those threads writing to a dead inode with no error until the next read. `salvage/demo.py` deletes
+from every table in foreign-key order and then asserts `PRAGMA foreign_key_check` is empty, so a
+table added later without being added to the delete list fails loudly instead of leaving orphans.
+
+**The ledger export takes a `ref_id` filter.** The incident page needs to hand a reviewer the
+entries for one incident. A filtered slice does not verify as a chain on its own and the docstring
+says so: sequence numbers are left as they are, so the gaps where other incidents' entries sit are
+visible and the slice reads as evidence about entries rather than as a chain.
+
+**Every page is wrapped in an error boundary.** A wrong field type on the incident detail page
+(`sibling_segments` is a mapping, and the code called `.map` on it) blanked the entire console
+rather than one panel. A demo where one bad field takes the whole screen is worse than a demo with
+one panel showing an error, so the boundary is per page.
+
+### The kill-switch rehearsal
+
+Same seed, same world, one difference. S1 seed 1 under B1, `stream_digest` 6a6e30230725aae5 in both
+runs and 282 at-risk orders in both:
+
+| | actions executed | refused | messages | opt-outs | recovered (paise) | at-risk rate |
+| --- | --- | --- | --- | --- | --- | --- |
+| switch off | 1038 | 614 | 1038 | 52 | 135,943,211 | 0.280 |
+| switch on | 0 | 1765 | 0 | 0 | 72,890,956 | 0.174 |
+
+Recovery falls to the organic floor, which is what suspending outbound action means. 1,166 of the
+1,765 refusals name `global.kill_switch_off`; the rest failed a case gate earlier in the sequence
+(no consent, quiet hours, hard decline) and never reached the global gates, so the count of
+refusals mentioning the switch is smaller than the count of refusals and that is not a discrepancy.
+
+Detection, diagnosis and escalation keep working while the switch is set, as Security section 6
+requires. S4 seed 1 under the agent profile with the switch on: one incident detected, one
+diagnosis, two escalations filed, one action executed, and that one action is `ESCALATE_HUMAN`,
+which is on the exempt list because it makes no outbound call. Zero links, zero messages.
+
+Over HTTP against a live server: the flip is refused without a token (401) and with the wrong token
+(403), the operator flip writes a `control.kill_switch` entry with `source: dashboard` (seq 1770,
+payload `{"enabled":true,"source":"dashboard"}`), and the chain still verifies at 1,770 entries.
+The same process then ran the scenario twice, switch on and switch off, and reproduced the two rows
+above exactly.
+
+### Two defects the rehearsal found, both in the code it was rehearsing
+
+**The dashboard run path never passed the kill switch to the runner.** `_run_scenario` built its own
+arguments for `run_policy_scenario` and omitted `kill_switch`, so an operator could flip the switch,
+watch the top bar go red, start a run and watch it send a thousand messages. The switch is now read
+from settings inside the runner call, with a comment saying it is deliberately not a request field:
+a run must not be able to opt out of an operator control. `test_a_dashboard_run_cannot_opt_out_of_
+the_kill_switch` pins it by asserting both that the argument arrives true and that `kill_switch` is
+absent from the request model.
+
+**`salvage demo reset` ignored `--db` and emptied the default database.** The `demo reset` and
+`demo kill-switch` subparsers each declared their own `--db`, which parses without complaint and
+then overwrites the global `--db` with its own default of `None`. So
+`salvage --db scratch.db demo reset` resolved to `data/salvage.db` and deleted the local demo data.
+It cost nothing here, because that file is gitignored generated data and the ledger was kept, but
+the same shape against a real database is unrecoverable. The subparser options are gone, the
+command now prints the resolved path before it deletes anything, and
+`test_no_subcommand_shadows_the_global_db_flag` walks the whole parser tree and fails if any
+subcommand defines `--db` again. That test was checked against a planted copy of the bug before
+being trusted.
+
+The second one is the argument for rehearsing a safety control instead of asserting it in a unit
+test. Both defects were in the wiring between a component that works and the operator who has to
+reach for it, which is exactly the seam a unit test on either side leaves uncovered.

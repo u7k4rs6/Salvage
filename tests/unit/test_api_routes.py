@@ -188,6 +188,35 @@ def test_kill_switch_flips_the_setting_and_lands_in_the_ledger(client):
     assert get_settings().salvage_kill_switch is False
 
 
+def test_a_dashboard_run_cannot_opt_out_of_the_kill_switch(client, monkeypatch):
+    """The rehearsal found this one: the runner built its own arguments and never read the
+    switch, so a run started after an operator flipped it would have sent anyway. The kill
+    switch is an operator control, so it is read from settings and is not a run option."""
+    from salvage.api import routes_sim
+
+    seen: dict[str, object] = {}
+
+    def fake_run(conn, **kwargs):
+        seen.update(kwargs)
+        raise RuntimeError("stop here, the arguments are the point")
+
+    monkeypatch.setattr("salvage.eval.agent_run.run_policy_scenario", fake_run)
+    monkeypatch.setattr("salvage.demo.reset", lambda conn, **kw: {})
+
+    client.post("/api/control/kill-switch", json={"enabled": True}, headers=auth())
+    try:
+        with pytest.raises(RuntimeError):
+            routes_sim._run_scenario(  # noqa: SLF001
+                lambda: open_migrated(client.db_path),
+                routes_sim.SimRequest(scenario="S1", seed=0, policy="B1"),
+            )
+        assert seen["kill_switch"] is True
+    finally:
+        client.post("/api/control/kill-switch", json={"enabled": False}, headers=auth())
+
+    assert "kill_switch" not in routes_sim.SimRequest.model_fields
+
+
 def test_escalation_decision_requires_a_note(client):
     """Frontend spec section 4.4: approving without a reason is how an audit trail becomes
     decoration, so the note is required by the schema rather than by the form."""

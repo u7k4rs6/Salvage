@@ -69,6 +69,9 @@ class SimRequest(BaseModel):
     # minutes per real second". Pacing is applied by the SSE tick loop, not by slowing the
     # simulator, so the numbers a paced run produces are identical to a fast one.
     speed: int = Field(default=0, ge=0, le=600)
+    # A scenario is a whole world, and two worlds in one database collide on the first customer
+    # they share. The runner resets by default; unset this only to inspect a failure.
+    reset: bool = True
 
 
 @router.get("/sim/status")
@@ -104,6 +107,7 @@ async def sim_run(request: SimRequest, connection_factory: ConnFactory) -> dict[
 
 
 def _run_scenario(connection_factory, request: SimRequest) -> dict[str, Any]:
+    from salvage.demo import reset as reset_database
     from salvage.eval.agent_run import run_policy_scenario
     from salvage.llm.provider import build_provider
 
@@ -118,6 +122,8 @@ def _run_scenario(connection_factory, request: SimRequest) -> dict[str, Any]:
             provider = build_provider("fixture")
 
     conn = connection_factory()
+    if request.reset:
+        reset_database(conn)
     result = run_policy_scenario(
         conn,
         scenario=request.scenario,
@@ -125,6 +131,11 @@ def _run_scenario(connection_factory, request: SimRequest) -> dict[str, Any]:
         policy=request.policy,
         variant=request.variant,
         provider=provider,
+        # Read from settings rather than from the request: the kill switch is an operator
+        # control, not a run option, and a run must not be able to opt out of it. Settings are
+        # re-read here because the flip resets the cache, so a run started after the flip sees
+        # it without a restart.
+        kill_switch=settings.salvage_kill_switch,
     )
     metrics = result.metrics
     BUS.publish(
@@ -162,6 +173,8 @@ def _run_scenario(connection_factory, request: SimRequest) -> dict[str, Any]:
         "recovered_amount": metrics.recovered_amount,
         "policy_violations": metrics.policy_violations,
         "provider": "none" if provider is None else provider.name,
+        "reset": request.reset,
+        "kill_switch": settings.salvage_kill_switch,
     }
 
 
