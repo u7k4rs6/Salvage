@@ -259,6 +259,16 @@ def plan_incident(
     # Params are validated per action here rather than in the schema, because the schema has to
     # accept a generic object for the model to fill. An action whose params do not validate is
     # dropped and the drop is visible in the returned error.
+    # An escalation or a no-action carries a reason, which is prose for the human who reads it,
+    # and the model has already written prose in the plan's rationale. Gemini put it there and
+    # left params empty, and the action was dropped for it: the agent then answered a merchant
+    # misconfiguration with silence, which is the one response the design does not allow. The
+    # reason is filled from the rationale rather than the action being thrown away, because an
+    # action is not wrong for putting its explanation in the field next door.
+    plan = plan.model_copy(
+        update={"actions": [_with_reason(a, plan.rationale) for a in plan.actions]}
+    )
+
     kept, dropped = [], []
     for action in plan.actions:
         try:
@@ -273,8 +283,25 @@ def plan_incident(
         kept.append(action)
     if dropped:
         plan = plan.model_copy(update={"actions": kept})
-        return plan, "dropped invalid actions: " + "; ".join(dropped)
+        detail = "dropped invalid actions: " + "; ".join(dropped)
+        if not kept:
+            # Everything was dropped. A planner that cannot plan falls back to asking a person,
+            # exactly as it does when there is no provider at all: an incident answered with
+            # silence is worse than an incident escalated for a bad reason, and silence is what
+            # this produced on S4 until it was found.
+            return default_plan(incident_id, cause, detail), detail
+        return plan, detail
     return plan, None
+
+
+def _with_reason(action: PlannedAction, rationale: str) -> PlannedAction:
+    """Fill an absent `reason` on the two actions that need one, from the plan's own rationale."""
+    if action.type not in (ActionType.ESCALATE_HUMAN, ActionType.NO_ACTION):
+        return action
+    if str(action.params.get("reason") or "").strip():
+        return action
+    reason = (rationale or "").strip() or f"{action.type.value} with no reason given"
+    return action.model_copy(update={"params": {**action.params, "reason": reason[:300]}})
 
 
 def plan_json(plan: Plan) -> str:

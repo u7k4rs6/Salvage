@@ -506,5 +506,71 @@ def test_a_planned_action_that_invents_a_field_is_still_dropped():
         segment_recovered=False,
         value_threshold_paise=50000,
     )
-    assert plan.actions == []
+    # The action is dropped, and because nothing survives, the plan falls back to escalating
+    # rather than to silence. See
+    # test_a_plan_whose_actions_are_all_dropped_escalates_rather_than_falling_silent.
+    assert [action.type for action in plan.actions] == [ActionType.ESCALATE_HUMAN]
     assert error is not None and "amount" in error
+
+
+def _provider_returning(actions, rationale="the merchant's own configuration is refusing these"):
+    class _Provider:
+        name = "gemini"
+        model = "test"
+
+        def complete(self, system, user, schema, *, conn=None):
+            del system, user, conn
+            return schema.model_validate(
+                {"incident_id": "inc_1", "actions": actions, "rationale": rationale}
+            )
+
+    return _Provider()
+
+
+def _plan_with(provider, cause="merchant_config"):
+    return plan_incident(
+        provider,
+        incident_id="inc_1",
+        segment_key="netbanking",
+        cause=cause,
+        confidence=0.95,
+        counts=EligibilityCounts(
+            affected_orders=20,
+            unpaid_orders=20,
+            consented=9,
+            consented_with_alternate=6,
+            above_value_threshold=7,
+            hard_declined=0,
+            opted_out=0,
+        ),
+        segment_recovered=False,
+        value_threshold_paise=50000,
+    )
+
+
+def test_an_escalation_without_a_reason_takes_the_plan_rationale():
+    """Gemini escalated the S4 misconfiguration and wrote its reasoning in the plan's rationale,
+    leaving the action's params empty. EscalateHumanParams requires a reason, so the action was
+    dropped and the agent answered a merchant misconfiguration with silence, which is the one
+    response the design does not allow. An action is not wrong for putting its explanation in the
+    field next door."""
+    plan, error = _plan_with(
+        _provider_returning([{"type": "ESCALATE_HUMAN", "scope": "all_affected"}])
+    )
+    assert error is None, error
+    assert [action.type for action in plan.actions] == [ActionType.ESCALATE_HUMAN]
+    assert plan.actions[0].params["reason"] == "the merchant's own configuration is refusing these"
+
+
+def test_a_plan_whose_actions_are_all_dropped_escalates_rather_than_falling_silent():
+    """A planner that cannot plan asks a person. That is what default_plan is for, and it was
+    only reached when the provider was absent or raised, never when every action it proposed was
+    thrown away by validation."""
+    plan, error = _plan_with(
+        _provider_returning(
+            [{"type": "SEND_RECOVERY_LINK", "scope": "all_affected", "params": {"amount": 100}}]
+        )
+    )
+    assert error is not None and "amount" in error
+    assert [action.type for action in plan.actions] == [ActionType.ESCALATE_HUMAN]
+    assert plan.actions[0].params["reason"]
