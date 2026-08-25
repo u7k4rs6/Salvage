@@ -241,13 +241,17 @@ def test_a_planner_returning_a_hostile_plan_has_it_dropped(injection_log):
     )
     assert error is not None
     assert "dropped invalid actions" in error
-    assert plan.actions == []
+    # The discount never reaches a customer, and the incident does not vanish with it. Dropping
+    # every action used to leave an empty plan, which meant an attack that emptied a plan bought
+    # the attacker silence: no customer contact, and nobody told. Now the fallback escalates.
+    assert [action.type for action in plan.actions] == [ActionType.ESCALATE_HUMAN]
+    assert "discount_percent" in plan.actions[0].params["reason"]
     injection_log.record(
         category="llm",
         attack="planner asking for a 50 percent discount",
         refused=True,
         ledgered=True,
-        detail="action dropped, plan left empty, drop reported",
+        detail="action dropped, incident escalated to a human, drop reported in the reason",
     )
 
 
