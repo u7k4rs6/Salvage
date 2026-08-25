@@ -582,17 +582,30 @@ def fixture_provenance(directory: Path | str = FIXTURE_DIR) -> str:
     paths = sorted(directory.glob("*.json"))
     if not paths:
         return "The fixture directory is empty, so there is no LLM column to report."
+    # Diagnosis and planner fixtures live in the same directory and are told apart by what the
+    # model was asked for. Only the diagnosis ones back the ablation, and a count that quietly
+    # included the planner's would overstate the evidence behind that table by a factor of two.
     seen: dict[tuple[str, str], int] = {}
+    planner = 0
     for path in paths:
         record = json.loads(path.read_text(encoding="utf-8"))
+        if "root_cause" not in (record.get("response") or {}):
+            planner += 1
+            continue
         key = (str(record.get("recorded_from", "unknown")), str(record.get("model", "unknown")))
         seen[key] = seen.get(key, 0) + 1
+    if not seen:
+        return "No diagnosis fixtures are recorded, so there is no LLM column to report."
     parts = [
         f"{count} from {source} model `{model}`" for (source, model), count in sorted(seen.items())
     ]
-    return (
-        f"Rules-only against a recorded model. {len(paths)} fixture(s): " + ", ".join(parts) + "."
+    tail = (
+        f" A further {planner} planner fixture(s) sit alongside them and back no table here: the "
+        f"planner is not scored against ground truth anywhere in this document."
+        if planner
+        else ""
     )
+    return f"{sum(seen.values())} diagnosis fixture(s): " + ", ".join(parts) + f".{tail}"
 
 
 def recording_provider(directory: Path | str = FIXTURE_DIR) -> FixtureProvider:

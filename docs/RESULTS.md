@@ -8,7 +8,7 @@ numbers mean.
 
 ## Where the agent's answers came from
 
-**The agent arm is measured, from fixtures recorded blind.** Rules-only against a recorded model. 82 fixture(s): 82 from gemini model `gemini-2.5-flash`.
+**The agent arm is measured, from fixtures recorded blind.** 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 41 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
 
 The recording is blind in the code path rather than by discipline. `prompts_for_recording` builds
 each evidence packet through `build_for_incident`, the same call the agent makes, which reads the
@@ -211,7 +211,7 @@ All 50 worlds identical across all 4 policy arms.
 
 ## 6. Diagnosis ablation
 
-Rules-only against a recorded model. 82 fixture(s): 82 from gemini model `gemini-2.5-flash`.
+Rules-only against a recorded model. 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 41 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
 
 The reconciled column is the one the agent acts on. A rules verdict and a model verdict that agree raise confidence, a disagreement lowers it, and anything below 0.6 escalates rather than acting. Reading the LLM column alone would credit the model for an answer the agent would not have used.
 

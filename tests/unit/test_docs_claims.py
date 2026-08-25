@@ -54,9 +54,13 @@ def test_the_results_provenance_names_a_provider_and_a_model():
     outlive them. This checks the line actually made it into the document."""
     text = _read(RESULTS)
     assert "The agent arm is measured, from fixtures recorded blind." in text
-    assert re.search(r"\d+ fixture\(s\): .*from \w+ model `", text), (
-        "the provenance line should name how many fixtures, from which provider, on which model"
+    assert re.search(r"\d+ diagnosis fixture\(s\): .*from \w+ model `", text), (
+        "the provenance line should name how many diagnosis fixtures, from which provider, on "
+        "which model"
     )
+    # Planner fixtures live in the same directory and must not be counted as evidence for the
+    # ablation. The line said "82 fixture(s)" when 41 of them had nothing to do with that table.
+    assert "planner fixture(s) sit alongside them and back no table here" in text
 
 
 def test_every_primary_cell_carries_contact_volume():

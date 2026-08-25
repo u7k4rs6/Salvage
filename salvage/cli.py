@@ -310,7 +310,7 @@ def _accuracy_provenance(provider: str) -> str:
     if provider == "fixture":
         from salvage.llm.provider import fixture_provenance
 
-        return fixture_provenance()
+        return f"Rules-only against a recorded model. {fixture_provenance()}"
     return f"Rules-only against the live {provider} provider."
 
 
