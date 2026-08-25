@@ -72,7 +72,7 @@ and should not be read as one:** the difference is 5,840 rupees on a paired stan
 15,993 across ten seeds, the agent loses some seeds outright, and its message count is 86 percent
 of B2's rather than a third. Call it a tie reached with slightly fewer contacts.
 
-**The baselines beat the agent on whole-run revenue on every scenario, by 35 to 45 percent.** On S1
+**The baselines beat the agent on whole-run revenue on every scenario, by 29 to 44 percent.** On S1
 they recover about 17.3 lakh to the agent's 11.0 lakh. They win it by messaging a thousand
 customers a day whose failures have nothing to do with any incident. The agent sends 90. On S0, the
 day nothing breaks at all, the baselines send about a thousand messages each and the agent sends

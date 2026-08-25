@@ -87,7 +87,7 @@ For scale: the heaviest arm in this sweep sends about 1436 messages per simulate
 
 Recovered revenue in rupees over **every** order whose first attempt failed during the evaluation day, mean plus or minus standard deviation across 10 seeds, with messages sent and opt-outs.
 
-**The agent loses this table on every scenario, by 35 to 45 percent.** Say it plainly rather than leaving it for a reader to notice: on S1 the agent recovers about 11.0 lakh against B2's 17.3 lakh. It loses because it declines to message customers whose failure has nothing to do with an incident, and most of a day's failures are exactly that.
+**The agent loses this table on every scenario, by 29 to 44 percent.** Say it plainly rather than leaving it for a reader to notice: on S1 the agent recovers about 11.0 lakh against B2's 17.3 lakh. It loses because it declines to message customers whose failure has nothing to do with an incident, and most of a day's failures are exactly that.
 
 This is secondary, and the S0 row says why. S0 has no fault at all, and a link-sending baseline still shows roughly 1.8 times what doing nothing shows. That is not a recovery agent working; it is the measure being dominated by ordinary background failure that happens every day, on which a policy that messages everybody will always score well. The primary table above scopes to the orders a fault actually put at risk.
 

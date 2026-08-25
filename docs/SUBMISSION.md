@@ -43,8 +43,8 @@ The agent beats the best blunt baseline by 26 percent on S1 using a third of its
 deviation of 15,993, with the agent losing seeds outright. S4 is a loss by design, and the most
 useful row here.
 
-**Scoped to the whole day instead, the baselines beat the agent on every scenario by 35 to 45
-percent.** On S1 they recover about 17.3 lakh against the agent's 11.0 lakh. They win by messaging
+**Scoped to the whole day instead, the agent recovers 29 to 44 percent less than the best
+baseline, on every scenario.** On S1 they recover about 17.3 lakh against the agent's 11.0 lakh. They win by messaging
 about a thousand customers a day, most of whose failures have nothing to do with any incident. Both
 readings are true. Which one a merchant should want depends on what a message costs them, and this
 simulator charges almost nothing for one, which flatters the baselines and not the agent.

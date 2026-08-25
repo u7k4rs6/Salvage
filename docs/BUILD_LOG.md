@@ -1825,7 +1825,7 @@ is the correct outcome and ships, and three of them did.
 
 ### F1, the pitch omits the whole-run loss and misstates the message ratio: FIXED
 
-The baselines beat the agent on whole-run revenue on every scenario by 35 to 45 percent. That is
+The baselines beat the agent on whole-run revenue on every scenario by 29 to 44 percent. That is
 now stated in the pitch, in the README and at the head of the primary table, not left in section 2
 for a reader to find. The "between a third and a half as many messages" claim covered a case where
 the true figure was 86 percent; every ratio is now per scenario and the S3 figure is stated on its

@@ -212,7 +212,7 @@ def whole_run_table(result: SweepResult) -> str:
         f"evaluation day, mean plus or minus standard deviation across {seeds} seeds, with "
         "messages sent and opt-outs.",
         "",
-        "**The agent loses this table on every scenario, by 35 to 45 percent.** Say it plainly "
+        "**The agent loses this table on every scenario, by 29 to 44 percent.** Say it plainly "
         "rather than leaving it for a reader to notice: on S1 the agent recovers about 11.0 lakh "
         "against B2's 17.3 lakh. It loses because it declines to message customers whose failure "
         "has nothing to do with an incident, and most of a day's failures are exactly that.",

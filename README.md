@@ -103,7 +103,7 @@ nothing recovers while both baselines message around two hundred customers about
 them can fix.
 
 **Scoped to the whole day rather than to the at-risk set, the baselines beat the agent on every
-scenario by 35 to 45 percent** (section 2 of the results). They win by messaging a thousand
+scenario by 29 to 44 percent** (section 2 of the results). They win by messaging a thousand
 customers a day, most of whose failures have nothing to do with an incident. Both readings are
 true; which one matters depends on what a message costs, and this simulator charges almost nothing
 for one.
