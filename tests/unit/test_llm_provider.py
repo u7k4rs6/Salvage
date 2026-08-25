@@ -8,6 +8,7 @@ section 15).
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import httpx
 import pytest
@@ -375,3 +376,18 @@ def test_the_blind_recorder_refuses_a_prompt_carrying_its_own_answer():
 def test_build_provider_rejects_an_unknown_name():
     with pytest.raises(ValueError, match="unknown LLM provider"):
         build_provider("not_a_provider")
+
+
+def test_a_fixture_miss_is_visible_afterwards_rather_than_only_at_the_call_site():
+    """FixtureMiss is an LLMError, and every caller treats an LLMError as a reason to escalate
+    rather than to crash. That is right for a live provider and wrong for a sweep, where a missing
+    fixture would be read as an agent that chose to escalate. The provider therefore keeps the
+    misses, and `salvage eval run` fails the sweep if there are any."""
+    from salvage.cli import _fixture_misses
+
+    provider = FixtureProvider(Path("/nonexistent"), strict=True)
+    assert _fixture_misses(provider) == []
+    with pytest.raises(LLMError):
+        provider._generate("system", "user", {"type": "object"}, "LLMDiagnosis")  # noqa: SLF001
+    assert len(_fixture_misses(provider)) == 1
+    assert _fixture_misses(None) == []

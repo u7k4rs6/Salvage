@@ -528,6 +528,7 @@ def cmd_eval_run(args: argparse.Namespace) -> int:
     )
 
     path = write_results_json(result)
+    misses = _fixture_misses(provider)
     print()
     print(format_metrics_table(result.rows, title="Per-run metrics"))
     print()
@@ -545,7 +546,30 @@ def cmd_eval_run(args: argparse.Namespace) -> int:
         report_path = write_results_md(result)
         print(f"Wrote {report_path}")
 
+    if misses:
+        print(
+            f"{len(misses)} prompt(s) had no fixture: "
+            + ", ".join(sorted(miss[:12] for miss in misses)),
+            file=sys.stderr,
+        )
+        print(
+            "A missing fixture escalates the incident, which is indistinguishable in the results "
+            "from an agent that chose to escalate. Record the missing prompts before reporting "
+            "anything from this sweep.",
+            file=sys.stderr,
+        )
+        return 1
     return 0 if digests_match(result) else 1
+
+
+def _fixture_misses(provider) -> list[str]:
+    """Prompt hashes the fixture provider could not answer.
+
+    FixtureMiss is an LLMError, and every caller of a provider treats an LLMError as a reason to
+    escalate rather than to crash, which is right for a live provider and wrong for a sweep: a
+    missing fixture would be read as a decision the agent took. So the sweep asks afterwards.
+    """
+    return list(getattr(provider, "misses", []) or [])
 
 
 def _digest_block(result) -> str:
