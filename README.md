@@ -95,10 +95,19 @@ Recovered revenue in rupees over the at-risk order set against messages sent, me
 | S4 merchant misconfiguration | 90,128 / 0 msg | 90,128 / 0 msg | 1,57,696 / 178 msg | 1,65,041 / 272 msg |
 
 The agent wins S1 to S3 on both axes at once, recovering more from between a third and a half of
-the contacts. **It loses S4**, and that row is the one worth reading: the cause is a merchant
-misconfiguration, so it contacts nobody and escalates, recovering exactly what doing nothing
-recovers while both baselines message around two hundred customers about something none of them can
-fix. `docs/RESULTS.md` section 11 sweeps what an escalation is worth once somebody acts on it.
+the contacts. **It loses S4 in that table**, and that row is the one worth reading: the cause is a
+merchant misconfiguration, so it contacts nobody and escalates, recovering exactly what doing
+nothing recovers while both baselines message around two hundred customers about something none of
+them can fix.
+
+That is restraint measured against no benefit, because an escalation used to reach a human and
+change nothing in the world. `escalation_fix_minutes` now models the repair as a swept parameter,
+and `docs/RESULTS.md` section 11 reports the curve rather than picking a value off it: at every
+response time from 15 minutes to two hours the agent lands between 2,67,435 and 2,77,080 rupees
+against B2's 1,83,115, sending nothing. Past the fault's own 180 minute duration a fix is worth
+exactly nothing, because the world has already recovered on its own. Only an arm that escalates can
+be repaired, which is an asymmetry the results state plainly rather than assume in the agent's
+favour.
 
 Diagnosis accuracy over 41 incidents: rules-only 0.902, model 0.976, reconciled 0.976. Zero policy
 violations across all 200 runs, and 45 fault injection attempts all refused.

@@ -1723,3 +1723,50 @@ confidence whether or not the agreement is correct.
 
 Worth stating plainly: this is one model on one day. A different model, or the same model next
 month, is a different measurement, and nothing here is a claim about language models in general.
+
+## 2026-08-26, M5 step 2 results: what an escalation is worth
+
+S4, five seeds, at-risk revenue in rupees against messages sent. B0, B1 and B2 are flat at every
+value because they never escalate, so only the agent row moves.
+
+| T | agent | B0 | B1 | B2 |
+| --- | --- | --- | --- | --- |
+| never | 98,033 / 0 | 98,033 / 0 | 1,69,017 / 1018 | 1,83,115 / 1280 |
+| 120 min | 2,67,435 / 0 | 98,033 / 0 | 1,69,017 / 1018 | 1,83,115 / 1280 |
+| 60 min | 2,75,192 / 0 | 98,033 / 0 | 1,69,017 / 1018 | 1,83,115 / 1280 |
+| 30 min | 2,76,808 / 0 | 98,033 / 0 | 1,69,017 / 1018 | 1,83,115 / 1280 |
+| 15 min | 2,77,080 / 0 | 98,033 / 0 | 1,69,017 / 1018 | 1,83,115 / 1280 |
+
+`never` reproduces the pre-M5 number exactly, 9,803,336 paise, which is what the additive check
+was for. The crossover is at the slowest value swept: **at T = 120 minutes the agent is already
+ahead of B2, 2,67,435 against 1,83,115, sending zero messages against 1,280.** There is no value in
+the swept range where a fix leaves the agent behind.
+
+### The flat curve is a fact about the fault, not about response times
+
+15 minutes buys 3.6 percent more than 120 minutes, which looks like an argument that responding
+quickly does not matter. It is not. The S4 fault fails payments for 180 simulated minutes and the
+escalation is filed about 7 minutes in, so every value in the swept range repairs the world while
+it is still breaking: the population a repair can reach is the same at each value and only the 12
+hour decay separates them.
+
+The cliff is at T equal to the fault's own duration. Probed on the agent arm alone, same five
+seeds, at 180, 240 and 360 minutes the at-risk revenue is 98,033 at every one of them, which is
+`never` to the paise and zero orders recovered by a fix. A repair that arrives after the world has
+recovered on its own buys nothing at all, and `_repair_world` skips a fault whose window has
+already closed rather than crediting the escalation for the clock.
+
+Reported that way round because the shallow section alone would read as "responding slowly is
+free", which is the opposite of what the mechanism does. The honest reading is that any response
+inside the outage is worth about the same, and any response after it is worth nothing.
+
+### Two defects in the measurement machinery, both mine
+
+**The probe overwrote the sweep.** `eval escalation-fix` wrote to a hardcoded artifact name, so
+running it again over 180, 240 and 360 replaced the curve the report reads. It happened twice
+before I understood it, which is a quiet way to publish a curve nobody ran. It takes `--out` now.
+
+**The first fix for that added the flag and left the filename hardcoded**, and the test I wrote
+passed because it only asserted the flag existed. The test now reads the source and requires both
+that the hardcoded name is gone and that `args.out` is what gets written. A test that checks the
+handle rather than the wire is worse than no test, because it tells you the thing is fixed.

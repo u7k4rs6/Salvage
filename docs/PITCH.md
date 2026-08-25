@@ -77,14 +77,29 @@ right 90.2 percent of the time and the model-assisted diagnosis 97.6 percent. Th
 to `unknown` when the detector attributes an incident to a whole method rather than the failing
 instrument; the model reads the same evidence packet and gets three of those four right.
 
-**S4 is a loss and it is the most useful row in the table.** The cause is a merchant
+**S4 is a loss in that table and it is the most useful row in it.** The cause is a merchant
 misconfiguration, no customer can pay their way around it, so the agent contacts nobody and files
 an escalation. It therefore recovers exactly what doing nothing recovers, and both link-sending
 baselines beat it by messaging around two hundred customers about something none of them can fix.
-That is the cost of restraint, and until this milestone the simulator charged the agent for it
-without ever paying out: an escalation reached a human and the world carried on failing. Section 11
-of `docs/RESULTS.md` now sweeps how long a merchant takes to act on one, and reports the curve
-rather than picking a number off it.
+
+That is the cost of restraint measured against no benefit, because until this milestone an
+escalation reached a human and the world carried on failing for the full three hours. So the second
+thing M5 does is model the fix as a swept parameter: an escalation filed at time t repairs the
+faulting method at t plus T, and T is swept rather than chosen, because how fast a merchant acts is
+not a fact about Salvage.
+
+The answer is that it barely matters when, only whether. At every response time from 15 minutes to
+two hours the agent lands between 2,67,435 and 2,77,080 rupees against B2's 1,83,115, and it does
+it sending nothing at all. Even the slowest response swept puts it 46 percent ahead of the best
+baseline on zero messages. Past the fault's own 180 minute duration the fix is worth exactly
+nothing, because the world has already recovered on its own.
+
+Two caveats, both stated in the results rather than buried. Only an arm that escalates can be
+repaired, so B1 and B2 cannot benefit by construction, and a real merchant might well notice a
+wholly dead payment method without an agent telling them. And the mechanism is deliberately the
+smaller of the two things it could be: it gives customers one more chance to come back, and does
+not stop the payments that would fail after the repair, so it understates what a fix is worth for
+the only arm that can trigger one.
 
 Everything above is bought in a simulator that charges nothing for a message except a 2.6 percent
 chance of an opt-out. No regulatory cost, no sender reputation, no fatigue. That pricing flatters
