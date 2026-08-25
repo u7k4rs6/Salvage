@@ -240,7 +240,8 @@ def write_metrics_csv(result: SweepResult, path: Path | str = "docs/results_by_r
                     "actions_refused": row.actions_refused,
                     "policy_violations": row.policy_violations,
                     "time_to_detect_minutes": (
-                        "" if row.time_to_detect_minutes is None
+                        ""
+                        if row.time_to_detect_minutes is None
                         else f"{row.time_to_detect_minutes:.1f}"
                     ),
                     "stream_digest": row.stream_digest,

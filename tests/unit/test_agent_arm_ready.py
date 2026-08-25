@@ -261,9 +261,9 @@ def test_the_agent_arm_beats_doing_nothing_on_the_at_risk_set(tmp_path, small_pa
             conn.close()
 
     assert outcomes["agent"].at_risk_orders == outcomes["B0"].at_risk_orders > 0
-    assert (
-        outcomes["agent"].at_risk_recovered_amount >= outcomes["B0"].at_risk_recovered_amount
-    ), "the agent recovered less than doing nothing on the at-risk set"
+    assert outcomes["agent"].at_risk_recovered_amount >= outcomes["B0"].at_risk_recovered_amount, (
+        "the agent recovered less than doing nothing on the at-risk set"
+    )
 
 
 def test_a_merchant_config_incident_still_contacts_nobody_with_a_model(tmp_path, small_params):

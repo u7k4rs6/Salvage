@@ -36,24 +36,67 @@ classification, not action. Reading it as a policy comparison would be a mistake
 diagnosis never clears the action threshold, so such an arm would escalate everything and recover
 nothing.
 
-## 1. Headline: recovered revenue
+## 1. Primary: recovered revenue over the at-risk order set
 
-Recovered revenue in rupees, mean plus or minus standard deviation across 10 seeds.
+Mean across 10 seeds. Every cell is **recovered revenue in rupees and messages sent**, both scoped to the at-risk order set.
 
-Every policy is measured over the same order set: every order whose first payment attempt
-failed during the evaluation day. The number counts every route to payment, including
-customers who came back on their own, because that is the only quantity that means the
-same thing for all four arms.
+An order is at risk when its first payment attempt failed inside a fault window **and** on the instrument that fault was breaking. That is the population a recovery agent is aimed at. It is computed from the world's fault schedule and the attempt stream, neither of which any policy touches, so it is identical across all four arms and a test proves it. S0 has no fault, so its at-risk set is empty and every arm recovers nothing from it: the messages column is the whole story on that row.
 
-| scenario | agent | B0 | B1 | B2 | best |
+Revenue is never shown without contact volume beside it. A policy that recovers more by messaging everybody has not obviously won.
+
+| scenario | at-risk orders | agent | B0 | B1 | B2 |
 |---|---|---|---|---|---|
-| S0 | 9,00,143.91 +/- 1,43,306.32 | 9,00,143.91 +/- 1,43,306.32 | 16,06,269.96 +/- 2,36,648.25 | 15,92,749.07 +/- 2,33,011.34 | B1 |
-| S1 | 9,71,510.97 +/- 1,49,144.62 | 9,71,510.97 +/- 1,49,144.62 | 17,20,538.42 +/- 2,58,270.52 | 17,29,528.48 +/- 2,53,398.64 | B2 |
-| S2 | 9,29,264.42 +/- 1,50,027.09 | 9,29,264.42 +/- 1,50,027.09 | 16,55,171.60 +/- 2,49,836.27 | 16,51,203.57 +/- 2,47,574.88 | B1 |
-| S3 | 10,99,885.26 +/- 1,84,025.99 | 10,99,885.26 +/- 1,84,025.99 | 18,74,640.11 +/- 3,03,994.99 | 18,92,941.10 +/- 2,98,122.66 | B2 |
-| S4 | 9,44,448.05 +/- 1,53,928.98 | 9,44,448.05 +/- 1,53,928.98 | 16,92,541.01 +/- 2,61,694.87 | 16,82,976.85 +/- 2,49,252.64 | B1 |
+| S0 | 0 | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg | 0.00 / 0 msg |
+| S1 | 262 | 93,946.82 / 0 msg | 93,946.82 / 0 msg | 1,47,796.78 / 164 msg | 1,75,050.25 / 261 msg |
+| S2 | 153 | 50,094.51 / 0 msg | 50,094.51 / 0 msg | 79,262.89 / 88 msg | 93,254.58 / 140 msg |
+| S3 | 551 | 3,01,759.77 / 0 msg | 3,01,759.77 / 0 msg | 4,20,743.45 / 312 msg | 4,72,828.40 / 492 msg |
+| S4 | 300 | 90,128.09 / 0 msg | 90,128.09 / 0 msg | 1,57,696.44 / 178 msg | 1,65,041.30 / 272 msg |
 
-## 2. Decomposition
+Opt-outs are counted over the whole run rather than over the at-risk set, and are shown separately for that reason. The simulator draws an opt-out when a message is sent, and a policy sends to orders inside and outside the at-risk set alike, so there is no honest way to attribute an opt-out to one population. Every message a policy sends can produce one, which is the number that matters when judging contact volume.
+
+| scenario | agent msg / opt-out | B0 msg / opt-out | B1 msg / opt-out | B2 msg / opt-out |
+|---|---|---|---|---|
+| S0 | 0 / 0 | 0 / 0 | 878 / 19 | 1056 / 23 |
+| S1 | 0 / 0 | 0 / 0 | 1026 / 33 | 1296 / 29 |
+| S2 | 0 / 0 | 0 / 0 | 951 / 26 | 1176 / 27 |
+| S3 | 0 / 0 | 0 / 0 | 1111 / 39 | 1436 / 35 |
+| S4 | 0 / 0 | 0 / 0 | 1017 / 31 | 1275 / 31 |
+
+Recovery rate over the at-risk set:
+
+| scenario | agent | B0 | B1 | B2 |
+|---|---|---|---|---|
+| S0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| S1 | 0.194 | 0.194 | 0.305 | 0.364 |
+| S2 | 0.176 | 0.176 | 0.277 | 0.331 |
+| S3 | 0.296 | 0.296 | 0.411 | 0.465 |
+| S4 | 0.152 | 0.152 | 0.272 | 0.287 |
+
+### What a message costs here, and what it does not
+
+**A message costs nothing in this simulator except the chance that the customer opts out.** There is no regulatory cost, no TRAI or DLT registration limit, no sender reputation, no per-message fee, no fatigue beyond the single opt-out draw, and no effect on anything the customer does later. Deliberately: modelling those would mean inventing half a dozen more parameters, and the point here is to name the limit rather than tune it away.
+
+Read every advantage a link-sending baseline shows in that light. B1's whole-run lead is real inside the model and it is bought entirely with contact volume that the model prices at almost zero.
+
+For scale: the heaviest arm in this sweep sends about 1436 messages per simulated day on S3 (B2). A real merchant sending that volume would be having a different conversation, with their operator and possibly with a regulator, before they had it about recovered revenue.
+
+**Opt-outs are doing some work, but not much.** Across the sweep, 2.6% of messages produced an opt-out, from the `opt_out_probability_base` and `opt_out_probability_still_failing` parameters in `salvage/sim/params.yaml` (0.02 and 0.12). That is the only push-back a policy feels for sending, and at that rate a policy can send a thousand messages and lose a few dozen customers permanently, which the model then charges it nothing further for. If the results are ever used to argue for a high-volume strategy, this parameter is the first one to attack.
+
+## 2. Secondary: whole-run totals
+
+Recovered revenue in rupees over **every** order whose first attempt failed during the evaluation day, mean plus or minus standard deviation across 10 seeds, with messages sent and opt-outs.
+
+This is secondary, and the S0 row says why. S0 has no fault at all, and a link-sending baseline still shows roughly 1.8 times what doing nothing shows. That is not a recovery agent working; it is the measure being dominated by ordinary background failure that happens every day, on which a policy that messages everybody will always score well. The primary table above scopes to the orders a fault actually put at risk.
+
+| scenario | agent | B0 | B1 | B2 |
+|---|---|---|---|---|
+| S0 | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 9,00,143.91 +/- 1,43,306.32 / 0 msg / 0 opt-out | 16,06,269.96 +/- 2,36,648.25 / 878 msg / 19 opt-out | 15,92,749.07 +/- 2,33,011.34 / 1056 msg / 23 opt-out |
+| S1 | 9,71,510.97 +/- 1,49,144.62 / 0 msg / 0 opt-out | 9,71,510.97 +/- 1,49,144.62 / 0 msg / 0 opt-out | 17,20,538.42 +/- 2,58,270.52 / 1026 msg / 33 opt-out | 17,29,528.48 +/- 2,53,398.64 / 1296 msg / 29 opt-out |
+| S2 | 9,29,264.42 +/- 1,50,027.09 / 0 msg / 0 opt-out | 9,29,264.42 +/- 1,50,027.09 / 0 msg / 0 opt-out | 16,55,171.60 +/- 2,49,836.27 / 951 msg / 26 opt-out | 16,51,203.57 +/- 2,47,574.88 / 1176 msg / 27 opt-out |
+| S3 | 10,99,885.26 +/- 1,84,025.99 / 0 msg / 0 opt-out | 10,99,885.26 +/- 1,84,025.99 / 0 msg / 0 opt-out | 18,74,640.11 +/- 3,03,994.99 / 1111 msg / 39 opt-out | 18,92,941.10 +/- 2,98,122.66 / 1436 msg / 35 opt-out |
+| S4 | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 9,44,448.05 +/- 1,53,928.98 / 0 msg / 0 opt-out | 16,92,541.01 +/- 2,61,694.87 / 1017 msg / 31 opt-out | 16,82,976.85 +/- 2,49,252.64 / 1275 msg / 31 opt-out |
+
+## 3. Decomposition
 
 How each policy got there. These columns add up to the headline number and are not
 comparable across policies on their own: B0 has no link column by construction, so
@@ -82,7 +125,7 @@ reading its organic column against another arm's link column compares a whole to
 | S4 | B2 | 919.1 | 431.0 | 0.0 | 488.1 | 1275 |
 | S4 | agent | 503.9 | 0.0 | 0.0 | 503.9 | 0 |
 
-## 3. Secondary metrics
+## 4. Secondary metrics
 
 | scenario | policy | recovery rate | in-fault rate | messages per 1,000 rupees | escalations | detected | time to detect (sim min) | policy violations |
 |---|---|---|---|---|---|---|---|---|
@@ -90,24 +133,24 @@ reading its organic column against another arm's link column compares a whole to
 | S0 | B1 | 0.593 | 0.000 | 0.56 | 0.0 | 0/10 | n/a | 0 |
 | S0 | B2 | 0.583 | 0.000 | 0.68 | 0.0 | 0/10 | n/a | 0 |
 | S0 | agent | 0.323 | 0.000 | 0.00 | 0.0 | 0/10 | n/a | 0 |
-| S1 | B0 | 0.301 | 0.253 | 0.00 | 0.0 | 10/10 | 5.4 | 0 |
-| S1 | B1 | 0.549 | 0.412 | 0.61 | 0.0 | 10/10 | 5.4 | 0 |
-| S1 | B2 | 0.548 | 0.417 | 0.77 | 0.0 | 10/10 | 5.4 | 0 |
-| S1 | agent | 0.301 | 0.253 | 0.00 | 2.0 | 10/10 | 5.4 | 0 |
-| S2 | B0 | 0.307 | 0.272 | 0.00 | 0.0 | 10/10 | 8.6 | 0 |
-| S2 | B1 | 0.564 | 0.455 | 0.59 | 0.0 | 10/10 | 8.6 | 0 |
-| S2 | B2 | 0.558 | 0.436 | 0.73 | 0.0 | 10/10 | 8.6 | 0 |
-| S2 | agent | 0.307 | 0.272 | 0.00 | 2.0 | 10/10 | 8.6 | 0 |
+| S1 | B0 | 0.301 | 0.194 | 0.00 | 0.0 | 10/10 | 5.4 | 0 |
+| S1 | B1 | 0.549 | 0.305 | 0.61 | 0.0 | 10/10 | 5.4 | 0 |
+| S1 | B2 | 0.548 | 0.364 | 0.77 | 0.0 | 10/10 | 5.4 | 0 |
+| S1 | agent | 0.301 | 0.194 | 0.00 | 2.0 | 10/10 | 5.4 | 0 |
+| S2 | B0 | 0.307 | 0.176 | 0.00 | 0.0 | 10/10 | 8.6 | 0 |
+| S2 | B1 | 0.564 | 0.277 | 0.59 | 0.0 | 10/10 | 8.6 | 0 |
+| S2 | B2 | 0.558 | 0.331 | 0.73 | 0.0 | 10/10 | 8.6 | 0 |
+| S2 | agent | 0.307 | 0.176 | 0.00 | 2.0 | 10/10 | 8.6 | 0 |
 | S3 | B0 | 0.312 | 0.296 | 0.00 | 0.0 | 10/10 | 7.0 | 0 |
 | S3 | B1 | 0.544 | 0.411 | 0.61 | 0.0 | 10/10 | 7.0 | 0 |
 | S3 | B2 | 0.547 | 0.465 | 0.78 | 0.0 | 10/10 | 7.0 | 0 |
 | S3 | agent | 0.312 | 0.296 | 0.00 | 2.2 | 10/10 | 7.0 | 0 |
-| S4 | B0 | 0.291 | 0.244 | 0.00 | 0.0 | 10/10 | 9.5 | 0 |
-| S4 | B1 | 0.538 | 0.416 | 0.62 | 0.0 | 10/10 | 9.5 | 0 |
-| S4 | B2 | 0.531 | 0.403 | 0.78 | 0.0 | 10/10 | 9.5 | 0 |
-| S4 | agent | 0.291 | 0.244 | 0.00 | 2.0 | 10/10 | 9.5 | 0 |
+| S4 | B0 | 0.291 | 0.152 | 0.00 | 0.0 | 10/10 | 9.5 | 0 |
+| S4 | B1 | 0.538 | 0.272 | 0.62 | 0.0 | 10/10 | 9.5 | 0 |
+| S4 | B2 | 0.531 | 0.287 | 0.78 | 0.0 | 10/10 | 9.5 | 0 |
+| S4 | agent | 0.291 | 0.152 | 0.00 | 2.0 | 10/10 | 9.5 | 0 |
 
-## 4. Identical worlds
+## 5. Identical worlds
 
 Every policy arm must face the identical world. The pre-intervention attempt stream is
 hashed before any policy acts, and the hash is the same across all four arms for every
@@ -169,7 +212,7 @@ is checked rather than assumed.
 
 All 50 worlds identical across all 4 policy arms.
 
-## 5. Diagnosis ablation
+## 6. Diagnosis ablation
 
 Rules-only. The LLM column is unmeasured: the fixtures M2 shipped were written by the model being evaluated, with the scenario labels visible, and were deleted in M3. See salvage/llm/fixtures/README.md.
 
@@ -187,7 +230,7 @@ Where the rules classifier falls back to `unknown`:
 - S2 seed 9 on `card`: truth auth_failure_bin, rules said unknown
 - S3 seed 8 on `card:card_network:Visa`: truth gateway_degradation, rules said unknown
 
-## 6. Detector operating envelope
+## 7. Detector operating envelope
 
 Detection latency is bounded by how much traffic the affected segment carries. The
 detector will not evaluate a segment key with fewer than 20 attempts in a 15-minute
@@ -208,7 +251,7 @@ At 1,500 attempts a day: 4 of 10 faults detected at all, 0 of 10 inside 15 sim m
 At 5,000 attempts a day: 10 of 10 faults detected at all, 5 of 10 inside 15 sim minutes.
 At 12,000 attempts a day: 10 of 10 faults detected at all, 10 of 10 inside 15 sim minutes.
 
-## 7. Peak against trough detection
+## 8. Peak against trough detection
 
 The same fault, moved from the 19:00 to 21:00 IST peak to the 03:30 IST trough, where the
 arrival rate is about one thirtieth of the peak. Time to detect is reported as a range
@@ -225,7 +268,7 @@ Not slow. Not misattributed. **Not detected.** The diurnal curve puts the 03:00 
 
 The 15-minute promise in PRD goal G1 is a promise about the evening peak. Overnight, at this merchant size, the detector does not fire at all. The fix is volume or a longer window, not a threshold, and both trade against the zero false-alarm result.
 
-## 8. Sensitivity and the adversarial set
+## 9. Sensitivity and the adversarial set
 
 The response-model multipliers in `salvage/sim/params.yaml` are assumptions, so the
 results have to say how much the answer depends on them. Each row scales the intervention
@@ -255,7 +298,7 @@ helps nor hurts and timing cannot matter.
 
 The agent has no advantage here, by design. That is the point of running it.
 
-## 9. Fault injection
+## 10. Fault injection
 
 **45 injection attempts, 45 refused.** 2 further cases are fault tolerance rather than attack, where the correct behaviour is to carry on, and all were handled.
 
@@ -320,7 +363,7 @@ Every attempt, in the order the suite runs them:
 | webhook | event type outside the handled set | yes |  |
 | webhook | contact details in a webhook body reaching the ledger | yes | ledger carries ids and the outcome, never the body |
 
-## 10. The real end-to-end run
+## 11. The real end-to-end run
 
 Not yet run. It needs Razorpay test-mode credentials, which the build environment did not have.
 `scripts/e2e_real_link.py` is ready and refuses to run without them.
@@ -339,11 +382,11 @@ uv run salvage e2e verify
 | webhook event id | _to fill_ |
 | ledger sequence numbers | _to fill_ |
 
-## 11. Known limitations
+## 12. Known limitations
 
 - **The agent arm is unmeasured with a model.** See the top of this document. The measured agent column is the no-model configuration and equals B0 by construction.
 - **S2 at low segment volume attributes to `card` rather than to the failing BIN.** On held-out seeds 8 and 9 the BIN key never reaches the detector's 20-attempt minimum in a 15-minute window, so the incident is attributed to the whole card method, whose effect size is diluted by four healthy BIN ranges. Detection still happens, at 11 and 16 sim minutes rather than 5 to 8, and the rules classifier then cannot fire the `auth_failure_bin` rule because `card` is not one of the card dimensions that rule accepts. This is the operating envelope in section 6, not a separate defect.
 - **S3 seed 8 opens two incidents for one fault.** A merchant-wide gateway incident, and then a second on `card:card_network:Visa` about seventy minutes later, after the first closed. The attribution logic was left alone rather than fitted to a held-out seed. The cost is one duplicate incident in fifty runs.
-- **Time to detect is a function of segment volume, not of fault severity.** Both slow detections on the held-out seeds happened because the affected segment sat at or below the 20-attempt floor, not because the signal was weak. Section 6 gives the boundary.
-- **The simulator is the instrument.** Every parameter is in `salvage/sim/params.yaml` with its assumption written beside it. The response-model multipliers are judgement, which is what section 8 exists to quantify.
+- **Time to detect is a function of segment volume, not of fault severity.** Both slow detections on the held-out seeds happened because the affected segment sat at or below the 20-attempt floor, not because the signal was weak. Section 7 gives the boundary.
+- **The simulator is the instrument.** Every parameter is in `salvage/sim/params.yaml` with its assumption written beside it. The response-model multipliers are judgement, which is what section 9 exists to quantify.
 - **Traffic volume is 12,000 attempts a day, not the 1,500 in the architecture note.** At 1,500 the detector cannot meet the 15-minute target on a single-instrument fault at all. The arithmetic is in `docs/BUILD_LOG.md`.

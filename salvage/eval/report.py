@@ -94,8 +94,8 @@ def primary_table(result: SweepResult) -> str:
     seeds = len(result.seeds)
 
     lines = [
-        f"Mean across {seeds} seeds. Every cell is **recovered revenue in rupees, messages sent, "
-        "opt-outs** for the at-risk order set only.",
+        f"Mean across {seeds} seeds. Every cell is **recovered revenue in rupees and messages "
+        "sent**, both scoped to the at-risk order set.",
         "",
         "An order is at risk when its first payment attempt failed inside a fault window **and** "
         "on the instrument that fault was breaking. That is the population a recovery agent is "
@@ -122,12 +122,34 @@ def primary_table(result: SweepResult) -> str:
             at_risk = int(round(entry.mean_at_risk_orders))
             cells.append(
                 f"{rupees(entry.mean_at_risk_recovered_amount)} / "
-                f"{entry.mean_at_risk_messages:.0f} msg / {entry.mean_opt_outs:.0f} opt-out"
+                f"{entry.mean_at_risk_messages:.0f} msg"
             )
         lines.append(f"| {scenario} | {at_risk} | " + " | ".join(cells) + " |")
 
     lines.append("")
-    lines.append("Recovery rate over the same set:")
+    lines.append(
+        "Opt-outs are counted over the whole run rather than over the at-risk set, and are shown "
+        "separately for that reason. The simulator draws an opt-out when a message is sent, and a "
+        "policy sends to orders inside and outside the at-risk set alike, so there is no honest "
+        "way to attribute an opt-out to one population. Every message a policy sends can produce "
+        "one, which is the number that matters when judging contact volume."
+    )
+    lines.append("")
+    lines.append("| scenario | " + " | ".join(f"{p} msg / opt-out" for p in policies) + " |")
+    lines.append("|" + "---|" * (len(policies) + 1))
+    for scenario in sorted(grouped):
+        cells = []
+        for policy in policies:
+            entry = grouped[scenario].get(policy)
+            cells.append(
+                "not run"
+                if entry is None
+                else f"{entry.mean_messages:.0f} / {entry.mean_opt_outs:.0f}"
+            )
+        lines.append(f"| {scenario} | " + " | ".join(cells) + " |")
+
+    lines.append("")
+    lines.append("Recovery rate over the at-risk set:")
     lines.append("")
     lines.append("| scenario | " + " | ".join(policies) + " |")
     lines.append("|" + "---|" * (len(policies) + 1))
@@ -135,9 +157,7 @@ def primary_table(result: SweepResult) -> str:
         cells = []
         for policy in policies:
             entry = grouped[scenario].get(policy)
-            cells.append(
-                "not run" if entry is None else f"{entry.mean_at_risk_recovery_rate:.3f}"
-            )
+            cells.append("not run" if entry is None else f"{entry.mean_at_risk_recovery_rate:.3f}")
         lines.append(f"| {scenario} | " + " | ".join(cells) + " |")
     return "\n".join(lines)
 

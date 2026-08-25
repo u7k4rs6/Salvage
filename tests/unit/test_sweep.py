@@ -147,11 +147,14 @@ def test_the_primary_table_never_shows_revenue_without_contact_volume(small_swee
     primary = report.split("## 2.")[0]
     assert "| best |" not in primary
     # The revenue table only. The rate table below it repeats the same population as a fraction.
-    revenue = primary.split("Recovery rate over the same set")[0]
+    revenue = primary.split("Opt-outs are counted over the whole run")[0]
     body = [line for line in revenue.splitlines() if line.startswith("| S")]
     assert body, "the primary table has at least one scenario row"
     for line in body:
-        assert "msg" in line and "opt-out" in line, line
+        assert "msg" in line, line
+    # Opt-outs are reported per arm too, in their own table, because an opt-out cannot honestly
+    # be attributed to the at-risk set. Both numbers are in section 1 either way.
+    assert "msg / opt-out" in primary
 
 
 # -- helpers ---------------------------------------------------------------

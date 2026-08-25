@@ -159,9 +159,7 @@ def test_at_risk_orders_are_scoped_to_the_failing_instrument(runs):
     result, conn = runs[POLICIES[0]]
     fault = result.sim.scheduled_faults[0]
     windows = [
-        FaultWindow(
-            start=fault.start_ts, end=fault.end_ts, selector=dict(fault.fault.selector)
-        )
+        FaultWindow(start=fault.start_ts, end=fault.end_ts, selector=dict(fault.fault.selector))
     ]
     scoped = set(at_risk_order_ids(conn, windows))
 
