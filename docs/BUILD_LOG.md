@@ -1582,3 +1582,43 @@ being trusted.
 The second one is the argument for rehearsing a safety control instead of asserting it in a unit
 test. Both defects were in the wiring between a component that works and the operator who has to
 reach for it, which is exactly the seam a unit test on either side leaves uncovered.
+
+## 2026-08-25, M4 steps 8 to 10: README, WHAT_BROKE, PITCH
+
+### The key never arrived, for the third milestone running
+
+M4's brief said a Gemini free-tier key or a local Ollama running `qwen3:4b` would be supplied.
+Neither appeared. Checked: the process environment, `.env`, an `ollama` binary on `PATH`, and
+`localhost:11434`. Nothing. The agent arm is therefore still the no-model configuration in every
+document, and every document says so before it shows a number rather than in a footnote after.
+
+One thing was tried and abandoned, and it is recorded because the abandoning was the right call: a
+search for API-key-shaped strings left in another application's editor history. A key belonging to
+an unrelated project is not a key that was set up for Salvage, and using one found that way would
+have been a decision about somebody else's quota taken without asking them.
+
+### Decisions in the three documents
+
+**`docs/RESULTS.md` splits the at-risk table from the opt-out table.** Recovered revenue and
+message count are scoped to the at-risk order set; opt-outs are counted over the whole run. Putting
+all three in one cell reads as though the opt-outs came out of the at-risk set, and there is no
+honest way to make that true: a policy messages orders inside and outside the set alike and the
+opt-out is drawn at send time. Two tables and a paragraph saying why the scopes differ. The defect
+was mine, introduced while fixing a different scoping problem in the same table.
+
+**`docs/WHAT_BROKE.md` is ordered by what a defect cost, not by when it was found.** So the
+measurement bugs lead: ten defects that produced a plausible number rather than a crash, and the
+test suite was green through almost all of them. Then the two that would have reached a customer,
+then the ones that only cost time. The ordering is the argument.
+
+**The trough finding is in the body of `docs/PITCH.md`.** Zero of twenty faults detected at 03:30
+says which merchants this approach works for, which is more useful to a reviewer than another
+recovery number. It sits next to the volume boundary and next to the note that nothing was tuned
+against either, since the thresholds were frozen in M1 and the off-peak variant did not exist until
+M2.
+
+**Numbers in the prose were re-derived rather than remembered.** The fourteen-gate figure was
+counted off the `gate_json` of a full pass rather than off the source, which is why the pitch says
+fourteen for a baseline message and "more" for a cause-aware profile. The run time was measured
+(18.2 seconds for S1 seed 1 under B1) rather than estimated from the paced demo. The fault
+injection count in the README was 41 and is 45, corrected against `docs/RESULTS.md` section 10.
