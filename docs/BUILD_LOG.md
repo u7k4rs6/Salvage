@@ -425,7 +425,8 @@ segment the fault was actually applied to.
 - **Segment statistics are persisted only for windows that were actually tested.** Every key at
   every minute would be roughly 90,000 rows per simulated day, most describing a segment with two
   attempts in it. The dashboard's heatmap reads the most recent tested window per key, which this
-  keeps.
+  keeps. **[Corrected 2026-08-26: the second sentence is wrong. `/api/overview` reads one window,
+  not one per key. See the correction at the end of this document.]**
 - **Three modules beyond the section 13 layout.** `detect/thresholds.py` (the frozen set, kept
   separate so it is obvious what "frozen" covers), `detect/run.py` (the loop that drives
   `monitor.py` and `incidents.py`) and `detect/calibrate.py` (the CLI command). No dependency
@@ -1936,3 +1937,36 @@ gap left in the evaluation and it is open.
 
 The real Razorpay test-mode run is also still not done, so claim 8 remains transcription verified
 against the live docs rather than verified against the live API.
+
+---
+
+## 2026-08-26, post-freeze documentation correction
+
+**No code changed.** The build is still frozen at `e92a71c`. This entry corrects a claim two
+documents made about code that was already shipped, which is a documentation defect, not a
+behaviour change. Nothing in `salvage/` was touched.
+
+- **The heatmap does not read the most recent tested window per key.** The M2 entry above and the
+  docstring on `_persist_stats` in `salvage/detect/run.py` both say it does. It does not.
+  `_latest_window()` in `salvage/api/routes_incidents.py` takes a single `MAX(window_start)` over
+  the whole `segments_stats` table and the query that follows filters `WHERE window_start = ?` on
+  that one value. So the board shows one 15-minute window, and a key that was live 15 minutes ago
+  but is not live in that window is absent from the response entirely.
+
+  Why it matters, and why it was worth correcting rather than leaving: keys have to be dense **in
+  the same 15 minutes** to appear together, not merely dense at some point. Combined with the
+  20-attempt floor this is most of the reason the board looks empty away from the evening peak.
+  At 12,000 attempts per day a 15-minute window holds about 125 attempts on average and about 375
+  at peak, so of the 33 segment keys the simulator can produce, about 5 clear the floor off peak
+  and 21 clear it at peak. Twelve never clear it at any hour: the five netbanking banks, three
+  card BINs, the three card issuers behind them, and the `wallet` method row itself at about 19
+  expected attempts against a floor of 20.
+
+  The per-key reading would be a different query and a different behaviour, and changing it after
+  the freeze was not on the table. The claim was corrected instead, in the M2 entry above and here.
+  `web/src/board/` on branch `ui/board` carries the expected key list so the console can show a
+  below-floor segment as below-floor rather than dropping it.
+
+- **The docstring in `salvage/detect/run.py` repeats the same wrong sentence** and was left alone,
+  because editing it is a code change and the freeze covers `salvage/`. It is wrong in the same
+  way and for the same reason. A reader who finds it should read this entry.
