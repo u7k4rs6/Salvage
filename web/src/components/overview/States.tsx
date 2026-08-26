@@ -4,12 +4,12 @@ import { describe } from "../../lib/api";
 /**
  * Loading, empty and error on the dark surface.
  *
- * The console's shared primitives are drawn for the light frame the other six pages use, so the
- * Overview carries its own three. They are the same three states with the same contract: every
- * region that renders server data can be in exactly one of them, and none of them is optional.
+ * The console's shared primitives are drawn for the light frame the other six pages use, so this
+ * page carries its own three. Same contract: every region that renders server data is in exactly
+ * one of these states, and none of them is optional.
  */
 
-export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?: string }) {
+export function Loading({ rows = 3, label = "Loading" }: { rows?: number; label?: string }) {
   return (
     <div aria-live="polite" aria-busy="true">
       <span className="sr-only">{label}</span>
@@ -17,7 +17,7 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
         <div
           key={index}
           className="skeleton mb-2"
-          style={{ width: `${100 - index * 9}%`, animationDelay: `${index * 90}ms` }}
+          style={{ width: `${96 - index * 11}%`, animationDelay: `${index * 80}ms` }}
         />
       ))}
     </div>
@@ -26,29 +26,21 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
 
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="py-10">
-      <p className="body">{children}</p>
-      {action && <div className="mt-4">{action}</div>}
+    <div className="py-6">
+      <p className="txt">{children}</p>
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
 
 export function ErrorPanel({ error, retry }: { error: unknown; retry?: () => void }) {
   return (
-    <div role="alert" className="error-block">
-      <div className="microlabel" style={{ color: "var(--incident)" }}>
-        Request failed
-      </div>
-      <div className="mono mt-1.5 break-words" style={{ fontSize: 12, color: "var(--text-2)" }}>
-        {describe(error)}
-      </div>
+    <div role="alert" className="alert">
+      <div className="lbl crit">Request failed</div>
+      <div className="mono mid mt-1.5 break-words text-[12px]">{describe(error)}</div>
       {retry && (
-        <button
-          type="button"
-          onClick={retry}
-          className="focus-ring microlabel microlabel-ink lift mt-3 block"
-        >
-          Try again &rarr;
+        <button type="button" onClick={retry} className="link focus-ring lbl lbl-2 mt-2.5 block">
+          Retry &rarr;
         </button>
       )}
     </div>

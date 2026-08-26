@@ -14,15 +14,34 @@ import ScenarioRunner from "./pages/ScenarioRunner";
 // reached by typing the path.
 import Specimens from "./pages/Specimens";
 
-// Seven entries in the order docs/04_FRONTEND_SPEC.md section 2 fixes.
-const NAV = [
-  { to: "/overview", label: "Overview" },
-  { to: "/incidents", label: "Incidents" },
-  { to: "/escalations", label: "Escalations" },
-  { to: "/ledger", label: "Ledger" },
-  { to: "/results", label: "Results" },
-  { to: "/storefront", label: "Storefront" },
-  { to: "/runner", label: "Scenario Runner" },
+// The seven entries docs/04_FRONTEND_SPEC.md section 2 fixes, in the order it fixes them.
+//
+// The group headings are presentation, not architecture: no route is added, removed or reordered.
+// They separate the surfaces that are live during an incident from the durable record and from
+// the simulation controls, which is a distinction the system already makes and the flat list hid.
+const NAV: { group: string; items: { to: string; label: string }[] }[] = [
+  {
+    group: "Operations",
+    items: [
+      { to: "/overview", label: "Overview" },
+      { to: "/incidents", label: "Incidents" },
+      { to: "/escalations", label: "Escalations" },
+    ],
+  },
+  {
+    group: "Record",
+    items: [
+      { to: "/ledger", label: "Ledger" },
+      { to: "/results", label: "Results" },
+    ],
+  },
+  {
+    group: "Simulation",
+    items: [
+      { to: "/storefront", label: "Storefront" },
+      { to: "/runner", label: "Scenario Runner" },
+    ],
+  },
 ];
 
 export default function App() {
@@ -31,22 +50,29 @@ export default function App() {
       <div className="chrome-ui min-h-screen">
         <TopBar />
         <div className="flex">
-          <nav className="min-h-[calc(100vh-42px)] w-48 shrink-0 border-r border-neutral-200 bg-white py-3">
-            {NAV.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  // A 2px marker and weight, nothing else. No pill, no card.
-                  `block border-l-2 px-4 py-[7px] text-[12.5px] tracking-[0.01em] ${
-                    isActive
-                      ? "border-neutral-900 font-semibold text-neutral-900"
-                      : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-900"
-                  }`
-                }
-              >
-                {item.label}
-              </NavLink>
+          <nav className="min-h-[calc(100vh-36px)] w-44 shrink-0 border-r border-neutral-200 bg-white py-2">
+            {NAV.map((section) => (
+              <div key={section.group} className="mb-1 last:mb-0">
+                <div className="nav-group px-4 pb-1 pt-2 text-[9.5px] font-medium uppercase tracking-[0.1em] text-neutral-400">
+                  {section.group}
+                </div>
+                {section.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      // A 2px marker and weight, nothing else. No pill, no card.
+                      `block border-l-2 px-4 py-[5px] text-[12.5px] tracking-[0.01em] ${
+                        isActive
+                          ? "border-neutral-900 font-semibold text-neutral-900"
+                          : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-900"
+                      }`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
             ))}
           </nav>
           <main className="min-w-0 flex-1 p-4">
