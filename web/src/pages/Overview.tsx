@@ -52,10 +52,15 @@ function cellColour(segment: Segment): string {
 function Cell({ node }: { node: BoardNode }) {
   if (node.state === "below_floor") {
     const peak = node.roster.expected_attempts_peak_window;
+    // A node sitting near the floor is not reliably absent, it flips window to window on
+    // ordinary noise. Saying so is better than implying the board has a fixed shape.
+    const marginal = node.roster.marginal_at_peak
+      ? " Sits close enough to the floor to appear in some windows and not others."
+      : "";
     return (
       <div
-        aria-label={`${node.instrument}, below the detection floor, no rate measured this window. About ${peak} attempts expected in a peak window against a floor of ${FLOOR_ATTEMPTS}.`}
-        title={`About ${peak} attempts expected in a peak 15-minute window. Floor is ${FLOOR_ATTEMPTS}.`}
+        aria-label={`${node.instrument}, below the detection floor, no rate measured this window. About ${peak} attempts expected in a peak window against a floor of ${FLOOR_ATTEMPTS}.${marginal}`}
+        title={`About ${peak} attempts expected in a peak 15-minute window. Floor is ${FLOOR_ATTEMPTS}.${marginal}`}
         className="h-full border border-dashed border-neutral-300 bg-neutral-50 px-2 py-1.5 text-neutral-400"
       >
         <div className="truncate text-[11px] font-medium">{node.instrument}</div>

@@ -1956,11 +1956,19 @@ behaviour change. Nothing in `salvage/` was touched.
   Why it matters, and why it was worth correcting rather than leaving: keys have to be dense **in
   the same 15 minutes** to appear together, not merely dense at some point. Combined with the
   20-attempt floor this is most of the reason the board looks empty away from the evening peak.
-  At 12,000 attempts per day a 15-minute window holds about 125 attempts on average and about 375
-  at peak, so of the 33 segment keys the simulator can produce, about 5 clear the floor off peak
-  and 21 clear it at peak. Twelve never clear it at any hour: the five netbanking banks, three
-  card BINs, the three card issuers behind them, and the `wallet` method row itself at about 19
-  expected attempts against a floor of 20.
+  At 12,000 attempts per day a 15-minute window holds about 125 attempts on average and about 316
+  at the 21:00 IST peak, so of the 33 segment keys the simulator can produce, about 5 clear the
+  floor mid-afternoon and 15 clear it at peak. Eighteen do not clear it even at peak, including
+  all five netbanking banks, whose busiest sees about 9 attempts against a floor of 20. Eleven of
+  the 33 sit within a quarter of the floor either side at peak and flip in and out on ordinary
+  Poisson noise, so a peak capture lands in a range of roughly 13 to 19 rather than on a number.
+
+  The first version of this entry said 375 attempts and 21 nodes at peak, from reading the
+  params comment's "about 1,500 per hour at the evening peak" as three times the daily mean. The
+  curve says 2.53 times the mean, not 3. `web/src/board/segment_roster.json` now derives the peak
+  window from `diurnal_weights` rather than a multiplier. No collapse decision changed: the
+  netbanking group was already below the floor at any volume this simulator produces, and every
+  group with at least one node above it still expands.
 
   The per-key reading would be a different query and a different behaviour, and changing it after
   the freeze was not on the table. The claim was corrected instead, in the M2 entry above and here.

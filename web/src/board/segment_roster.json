@@ -4,7 +4,107 @@
   "_window_seconds": 900,
   "_attempts_per_day": 12000,
   "_attempts_per_window_mean": 125.0,
-  "_attempts_per_window_peak": 375.0,
+  "_attempts_per_window_peak": 315.8,
+  "_peak_hour_ist": 21,
+  "_expected_coverage": "Expected node counts, from the diurnal curve. These are expectations, not promises: nine nodes sit within a quarter of the floor either side at peak and flip in and out on ordinary Poisson noise, so a peak capture lands in a range rather than on a number.",
+  "_nodes_clearing_floor_by_hour_ist": {
+    "0": {
+      "attempts_per_window": 42.5,
+      "nodes_clearing_floor": 2
+    },
+    "1": {
+      "attempts_per_window": 24.3,
+      "nodes_clearing_floor": 1
+    },
+    "2": {
+      "attempts_per_window": 14.6,
+      "nodes_clearing_floor": 0
+    },
+    "3": {
+      "attempts_per_window": 9.7,
+      "nodes_clearing_floor": 0
+    },
+    "4": {
+      "attempts_per_window": 9.7,
+      "nodes_clearing_floor": 0
+    },
+    "5": {
+      "attempts_per_window": 14.6,
+      "nodes_clearing_floor": 0
+    },
+    "6": {
+      "attempts_per_window": 30.4,
+      "nodes_clearing_floor": 1
+    },
+    "7": {
+      "attempts_per_window": 54.7,
+      "nodes_clearing_floor": 2
+    },
+    "8": {
+      "attempts_per_window": 85.0,
+      "nodes_clearing_floor": 3
+    },
+    "9": {
+      "attempts_per_window": 115.4,
+      "nodes_clearing_floor": 5
+    },
+    "10": {
+      "attempts_per_window": 139.7,
+      "nodes_clearing_floor": 7
+    },
+    "11": {
+      "attempts_per_window": 151.8,
+      "nodes_clearing_floor": 7
+    },
+    "12": {
+      "attempts_per_window": 157.9,
+      "nodes_clearing_floor": 7
+    },
+    "13": {
+      "attempts_per_window": 145.7,
+      "nodes_clearing_floor": 7
+    },
+    "14": {
+      "attempts_per_window": 127.5,
+      "nodes_clearing_floor": 5
+    },
+    "15": {
+      "attempts_per_window": 121.5,
+      "nodes_clearing_floor": 5
+    },
+    "16": {
+      "attempts_per_window": 127.5,
+      "nodes_clearing_floor": 5
+    },
+    "17": {
+      "attempts_per_window": 145.7,
+      "nodes_clearing_floor": 7
+    },
+    "18": {
+      "attempts_per_window": 176.1,
+      "nodes_clearing_floor": 10
+    },
+    "19": {
+      "attempts_per_window": 255.1,
+      "nodes_clearing_floor": 13
+    },
+    "20": {
+      "attempts_per_window": 297.6,
+      "nodes_clearing_floor": 15
+    },
+    "21": {
+      "attempts_per_window": 315.8,
+      "nodes_clearing_floor": 15
+    },
+    "22": {
+      "attempts_per_window": 279.4,
+      "nodes_clearing_floor": 15
+    },
+    "23": {
+      "attempts_per_window": 157.9,
+      "nodes_clearing_floor": 7
+    }
+  },
   "_wallet_has_no_instrument_dimension": "wallet is not one of the detector's INSTRUMENT_DIMENSIONS (salvage/detect/segments.py), so wallet attempts only ever produce the `all` and `wallet` keys. The wallet group can never have instrument tiles.",
   "nodes": [
     {
@@ -14,8 +114,9 @@
       "group": "merchant",
       "share_of_all_attempts": 1.0,
       "expected_attempts_mean_window": 125.0,
-      "expected_attempts_peak_window": 375.0,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 315.8,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi",
@@ -24,8 +125,9 @@
       "group": "method",
       "share_of_all_attempts": 0.6,
       "expected_attempts_mean_window": 75.0,
-      "expected_attempts_peak_window": 225.0,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 189.5,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "card",
@@ -34,8 +136,9 @@
       "group": "method",
       "share_of_all_attempts": 0.25,
       "expected_attempts_mean_window": 31.2,
-      "expected_attempts_peak_window": 93.8,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 78.9,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "netbanking",
@@ -44,8 +147,9 @@
       "group": "method",
       "share_of_all_attempts": 0.1,
       "expected_attempts_mean_window": 12.5,
-      "expected_attempts_peak_window": 37.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 31.6,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "wallet",
@@ -54,8 +158,9 @@
       "group": "method",
       "share_of_all_attempts": 0.05,
       "expected_attempts_mean_window": 6.2,
-      "expected_attempts_peak_window": 18.8,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 15.8,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "upi:upi_handle:ybl",
@@ -64,8 +169,9 @@
       "group": "upi_handle",
       "share_of_all_attempts": 0.18,
       "expected_attempts_mean_window": 22.5,
-      "expected_attempts_peak_window": 67.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 56.8,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi:upi_handle:okhdfcbank",
@@ -74,8 +180,9 @@
       "group": "upi_handle",
       "share_of_all_attempts": 0.156,
       "expected_attempts_mean_window": 19.5,
-      "expected_attempts_peak_window": 58.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 49.3,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi:upi_handle:oksbi",
@@ -84,8 +191,9 @@
       "group": "upi_handle",
       "share_of_all_attempts": 0.12,
       "expected_attempts_mean_window": 15.0,
-      "expected_attempts_peak_window": 45.0,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 37.9,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi:upi_handle:okicici",
@@ -94,8 +202,9 @@
       "group": "upi_handle",
       "share_of_all_attempts": 0.084,
       "expected_attempts_mean_window": 10.5,
-      "expected_attempts_peak_window": 31.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 26.5,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi:upi_handle:paytm",
@@ -104,8 +213,9 @@
       "group": "upi_handle",
       "share_of_all_attempts": 0.06,
       "expected_attempts_mean_window": 7.5,
-      "expected_attempts_peak_window": 22.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 18.9,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "upi:nb_bank:YESB",
@@ -114,8 +224,9 @@
       "group": "upi_nb_bank",
       "share_of_all_attempts": 0.18,
       "expected_attempts_mean_window": 22.5,
-      "expected_attempts_peak_window": 67.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 56.8,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi:nb_bank:HDFC",
@@ -124,8 +235,9 @@
       "group": "upi_nb_bank",
       "share_of_all_attempts": 0.156,
       "expected_attempts_mean_window": 19.5,
-      "expected_attempts_peak_window": 58.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 49.3,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi:nb_bank:SBIN",
@@ -134,8 +246,9 @@
       "group": "upi_nb_bank",
       "share_of_all_attempts": 0.12,
       "expected_attempts_mean_window": 15.0,
-      "expected_attempts_peak_window": 45.0,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 37.9,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi:nb_bank:ICIC",
@@ -144,8 +257,9 @@
       "group": "upi_nb_bank",
       "share_of_all_attempts": 0.084,
       "expected_attempts_mean_window": 10.5,
-      "expected_attempts_peak_window": 31.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 26.5,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "upi:nb_bank:PYTM",
@@ -154,8 +268,9 @@
       "group": "upi_nb_bank",
       "share_of_all_attempts": 0.06,
       "expected_attempts_mean_window": 7.5,
-      "expected_attempts_peak_window": 22.5,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 18.9,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "card:card_bin6:411111",
@@ -164,8 +279,9 @@
       "group": "card_bin6",
       "share_of_all_attempts": 0.075,
       "expected_attempts_mean_window": 9.4,
-      "expected_attempts_peak_window": 28.1,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 23.7,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": true
     },
     {
       "key": "card:card_issuer:HDFC",
@@ -174,8 +290,9 @@
       "group": "card_issuer",
       "share_of_all_attempts": 0.075,
       "expected_attempts_mean_window": 9.4,
-      "expected_attempts_peak_window": 28.1,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 23.7,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": true
     },
     {
       "key": "card:card_bin6:555555",
@@ -184,8 +301,9 @@
       "group": "card_bin6",
       "share_of_all_attempts": 0.0625,
       "expected_attempts_mean_window": 7.8,
-      "expected_attempts_peak_window": 23.4,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 19.7,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "card:card_issuer:ICIC",
@@ -194,8 +312,9 @@
       "group": "card_issuer",
       "share_of_all_attempts": 0.0625,
       "expected_attempts_mean_window": 7.8,
-      "expected_attempts_peak_window": 23.4,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 19.7,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "card:card_bin6:401200",
@@ -204,8 +323,9 @@
       "group": "card_bin6",
       "share_of_all_attempts": 0.05,
       "expected_attempts_mean_window": 6.2,
-      "expected_attempts_peak_window": 18.8,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 15.8,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "card:card_issuer:UTIB",
@@ -214,8 +334,9 @@
       "group": "card_issuer",
       "share_of_all_attempts": 0.05,
       "expected_attempts_mean_window": 6.2,
-      "expected_attempts_peak_window": 18.8,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 15.8,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "card:card_bin6:508500",
@@ -224,8 +345,9 @@
       "group": "card_bin6",
       "share_of_all_attempts": 0.0375,
       "expected_attempts_mean_window": 4.7,
-      "expected_attempts_peak_window": 14.1,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 11.8,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     },
     {
       "key": "card:card_issuer:SBIN",
@@ -234,8 +356,9 @@
       "group": "card_issuer",
       "share_of_all_attempts": 0.0375,
       "expected_attempts_mean_window": 4.7,
-      "expected_attempts_peak_window": 14.1,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 11.8,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     },
     {
       "key": "card:card_bin6:601136",
@@ -244,8 +367,9 @@
       "group": "card_bin6",
       "share_of_all_attempts": 0.025,
       "expected_attempts_mean_window": 3.1,
-      "expected_attempts_peak_window": 9.4,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 7.9,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     },
     {
       "key": "card:card_issuer:KKBK",
@@ -254,8 +378,9 @@
       "group": "card_issuer",
       "share_of_all_attempts": 0.025,
       "expected_attempts_mean_window": 3.1,
-      "expected_attempts_peak_window": 9.4,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 7.9,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     },
     {
       "key": "card:card_network:Visa",
@@ -264,8 +389,9 @@
       "group": "card_network",
       "share_of_all_attempts": 0.125,
       "expected_attempts_mean_window": 15.6,
-      "expected_attempts_peak_window": 46.9,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 39.5,
+      "reaches_floor_at_peak": true,
+      "marginal_at_peak": false
     },
     {
       "key": "card:card_network:MasterCard",
@@ -274,8 +400,9 @@
       "group": "card_network",
       "share_of_all_attempts": 0.0625,
       "expected_attempts_mean_window": 7.8,
-      "expected_attempts_peak_window": 23.4,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 19.7,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "card:card_network:RuPay",
@@ -284,8 +411,9 @@
       "group": "card_network",
       "share_of_all_attempts": 0.0625,
       "expected_attempts_mean_window": 7.8,
-      "expected_attempts_peak_window": 23.4,
-      "reaches_floor_at_peak": true
+      "expected_attempts_peak_window": 19.7,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": true
     },
     {
       "key": "netbanking:nb_bank:HDFC",
@@ -294,8 +422,9 @@
       "group": "nb_bank",
       "share_of_all_attempts": 0.03,
       "expected_attempts_mean_window": 3.8,
-      "expected_attempts_peak_window": 11.2,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 9.5,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     },
     {
       "key": "netbanking:nb_bank:ICIC",
@@ -304,8 +433,9 @@
       "group": "nb_bank",
       "share_of_all_attempts": 0.024,
       "expected_attempts_mean_window": 3.0,
-      "expected_attempts_peak_window": 9.0,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 7.6,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     },
     {
       "key": "netbanking:nb_bank:SBIN",
@@ -314,8 +444,9 @@
       "group": "nb_bank",
       "share_of_all_attempts": 0.022,
       "expected_attempts_mean_window": 2.8,
-      "expected_attempts_peak_window": 8.2,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 6.9,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     },
     {
       "key": "netbanking:nb_bank:UTIB",
@@ -324,8 +455,9 @@
       "group": "nb_bank",
       "share_of_all_attempts": 0.014,
       "expected_attempts_mean_window": 1.8,
-      "expected_attempts_peak_window": 5.3,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 4.4,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     },
     {
       "key": "netbanking:nb_bank:PUNB",
@@ -334,8 +466,9 @@
       "group": "nb_bank",
       "share_of_all_attempts": 0.01,
       "expected_attempts_mean_window": 1.3,
-      "expected_attempts_peak_window": 3.8,
-      "reaches_floor_at_peak": false
+      "expected_attempts_peak_window": 3.2,
+      "reaches_floor_at_peak": false,
+      "marginal_at_peak": false
     }
   ]
 }

@@ -23,6 +23,8 @@ export interface RosterNode {
   expected_attempts_mean_window: number;
   expected_attempts_peak_window: number;
   reaches_floor_at_peak: boolean;
+  /** Within a quarter of the floor either side at peak, so it flips window to window. */
+  marginal_at_peak: boolean;
 }
 
 export const ROSTER = rosterData.nodes as RosterNode[];
