@@ -230,16 +230,16 @@
         ],
         "opened_at": 1786200180,
         "closed_at": null,
-        "status": "open",
+        "status": "escalated",
         "rules_cause": "issuer_outage",
         "llm_cause": "issuer_outage",
         "root_cause": "issuer_outage",
         "confidence": 0.95,
         "at_risk_amount": 2104883,
         "recovered_amount": 0,
-        "cases": 81,
-        "actions": 26,
-        "escalated": false
+        "cases": 112,
+        "actions": 1,
+        "escalated": true
       }
     ],
     "series": [
@@ -928,7 +928,7 @@
       "attempts_last_hour": 4808,
       "success_rate": 0.8111480865224625,
       "at_risk_amount": 2104883,
-      "recovered_amount": 11868711
+      "recovered_amount": 0
     }
   },
   "GET /api/incidents/{id}": {
@@ -942,16 +942,16 @@
       ],
       "opened_at": 1786200180,
       "closed_at": null,
-      "status": "open",
+      "status": "escalated",
       "rules_cause": "issuer_outage",
       "llm_cause": "issuer_outage",
       "root_cause": "issuer_outage",
       "confidence": 0.95,
       "at_risk_amount": 2104883,
       "recovered_amount": 0,
-      "cases": 81,
-      "actions": 26,
-      "escalated": false
+      "cases": 112,
+      "actions": 1,
+      "escalated": true
     },
     "evidence": {
       "affected_scope": [
@@ -1054,1851 +1054,40 @@
     "plan": {
       "proposed": [
         {
-          "params": {},
-          "scope": "only_failing_method",
-          "type": "STEER_METHOD"
-        },
-        {
-          "params": {},
-          "scope": "consented_with_alternate",
-          "type": "SEND_RECOVERY_LINK"
+          "params": {
+            "reason": "planner failed: fixture provider has no response and no recorder"
+          },
+          "scope": "all_affected",
+          "type": "ESCALATE_HUMAN"
         }
       ],
-      "rationale": "The issuer is experiencing an outage. We will steer customers away from the failing UPI handle and provide recovery links to consented customers who have alternate payment methods available, allowing them to complete their payments.",
+      "rationale": "planner failed: fixture provider has no response and no recorder",
       "actions": [
         {
           "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00001",
-          "type": "STEER_METHOD",
+          "type": "ESCALATE_HUMAN",
           "case_id": null,
           "status": "executed",
-          "params": {},
-          "gate": [
-            {
-              "detail": "STEER_METHOD is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "kill switch off",
-              "passed": true,
-              "rule": "global.kill_switch_off"
-            },
-            {
-              "detail": "circuit breaker closed",
-              "passed": true,
-              "rule": "global.circuit_breaker_closed"
-            }
-          ],
+          "params": {
+            "reason": "planner failed: fixture provider has no response and no recorder"
+          },
+          "gate": [],
           "executed_at": 1786200180
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00002",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000091973",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000091973"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786458567 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason transaction_limit_exceeded",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786200180
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00003",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092101",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092101"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459052 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786200180
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00004",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092095",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092095"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459060 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786200180
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00005",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092177",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092177"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459270 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786200180
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00006",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092181",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092181"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459359 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786200180
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00007",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092193",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092193"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459361 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786200180
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00008",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092204",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092204"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459423 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201080
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00009",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092258",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092258"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459526 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201080
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00010",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092292",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092292"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459655 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201080
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00011",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092349",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092349"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459848 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201080
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00012",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092369",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092369"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459917 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201080
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00013",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092393",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092393"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459924 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201080
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00014",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092392",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092392"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459977 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201080
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00015",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092487",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092487"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786460187 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201080
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00016",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092530",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092530"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460359 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00017",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092537",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092537"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460404 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00018",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092556",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092556"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460418 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00019",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092545",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092545"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460425 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00020",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092555",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092555"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460430 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00021",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092584",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092584"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460560 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00022",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092733",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092733"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460967 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00023",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092724",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092724"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460988 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00024",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092747",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092747"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786461053 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00025",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092808",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092808"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786461124 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
-        },
-        {
-          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00026",
-          "type": "SEND_RECOVERY_LINK",
-          "case_id": "case_order_sim000000092798",
-          "status": "deferred",
-          "params": {
-            "case_id": "case_order_sim000000092798"
-          },
-          "gate": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786461166 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason insufficient_funds",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "executed_at": 1786201980
         }
       ]
     },
     "cases": [
+      {
+        "id": "case_order_sim000000089394",
+        "order_id": "order_sim000000089394",
+        "ref_hash": "5f7b11d354d9",
+        "amount": 93390,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
       {
         "id": "case_order_sim000000090994",
         "order_id": "order_sim000000090994",
@@ -2926,7 +1115,7 @@
         "order_id": "order_sim000000091973",
         "ref_hash": "bd0fc2ddf9cd",
         "amount": 45233,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -2977,11 +1166,22 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092088",
+        "order_id": "order_sim000000092088",
+        "ref_hash": "679ec4fd8813",
+        "amount": 88562,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092095",
         "order_id": "order_sim000000092095",
         "ref_hash": "cd55c6b3b56b",
         "amount": 158560,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3003,7 +1203,7 @@
         "order_id": "order_sim000000092101",
         "ref_hash": "e0151592946b",
         "amount": 286373,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3036,6 +1236,17 @@
         "order_id": "order_sim000000092136",
         "ref_hash": "f68ee189bc2b",
         "amount": 68563,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092154",
+        "order_id": "order_sim000000092154",
+        "ref_hash": "15901403b9f1",
+        "amount": 67505,
         "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
@@ -3080,7 +1291,7 @@
         "order_id": "order_sim000000092177",
         "ref_hash": "1dac792e058f",
         "amount": 63195,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3091,7 +1302,7 @@
         "order_id": "order_sim000000092181",
         "ref_hash": "42e5d9da87d5",
         "amount": 207489,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3109,11 +1320,22 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092191",
+        "order_id": "order_sim000000092191",
+        "ref_hash": "583ec6240b38",
+        "amount": 302243,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092193",
         "order_id": "order_sim000000092193",
         "ref_hash": "7d6bbf438dae",
         "amount": 131681,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3124,7 +1346,7 @@
         "order_id": "order_sim000000092204",
         "ref_hash": "c005b1978cea",
         "amount": 80279,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3135,6 +1357,28 @@
         "order_id": "order_sim000000092205",
         "ref_hash": "c060c874d5cb",
         "amount": 110784,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092207",
+        "order_id": "order_sim000000092207",
+        "ref_hash": "632e5d15ebb6",
+        "amount": 157237,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092244",
+        "order_id": "order_sim000000092244",
+        "ref_hash": "502c96dda7ad",
+        "amount": 90332,
         "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
@@ -3179,7 +1423,7 @@
         "order_id": "order_sim000000092258",
         "ref_hash": "9bd308d91078",
         "amount": 95043,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3197,11 +1441,44 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092280",
+        "order_id": "order_sim000000092280",
+        "ref_hash": "5fbc7ab183bb",
+        "amount": 112993,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092283",
+        "order_id": "order_sim000000092283",
+        "ref_hash": "5fbc7ab183bb",
+        "amount": 157331,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092292",
         "order_id": "order_sim000000092292",
         "ref_hash": "1bbe2cfa0188",
         "amount": 175655,
-        "state": "DEFERRED",
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092302",
+        "order_id": "order_sim000000092302",
+        "ref_hash": "60c4f154b2d8",
+        "amount": 52734,
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3241,11 +1518,22 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092348",
+        "order_id": "order_sim000000092348",
+        "ref_hash": "077d204955cc",
+        "amount": 57070,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092349",
         "order_id": "order_sim000000092349",
         "ref_hash": "b8df12f652ea",
         "amount": 51738,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3278,7 +1566,18 @@
         "order_id": "order_sim000000092369",
         "ref_hash": "9b1ad8ecf27d",
         "amount": 116336,
-        "state": "DEFERRED",
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092378",
+        "order_id": "order_sim000000092378",
+        "ref_hash": "921f5557a179",
+        "amount": 109211,
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3311,7 +1610,7 @@
         "order_id": "order_sim000000092392",
         "ref_hash": "8847f6dfdd14",
         "amount": 106655,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3322,7 +1621,7 @@
         "order_id": "order_sim000000092393",
         "ref_hash": "7be653440983",
         "amount": 301316,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3340,10 +1639,43 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092416",
+        "order_id": "order_sim000000092416",
+        "ref_hash": "a0ccbe7b5917",
+        "amount": 335592,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092419",
+        "order_id": "order_sim000000092419",
+        "ref_hash": "68ca6350a527",
+        "amount": 74078,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092423",
         "order_id": "order_sim000000092423",
         "ref_hash": "a0edaa6646b1",
         "amount": 63722,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092424",
+        "order_id": "order_sim000000092424",
+        "ref_hash": "1166b9f4d389",
+        "amount": 185459,
         "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
@@ -3373,6 +1705,17 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092432",
+        "order_id": "order_sim000000092432",
+        "ref_hash": "03a1fcd8ef31",
+        "amount": 131336,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092452",
         "order_id": "order_sim000000092452",
         "ref_hash": "7a8256ea02c5",
@@ -3388,6 +1731,28 @@
         "order_id": "order_sim000000092469",
         "ref_hash": "419bf6ff53e7",
         "amount": 80775,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092473",
+        "order_id": "order_sim000000092473",
+        "ref_hash": "a0af613d4aa7",
+        "amount": 75461,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092474",
+        "order_id": "order_sim000000092474",
+        "ref_hash": "4cf6ed853d63",
+        "amount": 108445,
         "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
@@ -3417,11 +1782,44 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092481",
+        "order_id": "order_sim000000092481",
+        "ref_hash": "0adf4c146e84",
+        "amount": 199382,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092484",
+        "order_id": "order_sim000000092484",
+        "ref_hash": "96c5fed34e6d",
+        "amount": 82618,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092487",
         "order_id": "order_sim000000092487",
         "ref_hash": "6f93d0d78855",
         "amount": 55599,
-        "state": "DEFERRED",
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092505",
+        "order_id": "order_sim000000092505",
+        "ref_hash": "085a25c639b2",
+        "amount": 66439,
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3476,7 +1874,7 @@
         "order_id": "order_sim000000092530",
         "ref_hash": "7731ba6a50b0",
         "amount": 61652,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3487,7 +1885,7 @@
         "order_id": "order_sim000000092537",
         "ref_hash": "8ef6462eb58e",
         "amount": 467793,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3509,7 +1907,18 @@
         "order_id": "order_sim000000092545",
         "ref_hash": "c41043d32167",
         "amount": 67294,
-        "state": "DEFERRED",
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092553",
+        "order_id": "order_sim000000092553",
+        "ref_hash": "817a5b2478f5",
+        "amount": 135765,
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3520,7 +1929,7 @@
         "order_id": "order_sim000000092555",
         "ref_hash": "b9fc56e02af9",
         "amount": 74867,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3531,7 +1940,7 @@
         "order_id": "order_sim000000092556",
         "ref_hash": "2d746fa93287",
         "amount": 199867,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3542,7 +1951,18 @@
         "order_id": "order_sim000000092584",
         "ref_hash": "52a06890e7e8",
         "amount": 197323,
-        "state": "DEFERRED",
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092594",
+        "order_id": "order_sim000000092594",
+        "ref_hash": "eddbee1b1390",
+        "amount": 165403,
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3553,6 +1973,17 @@
         "order_id": "order_sim000000092606",
         "ref_hash": "029502dc45d1",
         "amount": 55194,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092610",
+        "order_id": "order_sim000000092610",
+        "ref_hash": "4cf6ed853d63",
+        "amount": 181337,
         "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
@@ -3582,10 +2013,43 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092627",
+        "order_id": "order_sim000000092627",
+        "ref_hash": "11e0f0ae4a6f",
+        "amount": 97317,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092633",
         "order_id": "order_sim000000092633",
         "ref_hash": "bdfec755b04e",
         "amount": 60351,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092635",
+        "order_id": "order_sim000000092635",
+        "ref_hash": "47533bfc4234",
+        "amount": 54928,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092648",
+        "order_id": "order_sim000000092648",
+        "ref_hash": "ab71c47973f6",
+        "amount": 31234,
         "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
@@ -3659,10 +2123,32 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092690",
+        "order_id": "order_sim000000092690",
+        "ref_hash": "5f61732dfb3a",
+        "amount": 198172,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092702",
         "order_id": "order_sim000000092702",
         "ref_hash": "36a337925ca1",
         "amount": 79985,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092718",
+        "order_id": "order_sim000000092718",
+        "ref_hash": "84c51034403d",
+        "amount": 111532,
         "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
@@ -3685,7 +2171,7 @@
         "order_id": "order_sim000000092724",
         "ref_hash": "1eb23123a7a1",
         "amount": 111468,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3707,7 +2193,7 @@
         "order_id": "order_sim000000092733",
         "ref_hash": "e29ecd7fa3ec",
         "amount": 147285,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3718,7 +2204,7 @@
         "order_id": "order_sim000000092747",
         "ref_hash": "0b0c91641a46",
         "amount": 82375,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3729,6 +2215,17 @@
         "order_id": "order_sim000000092761",
         "ref_hash": "a99471921885",
         "amount": 230464,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092772",
+        "order_id": "order_sim000000092772",
+        "ref_hash": "6b1f37a2ea9b",
+        "amount": 263228,
         "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
@@ -3769,11 +2266,33 @@
         "outcome": null
       },
       {
+        "id": "case_order_sim000000092791",
+        "order_id": "order_sim000000092791",
+        "ref_hash": "00aefcf753de",
+        "amount": 71198,
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
         "id": "case_order_sim000000092798",
         "order_id": "order_sim000000092798",
         "ref_hash": "d8d6f698eb97",
         "amount": 132799,
-        "state": "DEFERRED",
+        "state": "DETECTED",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": null
+      },
+      {
+        "id": "case_order_sim000000092807",
+        "order_id": "order_sim000000092807",
+        "ref_hash": "0c2439c044a8",
+        "amount": 242267,
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3784,7 +2303,7 @@
         "order_id": "order_sim000000092808",
         "ref_hash": "84eb8c2604d9",
         "amount": 237089,
-        "state": "DEFERRED",
+        "state": "DETECTED",
         "nudges": 0,
         "link_id": null,
         "next_action_at": null,
@@ -3919,34 +2438,31 @@
         "kind": "decide.plan",
         "ref_type": "incident",
         "ref_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-        "hash": "a47bbe77695c",
+        "hash": "d6f49449ff9c",
         "payload": {
           "eligibility": {
-            "above_value_threshold": 5,
-            "affected_orders": 19,
-            "consented": 12,
-            "consented_with_alternate": 6,
+            "above_value_threshold": 6,
+            "affected_orders": 22,
+            "consented": 13,
+            "consented_with_alternate": 7,
             "hard_declined": 0,
             "opted_out": 0,
-            "unpaid_orders": 19
+            "unpaid_orders": 22
           },
           "plan": {
             "actions": [
               {
-                "params": {},
-                "scope": "only_failing_method",
-                "type": "STEER_METHOD"
-              },
-              {
-                "params": {},
-                "scope": "consented_with_alternate",
-                "type": "SEND_RECOVERY_LINK"
+                "params": {
+                  "reason": "planner failed: fixture provider has no response and no recorder"
+                },
+                "scope": "all_affected",
+                "type": "ESCALATE_HUMAN"
               }
             ],
             "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-            "rationale": "The issuer is experiencing an outage. We will steer customers away from the failing UPI handle and provide recovery links to consented customers who have alternate payment methods available, allowing them to complete their payments."
+            "rationale": "planner failed: fixture provider has no response and no recorder"
           },
-          "planner_error": null
+          "planner_error": "fixture provider has no response and no recorder"
         }
       },
       {
@@ -3955,2980 +2471,34 @@
         "kind": "execute.action.executed",
         "ref_type": "action",
         "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00001",
-        "hash": "519e2ee616e8",
+        "hash": "194f722b73d9",
         "payload": {
           "case_id": null,
-          "gates": [
-            {
-              "detail": "STEER_METHOD is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "kill switch off",
-              "passed": true,
-              "rule": "global.kill_switch_off"
-            },
-            {
-              "detail": "circuit breaker closed",
-              "passed": true,
-              "rule": "global.circuit_breaker_closed"
-            }
-          ],
+          "gates": [],
           "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {},
-          "type": "STEER_METHOD"
+          "params": {
+            "reason": "planner failed: fixture provider has no response and no recorder"
+          },
+          "type": "ESCALATE_HUMAN"
         }
       },
       {
         "seq": 7,
         "ts": 1786200180,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00002",
-        "hash": "f974c5f767a8",
+        "kind": "escalation.opened",
+        "ref_type": "escalation",
+        "ref_id": "esc_inc_upi_upi_handle_okhdfcbank_1786200180_000",
+        "hash": "10dfd34ddd17",
         "payload": {
-          "case_id": "case_order_sim000000091973",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786458567 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason transaction_limit_exceeded",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
           "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000091973"
+          "proposed_action": {
+            "params": {
+              "reason": "planner failed: fixture provider has no response and no recorder"
+            },
+            "scope": "all_affected",
+            "type": "ESCALATE_HUMAN"
           },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 8,
-        "ts": 1786200180,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00003",
-        "hash": "d56edf4fe253",
-        "payload": {
-          "case_id": "case_order_sim000000092101",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459052 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092101"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 9,
-        "ts": 1786200180,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00004",
-        "hash": "1672cfe0cdd4",
-        "payload": {
-          "case_id": "case_order_sim000000092095",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459060 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092095"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 10,
-        "ts": 1786200180,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00005",
-        "hash": "245f4361a77c",
-        "payload": {
-          "case_id": "case_order_sim000000092177",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459270 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092177"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 11,
-        "ts": 1786200180,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00006",
-        "hash": "5a4f079b3ef8",
-        "payload": {
-          "case_id": "case_order_sim000000092181",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459359 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092181"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 12,
-        "ts": 1786200180,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00007",
-        "hash": "72051798c52f",
-        "payload": {
-          "case_id": "case_order_sim000000092193",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786200180 against TTL 1786459361 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092193"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 13,
-        "ts": 1786200456,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092207",
-        "hash": "122d39cb3b5b",
-        "payload": {
-          "amount": 157237,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 14,
-        "ts": 1786200579,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092244",
-        "hash": "99e69a5103f3",
-        "payload": {
-          "amount": 90332,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 15,
-        "ts": 1786200662,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092283",
-        "hash": "774fffd590bc",
-        "payload": {
-          "amount": 157331,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 16,
-        "ts": 1786200686,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092280",
-        "hash": "9ffeef3165fb",
-        "payload": {
-          "amount": 112993,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 17,
-        "ts": 1786200713,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092302",
-        "hash": "139815b9985c",
-        "payload": {
-          "amount": 52734,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 18,
-        "ts": 1786200968,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092378",
-        "hash": "268a67745647",
-        "payload": {
-          "amount": 109211,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 19,
-        "ts": 1786201027,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092419",
-        "hash": "d2b0383fa43e",
-        "payload": {
-          "amount": 74078,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 20,
-        "ts": 1786201215,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092473",
-        "hash": "963ce0610092",
-        "payload": {
-          "amount": 75461,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 21,
-        "ts": 1786201231,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092481",
-        "hash": "2635baa0f2dd",
-        "payload": {
-          "amount": 199382,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 22,
-        "ts": 1786201241,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092484",
-        "hash": "1a246bf0991f",
-        "payload": {
-          "amount": 82618,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 23,
-        "ts": 1786201245,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092474",
-        "hash": "d2bce632a907",
-        "payload": {
-          "amount": 108445,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 24,
-        "ts": 1786201270,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092505",
-        "hash": "cac5aeeee8f0",
-        "payload": {
-          "amount": 66439,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 25,
-        "ts": 1786201454,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092553",
-        "hash": "bf09b72d65c8",
-        "payload": {
-          "amount": 135765,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 26,
-        "ts": 1786201575,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092594",
-        "hash": "3bc17a48d59e",
-        "payload": {
-          "amount": 165403,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 27,
-        "ts": 1786201673,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092610",
-        "hash": "72f9347d17e5",
-        "payload": {
-          "amount": 181337,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 28,
-        "ts": 1786201674,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092627",
-        "hash": "ef3582a69137",
-        "payload": {
-          "amount": 97317,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 29,
-        "ts": 1786201733,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092635",
-        "hash": "cd13b2bfadf5",
-        "payload": {
-          "amount": 54928,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 30,
-        "ts": 1786201748,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092648",
-        "hash": "acbfa1574706",
-        "payload": {
-          "amount": 31234,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 31,
-        "ts": 1786201875,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092690",
-        "hash": "3c97eb01e345",
-        "payload": {
-          "amount": 198172,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 32,
-        "ts": 1786202111,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092772",
-        "hash": "56b3adfd3c28",
-        "payload": {
-          "amount": 263228,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 33,
-        "ts": 1786202138,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092791",
-        "hash": "b554665bba6f",
-        "payload": {
-          "amount": 71198,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 34,
-        "ts": 1786202284,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092836",
-        "hash": "8c16ce9a4dae",
-        "payload": {
-          "amount": 147848,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 35,
-        "ts": 1786202357,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092870",
-        "hash": "2c5039d0a5ec",
-        "payload": {
-          "amount": 67455,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 36,
-        "ts": 1786202496,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092906",
-        "hash": "e60bd66fa5f7",
-        "payload": {
-          "amount": 125303,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 37,
-        "ts": 1786202504,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092920",
-        "hash": "1b9e6f2b29c3",
-        "payload": {
-          "amount": 95783,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 38,
-        "ts": 1786202515,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092911",
-        "hash": "1491f82cf2bc",
-        "payload": {
-          "amount": 53988,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 39,
-        "ts": 1786202524,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092933",
-        "hash": "4feac0f54fe8",
-        "payload": {
-          "amount": 469955,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 40,
-        "ts": 1786202610,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092951",
-        "hash": "bf0dbd97a34d",
-        "payload": {
-          "amount": 70671,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 41,
-        "ts": 1786202642,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092979",
-        "hash": "d0d6f2ff1b5b",
-        "payload": {
-          "amount": 117626,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 42,
-        "ts": 1786202692,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092963",
-        "hash": "c29c97693e85",
-        "payload": {
-          "amount": 48970,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 43,
-        "ts": 1786202694,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000092969",
-        "hash": "9fb7c637998e",
-        "payload": {
-          "amount": 55746,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 44,
-        "ts": 1786202722,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093008",
-        "hash": "54ad82e96847",
-        "payload": {
-          "amount": 70503,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 45,
-        "ts": 1786202894,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093068",
-        "hash": "f4006cd2f11e",
-        "payload": {
-          "amount": 180558,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 46,
-        "ts": 1786203016,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093127",
-        "hash": "9cf8b5025e44",
-        "payload": {
-          "amount": 281708,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 47,
-        "ts": 1786203056,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093118",
-        "hash": "e0ac6f3203df",
-        "payload": {
-          "amount": 83879,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 48,
-        "ts": 1786203300,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093206",
-        "hash": "aa0ce7beac14",
-        "payload": {
-          "amount": 46085,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 49,
-        "ts": 1786203318,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093207",
-        "hash": "36127aadd846",
-        "payload": {
-          "amount": 390691,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 50,
-        "ts": 1786203319,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093213",
-        "hash": "58d29cfe8610",
-        "payload": {
-          "amount": 370568,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 51,
-        "ts": 1786203321,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093219",
-        "hash": "8ede9cf43796",
-        "payload": {
-          "amount": 309224,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 52,
-        "ts": 1786203386,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093222",
-        "hash": "cdff7651b175",
-        "payload": {
-          "amount": 86254,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 53,
-        "ts": 1786203404,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093239",
-        "hash": "e20a6f9ff47c",
-        "payload": {
-          "amount": 282056,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 54,
-        "ts": 1786203549,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093278",
-        "hash": "8111cfd19576",
-        "payload": {
-          "amount": 227152,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 55,
-        "ts": 1786203558,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093294",
-        "hash": "33f99decf4d7",
-        "payload": {
-          "amount": 119357,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 56,
-        "ts": 1786203654,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093313",
-        "hash": "e6ec8a8f36de",
-        "payload": {
-          "amount": 66546,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 57,
-        "ts": 1786203661,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093322",
-        "hash": "c5902ce2de2d",
-        "payload": {
-          "amount": 387192,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 58,
-        "ts": 1786203770,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093359",
-        "hash": "004532214d9c",
-        "payload": {
-          "amount": 247277,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 59,
-        "ts": 1786203809,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093382",
-        "hash": "91bcf0267b2f",
-        "payload": {
-          "amount": 77239,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 60,
-        "ts": 1786204018,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093436",
-        "hash": "af26a8ba18a9",
-        "payload": {
-          "amount": 203955,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 61,
-        "ts": 1786204134,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093476",
-        "hash": "300170af95df",
-        "payload": {
-          "amount": 168036,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 62,
-        "ts": 1786204216,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093527",
-        "hash": "6d1308d2d929",
-        "payload": {
-          "amount": 143286,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 63,
-        "ts": 1786204290,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093546",
-        "hash": "3f00eacf805b",
-        "payload": {
-          "amount": 34908,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 64,
-        "ts": 1786204334,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093555",
-        "hash": "f068dae8c51a",
-        "payload": {
-          "amount": 89006,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 65,
-        "ts": 1786204338,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093553",
-        "hash": "53a2d4450cbd",
-        "payload": {
-          "amount": 225599,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 66,
-        "ts": 1786204408,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093585",
-        "hash": "9ac592c78f10",
-        "payload": {
-          "amount": 55011,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 67,
-        "ts": 1786204416,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093573",
-        "hash": "62fe184ea153",
-        "payload": {
-          "amount": 66553,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 68,
-        "ts": 1786204480,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093598",
-        "hash": "4fb4365fffee",
-        "payload": {
-          "amount": 247675,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 69,
-        "ts": 1786204487,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093600",
-        "hash": "5ea2def2572e",
-        "payload": {
-          "amount": 46614,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 70,
-        "ts": 1786204491,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093590",
-        "hash": "feecc0be5407",
-        "payload": {
-          "amount": 37399,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 71,
-        "ts": 1786204559,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093631",
-        "hash": "c38771ab126c",
-        "payload": {
-          "amount": 113922,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 72,
-        "ts": 1786204622,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093676",
-        "hash": "6754af78c8bf",
-        "payload": {
-          "amount": 109184,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 73,
-        "ts": 1786204651,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093675",
-        "hash": "10450277f70d",
-        "payload": {
-          "amount": 86135,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 74,
-        "ts": 1786204770,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093722",
-        "hash": "9585be8df219",
-        "payload": {
-          "amount": 38826,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 75,
-        "ts": 1786204780,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093708",
-        "hash": "333fefb4d2d5",
-        "payload": {
-          "amount": 233357,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 76,
-        "ts": 1786204802,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093744",
-        "hash": "abb5cbe895f2",
-        "payload": {
-          "amount": 77953,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 77,
-        "ts": 1786204943,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093785",
-        "hash": "bcebe7d7b9e0",
-        "payload": {
-          "amount": 240623,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 78,
-        "ts": 1786204946,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093773",
-        "hash": "c7bc0d121c53",
-        "payload": {
-          "amount": 76833,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 79,
-        "ts": 1786205033,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093799",
-        "hash": "ddb61e4193a5",
-        "payload": {
-          "amount": 68008,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 80,
-        "ts": 1786205049,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093820",
-        "hash": "e0d4b37f76ba",
-        "payload": {
-          "amount": 210884,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 81,
-        "ts": 1786205284,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093919",
-        "hash": "2aa3a5caaddd",
-        "payload": {
-          "amount": 200509,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 82,
-        "ts": 1786205375,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000093936",
-        "hash": "a4ff1d8420de",
-        "payload": {
-          "amount": 267197,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 83,
-        "ts": 1786206347,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000094261",
-        "hash": "309b856e34a4",
-        "payload": {
-          "amount": 239797,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 84,
-        "ts": 1786206747,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000094420",
-        "hash": "c8ce970b5b27",
-        "payload": {
-          "amount": 179409,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 85,
-        "ts": 1786207295,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000094568",
-        "hash": "6f9b90c4d0ff",
-        "payload": {
-          "amount": 235868,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 86,
-        "ts": 1786207476,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000094631",
-        "hash": "a516954e8962",
-        "payload": {
-          "amount": 175637,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 87,
-        "ts": 1786207632,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000094690",
-        "hash": "df328e6cc3fc",
-        "payload": {
-          "amount": 186805,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 88,
-        "ts": 1786207840,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000094725",
-        "hash": "435f1c2be7a5",
-        "payload": {
-          "amount": 137464,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 89,
-        "ts": 1786210782,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000095551",
-        "hash": "9b5ce769522c",
-        "payload": {
-          "amount": 113567,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 90,
-        "ts": 1786211097,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000095609",
-        "hash": "b4299e089e55",
-        "payload": {
-          "amount": 51039,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 91,
-        "ts": 1786211464,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000095676",
-        "hash": "1b5b5216c9a3",
-        "payload": {
-          "amount": 365047,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 92,
-        "ts": 1786211510,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000095672",
-        "hash": "899389cc3363",
-        "payload": {
-          "amount": 75104,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 93,
-        "ts": 1786211855,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000095730",
-        "hash": "bd721eccc052",
-        "payload": {
-          "amount": 173278,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 94,
-        "ts": 1786212103,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000095766",
-        "hash": "b9554345c77c",
-        "payload": {
-          "amount": 45631,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 95,
-        "ts": 1786213166,
-        "kind": "execute.steer_recovered",
-        "ref_type": "order",
-        "ref_id": "order_sim000000095954",
-        "hash": "2b2377ddee46",
-        "payload": {
-          "amount": 70920,
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180"
-        }
-      },
-      {
-        "seq": 96,
-        "ts": 1786201080,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00008",
-        "hash": "15760c234048",
-        "payload": {
-          "case_id": "case_order_sim000000092204",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459423 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092204"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 97,
-        "ts": 1786201080,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00009",
-        "hash": "6f26a34e8fcd",
-        "payload": {
-          "case_id": "case_order_sim000000092258",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459526 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092258"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 98,
-        "ts": 1786201080,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00010",
-        "hash": "9c24dbb68183",
-        "payload": {
-          "case_id": "case_order_sim000000092292",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459655 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092292"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 99,
-        "ts": 1786201080,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00011",
-        "hash": "4fe3e2b1f806",
-        "payload": {
-          "case_id": "case_order_sim000000092349",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459848 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092349"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 100,
-        "ts": 1786201080,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00012",
-        "hash": "0bbeb6b4c8d4",
-        "payload": {
-          "case_id": "case_order_sim000000092369",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459917 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092369"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 101,
-        "ts": 1786201080,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00013",
-        "hash": "a48ac7e9dd20",
-        "payload": {
-          "case_id": "case_order_sim000000092393",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459924 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092393"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 102,
-        "ts": 1786201080,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00014",
-        "hash": "18fc4274d872",
-        "payload": {
-          "case_id": "case_order_sim000000092392",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786459977 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092392"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 103,
-        "ts": 1786201080,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00015",
-        "hash": "c3f3e64bd7ec",
-        "payload": {
-          "case_id": "case_order_sim000000092487",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201080 against TTL 1786460187 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092487"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 104,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00016",
-        "hash": "c75fe1eb7adb",
-        "payload": {
-          "case_id": "case_order_sim000000092530",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460359 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092530"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 105,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00017",
-        "hash": "33a5f0a52162",
-        "payload": {
-          "case_id": "case_order_sim000000092537",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460404 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092537"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 106,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00018",
-        "hash": "ce3fb03b1126",
-        "payload": {
-          "case_id": "case_order_sim000000092556",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460418 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092556"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 107,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00019",
-        "hash": "e8e607d93b0c",
-        "payload": {
-          "case_id": "case_order_sim000000092545",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460425 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092545"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 108,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00020",
-        "hash": "aafebb55aa96",
-        "payload": {
-          "case_id": "case_order_sim000000092555",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460430 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason payment_declined",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092555"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 109,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00021",
-        "hash": "c56e550106c8",
-        "payload": {
-          "case_id": "case_order_sim000000092584",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460560 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092584"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 110,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00022",
-        "hash": "6d9a1ccb6f63",
-        "payload": {
-          "case_id": "case_order_sim000000092733",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460967 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092733"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 111,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00023",
-        "hash": "04a666e119fa",
-        "payload": {
-          "case_id": "case_order_sim000000092724",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786460988 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092724"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 112,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00024",
-        "hash": "14d336139ff9",
-        "payload": {
-          "case_id": "case_order_sim000000092747",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786461053 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092747"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 113,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00025",
-        "hash": "542f4dfdb864",
-        "payload": {
-          "case_id": "case_order_sim000000092808",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786461124 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason bank_technical_error",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092808"
-          },
-          "type": "SEND_RECOVERY_LINK"
-        }
-      },
-      {
-        "seq": 114,
-        "ts": 1786201980,
-        "kind": "execute.action.deferred",
-        "ref_type": "action",
-        "ref_id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00026",
-        "hash": "30cf4523f91d",
-        "payload": {
-          "case_id": "case_order_sim000000092798",
-          "gates": [
-            {
-              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
-              "passed": true,
-              "rule": "matrix.action_allowed_for_cause"
-            },
-            {
-              "detail": "confidence 0.95 against threshold 0.6",
-              "passed": true,
-              "rule": "matrix.confidence_threshold"
-            },
-            {
-              "detail": "order is unpaid",
-              "passed": true,
-              "rule": "case.order_unpaid"
-            },
-            {
-              "detail": "no open link for this order, one will be created",
-              "passed": true,
-              "rule": "case.single_open_link"
-            },
-            {
-              "detail": "case state DETECTED",
-              "passed": true,
-              "rule": "case.not_terminal"
-            },
-            {
-              "detail": "now 1786201980 against TTL 1786461166 (72 hours from order creation)",
-              "passed": true,
-              "rule": "case.within_ttl"
-            },
-            {
-              "detail": "last attempt reason insufficient_funds",
-              "passed": true,
-              "rule": "case.no_hard_decline"
-            },
-            {
-              "detail": "consent=True",
-              "passed": true,
-              "rule": "customer.consent"
-            },
-            {
-              "detail": "customer has not opted out",
-              "passed": true,
-              "rule": "customer.not_opted_out"
-            },
-            {
-              "detail": "0 nudges this incident, cap 2",
-              "passed": true,
-              "rule": "customer.incident_cap"
-            },
-            {
-              "detail": "0 nudges in 7 days, cap 3",
-              "passed": true,
-              "rule": "customer.rolling_7_day_cap"
-            },
-            {
-              "detail": "the customer's method is still degraded, converting to DEFER_UNTIL_RECOVERED",
-              "passed": false,
-              "rule": "timing.method_not_still_degraded"
-            }
-          ],
-          "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
-          "params": {
-            "case_id": "case_order_sim000000092798"
-          },
-          "type": "SEND_RECOVERY_LINK"
+          "reason": "planner failed: fixture provider has no response and no recorder"
         }
       }
     ]

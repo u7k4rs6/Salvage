@@ -1997,3 +1997,35 @@ behaviour change. Nothing in `salvage/` was touched.
   `tests/` is outside the freeze's "no code, no parameter, no simulator constant" wording but is
   still a change after the freeze commit, so it is recorded here rather than made quietly. It adds
   one test and no dependency.
+
+## 2026-08-26, branch ui/board leaves the freeze
+
+Every entry above this one holds for `master`, which is still frozen at `e92a71c` and still
+produces `docs/RESULTS.md`. This entry records that branch `ui/board` no longer does.
+
+- **`_open_cases` was reading the future, and it is fixed on this branch.** The full account is
+  entry 14 in `docs/WHAT_BROKE.md`. In short: the agent's case-opening path decided "already paid"
+  from the status column, which in a completed simulation is the whole run's outcome available from
+  the first minute, so the agent declined to open cases for the customers who were about to come
+  back on their own. The baseline path has called `_paid_by` since M2. The agent path did not. Over
+  S1 seed 1 the agent worked 194 cases where the honest count is 300.
+
+  This is a code change inside `salvage/`, which the freeze forbids. It was made because the
+  defect is asymmetric between the agent and the baselines it is measured against, and a frozen
+  wrong comparison is worse than an unfrozen right one. `master` is untouched.
+
+- **`docs/RESULTS.md` is not reproducible from this branch, and a re-sweep alone will not fix
+  that.** The planner prompt carries the eligibility counts. The counts changed, so all 81 recorded
+  planner fixtures are keyed on prompt hashes that no longer occur, and the agent escalates on the
+  resulting LLM error instead of planning. Measured, S1 seed 1: 0.429 at-risk recovery before, 0.174
+  after, with zero messages. The second number measures an agent with no planner and is not
+  reportable.
+
+  Regenerating on this branch needs the planner fixtures re-recorded against a live model. That is
+  a spend and a provenance decision, not a command, and it has not been made. Until it is, the
+  numbers in `docs/RESULTS.md` belong to `e92a71c` and the document says which commit it describes.
+
+- **What is guarding it now.** Three tests in `tests/unit/test_agent_loop.py`: an order paid later
+  still gets a case, an order already paid does not, and a source check that no case path decides
+  paid by comparing the status column. The third exists because this regression is one line and has
+  now happened twice. All three were confirmed to fail against the old line before being kept.

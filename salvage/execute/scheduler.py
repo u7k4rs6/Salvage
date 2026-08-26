@@ -441,15 +441,20 @@ class AgentRunner:
             args.append(value)
 
         rows = self._conn.execute(
-            "SELECT DISTINCT a.order_id, a.customer_id, o.amount, o.created_at, o.status "
-            "FROM v_payment_attempts a JOIN v_orders o ON o.id = a.order_id "
+            "SELECT DISTINCT a.order_id, a.customer_id, o.amount, o.created_at, o.status, "
+            "o.paid_at FROM v_payment_attempts a JOIN v_orders o ON o.id = a.order_id "
             "WHERE " + " AND ".join(conditions),
             tuple(args),
         ).fetchall()
 
         cases: list[dict[str, Any]] = []
         for row in rows:
-            if row["status"] == "paid":
+            # `_paid_by`, not `status == "paid"`. The status column carries the whole run's
+            # outcome from the first minute, so reading it here skipped exactly the customers who
+            # were about to come back on their own, which is the failure `_paid_by` was written
+            # to prevent. The baseline path has always called it; this one did not, so the agent
+            # worked a smaller population than B1 and B2 over the same world.
+            if _paid_by(dict(row), now):
                 continue
             if repo.get_case_for_order(self._conn, str(row["order_id"])) is not None:
                 continue

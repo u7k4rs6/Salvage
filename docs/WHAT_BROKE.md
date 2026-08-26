@@ -25,6 +25,10 @@ This is the single worst bug in the project. It made every arm look better than 
 so in a way that no unit test on any component would have caught, because every component was
 behaving correctly. The frame was wrong.
 
+**It was not fully fixed. See entry 14.** The fix landed on `_open_case_for`, the path the
+baselines take, and on the `case.order_unpaid` gate. `_open_cases`, the path the agent takes, kept
+reading the status column for another seven milestones.
+
 ### 2. The baselines were getting the agent's steering for free
 
 The channel filled the alternate-method slot from `customers.alt_method` for every policy, so B1's
@@ -271,3 +275,64 @@ That is the argument for the two things this project spends the most effort on. 
 a decision that was recorded can be re-read later by someone who suspects the frame. And the
 insistence in `docs/RESULTS.md` on naming what is not measured, because the number you have not
 questioned is the one that will be wrong.
+
+## Found after the freeze
+
+### 14. The same bug as entry 1, in the one path entry 1 missed
+
+`_open_cases` in `salvage/execute/scheduler.py` decided whether an order was already paid with
+`if row["status"] == "paid": continue`. That is the exact comparison entry 1 is about, and
+`_paid_by`, sitting in the same file, carries a docstring that describes the consequence:
+
+> The agent runs over a completed simulation, so an order the customer will pay at 22:30 already
+> carries a paid status at 20:10, and a policy that read the status would be reading the future:
+> it would decline to act on exactly the customers who were about to come back.
+
+Entry 1's fix was applied where the bug was found rather than everywhere the pattern occurred. The
+baseline path, `_open_case_for`, has called `_paid_by` ever since. The agent path, 150 lines below
+it in the same class, never did.
+
+**It was asymmetric, which is what makes it worse than entry 1.** B1 and B2 opened cases for the
+customers who were about to come back. The agent did not. Over the same world, with the same
+detector and the same fault, the agent was working a smaller population than the arms it is
+compared against, and not because of any policy decision.
+
+Measured on S1 seed 1, agent arm, full run: **194 cases before the fix, 300 after.** On a capture
+stopped mid-incident at 20:45 sim time, 81 against 112. The 194 matches the `cases` field in the
+board fixture captured before any of this was known, which is how the two numbers were first seen
+side by side.
+
+Which direction it moved the tables is the part worth being careful about. The orders the agent
+skipped are by construction the ones that were about to be paid organically, so they were recovered
+either way and they landed in the agent's `organic` column. What the agent lost was the chance to
+convert them earlier by link or steer. So section 3's decomposition in `docs/RESULTS.md` understates
+the agent's `link` and `steer` columns and inflates its `organic` column, and the primary table
+understates the agent by an unknown amount. This is the rare one that did not flatter anybody.
+
+**How it was found, since it was not a test.** Trying to capture a dashboard fixture from a world
+stopped mid-incident. The simulator writes the whole day before the detector sees any of it, so a
+capture script deleted every row dated after the cutoff to make the database honest about what had
+happened yet. The case count then changed, 81 to 112, which changed the eligibility counts in the
+planner prompt, which missed its recorded fixture. Chasing that miss found this.
+
+Fixed by calling `_paid_by(dict(row), now)` and adding `o.paid_at` to the select, which the query
+was not fetching. Guarded by three tests: one that an order paid later still gets a case, one that
+an order already paid does not, and one that greps the file for the status comparison, because the
+shape of this regression is a single line and it has now happened twice.
+
+### What this costs, and it is not small
+
+`docs/RESULTS.md` was produced by the pre-fix code. This branch no longer reproduces it, and
+re-running `salvage eval run` is not enough to make it reproduce it.
+
+The planner prompt carries the eligibility counts, and the counts just changed, so every one of the
+81 recorded planner fixtures is keyed on a prompt hash that no longer occurs. With the fix in place
+and the old fixtures, the agent's planner call misses, the agent escalates on the LLM error exactly
+as designed, and S1 seed 1 falls from 0.429 to 0.174 at-risk recovery with zero messages sent. That
+number is a measurement of an agent with no planner. It is not a measurement of the fixed agent and
+must not be reported as one.
+
+Regenerating the results on this branch therefore needs the planner fixtures re-recorded against a
+live model, which is a spend and a provenance decision rather than a command to run. Until that
+happens, `docs/RESULTS.md` describes the frozen build at `e92a71c` and this branch's code does not
+produce it. The freeze note at the top of `docs/BUILD_LOG.md` still describes `master`.
