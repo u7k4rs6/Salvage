@@ -1,5 +1,19 @@
 # Salvage build log
 
+## FROZEN at commit e92a71c, 26 August 2026
+
+490 tests pass, ruff clean, secret scan clean, and the suite passes with no credentials in the
+environment. No code, no parameter and no simulator constant changed after this commit. The only
+commit that follows it is this note.
+
+The numbers in `docs/RESULTS.md` were produced by the sweep this commit contains, and every
+artifact under `data/results` was regenerated on this code, which `salvage eval report` enforces by
+refusing to write from an input older than the sweep. What is still open is recorded rather than
+fixed: the hybrid arm, the real Razorpay test-mode run, and the escalation-fix counterfactual, all
+listed under M8 below.
+
+---
+
 Dated entries from day one of coding. Each entry records a decision on an open item, a frozen
 threshold, or something that broke with what fixed it and what test now guards it. No em dashes or
 en dashes anywhere in this repository, by instruction.
