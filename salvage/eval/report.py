@@ -1015,6 +1015,33 @@ def _fix_crossover(
 
 def _limitations(inputs: ReportInputs) -> str:
     items = [
+        "**Two of the five scenarios key on payload fields that may not be present in production "
+        "Razorpay payloads.** This is the first limitation in this list for a reason. S2 detects "
+        "on `card_bin6` and S1 on `upi_handle`, and those are the primary segment keys for those "
+        "scenarios, not incidental details. Razorpay's published payment entity carries a card "
+        "object with id, entity, name, last4, network, type, issuer, international, emi, sub_type "
+        "and token_iin: there is no `iin`, and token_iin is null in the published sample and names "
+        "a network token rather than the card, so `card_bin` is None from a documented payload. "
+        "The webhook documentation publishes no payment.failed sample for UPI at all, and warns "
+        "twice that `vpa` must not be hardcoded and may not be present on a UPI failure, which is "
+        "exactly the event S1's detection depends on. Both were found by re-verifying the "
+        "checked-in fixtures against the live docs after an audit flagged the tests as circular; "
+        "the fixtures had cited those pages for shapes the pages do not contain.",
+        "**What that does and does not affect.** It affects no number in this document. The "
+        "simulator emits both fields and the detector reads them, so the measurement is internally "
+        "consistent and every comparison here is between policies facing the same payloads. What "
+        "it means is that the detector's segment keys would have to be re-derived against real "
+        "traffic before any of this ran in production, and that work has not been done.",
+        "**What the fallback would cost.** Without a BIN or a handle the finest available keys are "
+        "the ones the payload does carry: card network, card issuer, and the method itself. Those "
+        "are coarser, so the denominator for a given fault is larger and the excess failure rate "
+        "is diluted across healthy siblings, which by the operating envelope in section 7 means "
+        "later detection or none. The S2 note further down this list shows the shape of it: on "
+        "the two held-out seeds where the BIN key never clears the 20-attempt minimum, attribution "
+        "falls "
+        "back to `card` and detection slips from 5 to 8 sim minutes out to 11 and 16. That is the "
+        "same degradation a missing field would cause everywhere rather than on two seeds. Nothing "
+        "here is solved; it is measured on the cases where it happened by accident.",
         "**The escalation fix is modelled on the response side only.** The attempt stream is "
         "generated before any policy runs and is not rewritten, so payments the fault would have "
         "broken after a repair still fail in the recorded data and still count in the at-risk "
@@ -1026,21 +1053,6 @@ def _limitations(inputs: ReportInputs) -> str:
         "curve is available to the agent and to nobody else. A real merchant might notice a dead "
         "payment method without an agent telling them, so part of that column may belong to the "
         "merchant rather than to Salvage.",
-        "**The detector's card BIN key has no source in the documented payment entity.** "
-        "Razorpay's published payment entity carries a card object with id, entity, name, last4, "
-        "network, type, issuer, international, emi, sub_type and token_iin. There is no `iin`, and "
-        "token_iin is null in the published sample and is a network token rather than the card. "
-        "S2 detects a failing BIN range because the simulator supplies a BIN; a real deployment "
-        "would have to fetch it, and until it does, `card_bin6` is a segment key with nothing "
-        "behind it. This was found by re-verifying the checked-in fixtures against the live docs "
-        "after an audit flagged them as circular. The card fixture had asserted an `iin` field and "
-        "cited the docs page that does not contain one.",
-        "**The UPI handle may be absent on exactly the events that matter.** Razorpay's webhook "
-        "documentation publishes no payment.failed sample for UPI and warns twice that the vpa "
-        "parameter must not be hardcoded and may not be present on a UPI failure. Every "
-        "instrument-level UPI segment key in this project is derived from vpa, so S1's detection "
-        "premise depends on a field the payload is not guaranteed to carry. The normaliser "
-        "tolerates its absence; the detector simply has no key to fire on when it is missing.",
         "**The LLM column is one model on one day.** Every fixture was recorded from a single "
         "provider and model, listed at the top of this document. A different model, or the same "
         "model next month, is a different measurement. Nothing here is an accuracy claim about "

@@ -130,6 +130,21 @@ The steer conversion probability, the constant the S1 and S2 margins mostly rest
 0.25 to 0.65 in section 9. The win survives the whole range and narrows by about three quarters at
 the bottom of it.
 
+**Two of the five scenarios key on payload fields that may not be present in production Razorpay
+payloads.** S2 detects on `card_bin6` and S1 on `upi_handle`, and those are the primary segment
+keys for those scenarios. Razorpay's documented payment entity carries no `iin` on the card object,
+only a `token_iin` that is null in the published sample and names a network token rather than the
+card, so `card_bin` is None from a documented payload. The webhook docs publish no payment.failed
+sample for UPI at all and warn twice that `vpa` may be absent on a UPI failure, which is exactly
+the event S1 depends on.
+
+This affects no number above: the simulator emits both fields, the detector reads them, and every
+arm faces the same payloads. What it means is that the segment keys would have to be re-derived
+against real traffic before this ran in production, and that work has not been done. The fallback
+would be the coarser keys the payload does carry, card network, card issuer and the method itself,
+which enlarge the denominator and dilute the excess across healthy siblings, so by the operating
+envelope it means later detection or none. It is not solved.
+
 Zero policy violations across all 250 runs, and 45 fault injection attempts all refused.
 
 ## Documents

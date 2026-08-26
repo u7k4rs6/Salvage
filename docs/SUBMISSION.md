@@ -89,10 +89,18 @@ The ledger verifies offline through a script with no database access.
   run without test-mode credentials, which this build environment did not have.
 - A message costs nothing here but a 2.6 percent chance of an opt-out. No DLT registration, no
   sender reputation, no complaint cost.
-- The detector's `card_bin6` key has no source in Razorpay's documented payment entity, whose card
-  object carries no `iin`. S2 detects a failing BIN because the simulator supplies one.
-- Razorpay warns that `vpa` may be absent on a UPI failure, which is the event S1's
-  instrument-level detection depends on.
+- **Two of the five scenarios key on payload fields that may not be present in production Razorpay
+  payloads.** S2 detects on `card_bin6` and S1 on `upi_handle`, the primary segment keys for those
+  scenarios. The documented payment entity carries no `iin` on its card object, only a `token_iin`
+  that is null in the published sample and names a network token rather than the card, so
+  `card_bin` is None from a documented payload; and the webhook docs publish no payment.failed
+  sample for UPI at all while warning twice that `vpa` may be absent on exactly that event. This
+  affects no number reported here, because the simulator emits both fields and every arm faces the
+  same payloads, but the detector's segment keys would have to be re-derived against real traffic
+  before this ran in production, and that has not been done. The fallback is the coarser keys the
+  payload does carry, card network, card issuer and the method, which enlarge the denominator and
+  dilute the excess across healthy siblings, so by the operating envelope it buys later detection
+  or none. Not solved.
 - One model, one afternoon: every diagnosis fixture came from `gemini-2.5-flash`.
 - No hybrid arm. The best question a reviewer can ask is why a merchant should not simply run B1
   and let the agent suppress it inside incident scope, and this repository does not answer it.
