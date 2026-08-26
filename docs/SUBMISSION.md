@@ -51,15 +51,25 @@ simulator charges almost nothing for one, which flatters the baselines and not t
 
 ## Three results that went against us, kept because they are true
 
-**The language model's diagnosis accuracy is worth nothing here.** Over 41 incidents the rules
-classifier alone is right 90.2 percent of the time and the model-assisted diagnosis 97.6 percent.
-The `echo` column above is the agent with its model replaced by a stub that repeats the rules
-verdict; paired across ten seeds it is ahead on S1, behind on S2 and S3, identical on S4, and the
-four sum to roughly minus five thousand rupees. Every incident the rules get wrong they get wrong
-by answering `unknown`, and an unknown cause is allowed nothing but escalation, so both arms
-escalate the same incidents. The gate still earns its keep in the other direction: a model that
-returns a confident wrong cause recovers exactly what doing nothing recovers, because every action
-it proposes is refused.
+**On this workload the language model did not detectably contribute to recovery.** Over 41
+incidents the rules classifier alone is right 90.2 percent of the time and the model-assisted
+diagnosis 97.6 percent. The `echo` column above is the agent with its model replaced by a stub that
+repeats the rules verdict, everything else identical; paired across ten seeds it recovers 16,066
+rupees more on S1, 6,081 less on S2, 15,266 less on S3 and exactly the same on S4. The signs
+disagree, no scenario clears a paired t, and the four sum to roughly minus five thousand rupees.
+
+Every incident the rules get wrong they get wrong by answering `unknown`, and an unknown cause is
+allowed nothing but escalation, so both arms escalate the same incidents by different routes. The
+residual is a confound rather than a result: the reconciled cause is identical in the 37 of 41
+incidents the rules get right, and what differs is the confidence number in the planner's prompt,
+0.70 against 0.95.
+
+Two honest reasons it could come out differently elsewhere. The rules classifier was written
+against these exact five scenarios, so it is being asked about the distribution it was designed
+for. And 41 incidents cannot resolve a small effect; anything smaller than the seed-to-seed spread
+would be invisible here. The gate still earns its keep in one direction: a model that returns a
+confident wrong cause recovers exactly what doing nothing recovers, because every action it
+proposes is refused.
 
 **S4 is a loss until somebody acts on the escalation.** The cause is a merchant misconfiguration,
 no customer can pay around it, so the agent contacts nobody and files a ticket while both baselines

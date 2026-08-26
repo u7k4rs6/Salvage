@@ -81,18 +81,26 @@ depends on what a message costs them, and this simulator charges almost nothing 
 flatters the baselines rather than the agent.
 
 Where does the agent's at-risk margin come from? Mostly from steering customers onto a working
-instrument in the same session, and partly from timing links to land after a rail recovers. It does
-not come from the language model, and this build measured that rather than assuming it. Over 41
-incidents the rules classifier alone is right 90.2 percent of the time and the model-assisted
-diagnosis 97.6 percent. That seven-point edge is worth nothing here. The `echo` arm in the results
-is the agent with its model replaced by a stub that repeats the rules verdict, everything else
-identical, and paired across ten seeds it recovers 16,066 rupees more on S1, 6,081 less on S2,
-15,266 less on S3 and exactly the same on S4. The signs disagree and the four scenarios sum to
-about minus five thousand rupees.
+instrument in the same session, and partly from timing links to land after a rail recovers.
+**On this workload the language model did not detectably contribute to recovery**, and this build
+measured that rather than assuming it. Over 41 incidents the rules classifier alone is right 90.2
+percent of the time and the model-assisted diagnosis 97.6 percent. The `echo` arm in the results is
+the agent with its model replaced by a stub that repeats the rules verdict, everything else
+identical; paired across ten seeds it recovers 16,066 rupees more on S1, 6,081 less on S2, 15,266
+less on S3 and exactly the same on S4. The signs disagree, no scenario clears a paired t, and the
+four sum to roughly minus five thousand rupees.
 
-The reason is structural. Every incident the rules get wrong they get wrong by answering `unknown`,
-and an unknown cause is allowed nothing but escalation, so both arms escalate the same incidents by
-different routes. On every incident where the agent acts, the rules were already right.
+The mechanism is structural. Every incident the rules get wrong they get wrong by answering
+`unknown`, and an unknown cause is allowed nothing but escalation, so both arms escalate the same
+incidents by different routes. On every incident where the agent acts, the rules were already
+right. And the residual is a confound rather than a result: the reconciled cause is identical in
+the 37 of 41 incidents the rules get right, and what differs is the confidence number in the
+planner's prompt, 0.70 against 0.95.
+
+Two honest reasons it could come out differently elsewhere. The rules classifier was written
+against these exact five scenarios, so it is being asked about the distribution it was designed
+for. And 41 incidents cannot resolve a small effect; anything smaller than the seed-to-seed spread
+would be invisible here.
 
 The gate is doing the work, and it works in one direction. A probe against a model that returns a
 confident wrong cause recovers exactly what doing nothing recovers, because every action it

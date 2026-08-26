@@ -117,14 +117,17 @@ exactly nothing, because the world has already recovered on its own. Only an arm
 be repaired, which is an asymmetry the results state plainly rather than assume in the agent's
 favour.
 
-Diagnosis accuracy over 41 incidents: rules-only 0.902, model 0.976, reconciled 0.976. **That
-seven-point edge is worth nothing in this sweep.** The `echo` arm is the agent with its model
-replaced by a stub repeating the rules verdict, everything else identical; paired across ten seeds
-it recovers 16,066 rupees more on S1, 6,081 less on S2, 15,266 less on S3 and the same on S4. Every
-incident the rules get wrong they get wrong by answering `unknown`, and an unknown cause is allowed
-nothing but escalation, so both arms escalate the same incidents. The gate still earns its place in
-the other direction: a model returning a confident wrong cause recovers exactly what doing nothing
-recovers.
+Diagnosis accuracy over 41 incidents: rules-only 0.902, model 0.976, reconciled 0.976. **On this
+workload the language model did not detectably contribute to recovery.** The `echo` arm is the
+agent with its model replaced by a stub repeating the rules verdict, everything else identical;
+paired across ten seeds it recovers 16,066 rupees more on S1, 6,081 less on S2, 15,266 less on S3
+and the same on S4. The signs disagree, no scenario clears a paired t, and the four sum to roughly
+minus five thousand rupees. The residual is a confound rather than a result: the reconciled cause
+is identical in the 37 of 41 incidents the rules get right, and what differs is the confidence
+number in the planner's prompt, 0.70 against 0.95. Two honest reasons it could differ elsewhere:
+the rules classifier was written against these exact scenarios, and 41 incidents cannot resolve a
+small effect. The gate still earns its place in one direction: a model returning a confident wrong
+cause recovers exactly what doing nothing recovers.
 
 The steer conversion probability, the constant the S1 and S2 margins mostly rest on, is swept from
 0.25 to 0.65 in section 9. The win survives the whole range and narrows by about three quarters at

@@ -824,45 +824,50 @@ def _diagnosis_block(payload: dict[str, Any]) -> str:
         for miss in payload["misses"]:
             lines.append(f"- {miss}")
     lines.append("")
+    lines.append("")
     lines.append(
-        "**What that accuracy is worth in money, at this incident count, is nothing.** The `echo` "
-        "arm in the tables above is the agent with its diagnosis model replaced by a stub that "
-        "repeats the rules classifier at the minimum confidence that counts as agreement. "
+        "**On this workload the language model did not detectably contribute to recovery.** The "
+        "`echo` arm in the tables above is the agent with its diagnosis model replaced by a stub "
+        "that repeats the rules classifier at the minimum confidence that counts as agreement. "
         "Everything downstream is unchanged: same reconciliation, same 0.6 action threshold, same "
-        "matrix, same live planner. Paired against the agent across ten seeds it recovers "
-        "**16,066 rupees more on S1, 6,081 less on S2, 15,266 less on S3 and exactly the same on "
-        "S4**. The signs disagree, no scenario clears a two-sided paired t comfortably, and the "
-        "four scenarios sum to roughly minus five thousand rupees. That is a difference of zero "
-        "with noise on top."
+        "matrix, same live planner. Paired against the agent across ten seeds it recovers **16,066 "
+        "rupees more on S1, 6,081 less on S2, 15,266 less on S3 and exactly the same on S4**. The "
+        "signs disagree, no scenario clears a paired t, and the four sum to roughly minus five "
+        "thousand rupees."
     )
     lines.append("")
     lines.append(
-        "The reason is structural rather than lucky. Every incident the rules get wrong, they get "
-        "wrong by answering `unknown`, and the matrix allows nothing but escalation for an unknown "
-        "cause. So on those incidents the agent escalates because the model disagreed with the "
-        "rules and confidence collapsed to 0.5, and the echo arm escalates because the cause is "
-        "unknown and the matrix forbids everything else. Different route, same decision, no money "
-        "either way. On every incident where the agent acts, the rules were already right."
+        "The mechanism is structural. Every incident the rules get wrong, they get wrong by "
+        "answering `unknown`, and the matrix allows nothing but escalation for an unknown cause. "
+        "So on those incidents the agent escalates because the model disagreed with the rules and "
+        "confidence collapsed to 0.5, and the echo arm escalates because the cause is unknown and "
+        "the matrix forbids everything else. Different route, same decision, no money either way. "
+        "On every incident where the agent acts, the rules were already right."
     )
     lines.append("")
     lines.append(
-        "Where the two arms do diverge, it is not the diagnosis that differs. The reconciled cause "
-        "is the same in every incident the rules got right, which is 37 of 41; what differs is the "
-        "confidence number, 0.95 from the model against the echo's 0.70, and that number is in the "
-        "planner's prompt. So the residual gap measures a language model reacting to a different "
-        "stated confidence, not a better diagnosis. It is a confound rather than a result, and it "
-        "is reported rather than tuned away."
+        "**The residual is a confound, not a result.** Where the two arms diverge it is not the "
+        "diagnosis that differs: the reconciled cause is identical in the 37 of 41 incidents the "
+        "rules get right. What differs is the confidence number, 0.70 for the echo against 0.95 "
+        "from the model, and that number sits in the planner's prompt. The gap measures a language "
+        "model reacting to a different stated confidence."
     )
     lines.append("")
     lines.append(
-        "That is not an argument for dropping the model. The gate converts diagnosis quality into "
-        "money in one direction only: a confidently wrong cause is catastrophic, and a probe run "
-        "against a provider that always returns a confident wrong answer recovers exactly what "
-        "doing nothing recovers, because every action it proposes is refused by the matrix and the "
-        "incident escalates. What the numbers say is narrower and duller than a pitch would like: "
-        "at 41 incidents, on scenarios the rules were written for, accuracy above the gate "
-        "threshold is unpurchased. A harder incident mix is where a model would earn its place, "
-        "and this sweep does not contain one."
+        "Two honest reasons this could come out differently elsewhere. The rules classifier was "
+        "written against these exact five scenarios, so it is being asked about the distribution "
+        "it was designed for, and a workload it was not written for is where it would start "
+        "answering `unknown` more often. And 41 incidents cannot resolve a small effect: a real "
+        "difference smaller than the seed-to-seed spread would be invisible at this sample size. "
+        "Neither of those is a reason to read the result as anything other than what it is here."
+    )
+    lines.append("")
+    lines.append(
+        "The gate still earns its keep in one direction. A confidently wrong cause is caught: a "
+        "probe against a provider that always returns a confident wrong answer recovers exactly "
+        "what doing nothing recovers, because every action it proposes is refused by the matrix "
+        "and the incident escalates. What is unpurchased at this sample size is accuracy above "
+        "the threshold, not the check that catches being wrong."
     )
     if payload.get("llm_misses"):
         lines.append("")
