@@ -20,6 +20,13 @@ import {
   segmentLabel,
   timeOnly,
 } from "../lib/format";
+import {
+  buildBoard,
+  FLOOR_ATTEMPTS,
+  type Board,
+  type BoardGroup,
+  type BoardNode,
+} from "../board/roster";
 import type { Overview as OverviewData, Segment } from "../lib/types";
 
 /**
@@ -36,7 +43,28 @@ function cellColour(segment: Segment): string {
   return "bg-neutral-100 text-neutral-700";
 }
 
-function Cell({ segment }: { segment: Segment }) {
+/**
+ * A tile is measured or it is below the detection floor. The second state is not an error and not
+ * a loading state: the detector needs 20 attempts in a 15-minute window before a key can be
+ * tested at all, and most instruments are under that line for most of the day. The node stays on
+ * the board because its absence from measurement is the thing worth seeing.
+ */
+function Cell({ node }: { node: BoardNode }) {
+  if (node.state === "below_floor") {
+    const peak = node.roster.expected_attempts_peak_window;
+    return (
+      <div
+        aria-label={`${node.instrument}, below the detection floor, no rate measured this window. About ${peak} attempts expected in a peak window against a floor of ${FLOOR_ATTEMPTS}.`}
+        title={`About ${peak} attempts expected in a peak 15-minute window. Floor is ${FLOOR_ATTEMPTS}.`}
+        className="h-full border border-dashed border-neutral-300 bg-neutral-50 px-2 py-1.5 text-neutral-400"
+      >
+        <div className="truncate text-[11px] font-medium">{node.instrument}</div>
+        <div className="text-[10px] leading-tight">below detection floor</div>
+      </div>
+    );
+  }
+
+  const segment = node.segment;
   const inner = (
     <div
       // baseline arrives as a failure rate; every number on this cell is a success rate, so it
@@ -63,36 +91,68 @@ function Cell({ segment }: { segment: Segment }) {
   );
 }
 
-function Heatmap({ segments }: { segments: Segment[] }) {
-  const merchant = segments.find((segment) => segment.key === "all");
-  const methods = ["upi", "card", "netbanking", "wallet"];
-  const rest = segments.filter((segment) => segment.key !== "all");
-
+/** A whole dimension folded into one row, because five empty tiles say less than one sentence. */
+function CollapsedGroup({ group }: { group: BoardGroup }) {
+  const collapsed = group.collapsed;
+  if (!collapsed) return null;
   return (
-    <div className="space-y-2">
-      {merchant && (
+    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border border-dashed border-neutral-300 bg-neutral-50 px-2 py-1.5">
+      <span className="text-[11px] font-medium text-neutral-500">{group.title}</span>
+      <span className="text-[11px] text-neutral-500">{collapsed.label}</span>
+      <span className="text-[10px] text-neutral-400">{collapsed.detail}</span>
+    </div>
+  );
+}
+
+function Group({ group }: { group: BoardGroup }) {
+  if (group.collapsed) return <CollapsedGroup group={group} />;
+  if (group.nodes.length === 0) return null;
+  return (
+    <div>
+      <div className="mb-1 flex flex-wrap items-baseline gap-x-2">
+        <span className="text-[11px] font-medium text-neutral-600">{group.title}</span>
+        {group.note && <span className="text-[10px] text-neutral-500">{group.note}</span>}
+      </div>
+      <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-6">
+        {group.nodes.map((node) => (
+          <Cell key={node.key} node={node} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Heatmap({ board }: { board: Board }) {
+  return (
+    <div className="space-y-3">
+      {board.merchant && (
         <div>
           {/* Pinned merchant-wide row. A fault that spans every method is attributed to the
               `all` key by the detector, so without this row it would have nowhere to appear. */}
-          <Cell segment={merchant} />
+          <Cell node={board.merchant} />
         </div>
       )}
-      {methods.map((method) => {
-        const row = rest.filter((segment) => segment.method === method);
-        if (row.length === 0) return null;
-        return (
-          <div key={method}>
-            <div className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-600">
-              {method}
-            </div>
-            <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-6">
-              {row.map((segment) => (
-                <Cell key={segment.key} segment={segment} />
-              ))}
-            </div>
+      {board.methods.map((entry) => (
+        <div key={entry.method} className="border-t border-neutral-200 pt-2">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-neutral-600">
+              {entry.method}
+            </span>
+            {entry.methodNode && (
+              <span className="num text-[11px] text-neutral-500">
+                {entry.methodNode.state === "measured"
+                  ? `${percent(entry.methodNode.segment.rate)} / n ${entry.methodNode.segment.attempts}`
+                  : "below detection floor"}
+              </span>
+            )}
           </div>
-        );
-      })}
+          <div className="space-y-2">
+            {entry.groups.map((group) => (
+              <Group key={group.id} group={group} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -111,8 +171,9 @@ export default function OverviewPage() {
         empty={<span>No attempts yet. Run a scenario.</span>}
         rows={6}
       >
-        {(data) =>
-          data.segments.length === 0 ? (
+        {(data) => {
+          const board = buildBoard(data.segments);
+          return data.segments.length === 0 ? (
             <Panel title="Overview">
               <Empty
                 action={
@@ -144,22 +205,36 @@ export default function OverviewPage() {
                 <Stat
                   label="At-risk revenue"
                   value={rupees(data.stats.at_risk_amount)}
-                  hint="open incidents"
+                  hint="open incidents, measured over each incident's detection window"
                   tone={data.stats.at_risk_amount > 0 ? "amber" : "neutral"}
                 />
+                {/* Deliberately not "recovered today". The route sums recovery_routes with no
+                    time filter at all, and filters to the link and steer routes, so organic
+                    recovery is not in it. The label says what the number is. */}
                 <Stat
-                  label="Recovered"
+                  label="Recovered, all time"
                   value={rupees(data.stats.recovered_amount)}
-                  hint="by link or steer"
+                  hint="link and steer routes only, excludes organic recovery"
                   tone="green"
                 />
               </div>
 
               <Panel
                 title="Success rate by segment"
-                subtitle="Current 15-minute window. Baseline success rate and attempt count in small text. A red outline means the segment is inside an open incident."
+                subtitle={
+                  <>
+                    Current 15-minute window. Baseline success rate and attempt count in small
+                    text. A red outline means the segment is inside an open incident.{" "}
+                    <span className="num">
+                      {board.measured} of {board.total}
+                    </span>{" "}
+                    segments cleared the {FLOOR_ATTEMPTS}-attempt floor in this window; the rest
+                    are shown muted, because a segment the detector cannot test is a fact about
+                    the detector, not missing data.
+                  </>
+                }
               >
-                <Heatmap segments={data.segments} />
+                <Heatmap board={board} />
               </Panel>
 
               <Panel title="Active incidents">
@@ -190,16 +265,27 @@ export default function OverviewPage() {
                             </span>
                           )}
                         </div>
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        {/* Three separate figures, never a ratio. at risk is one detection
+                            window, recovered is the incident's whole life and is not restricted
+                            to the at-risk orders, so dividing them means nothing. The scope sits
+                            under each number so nobody has to know that to read the card. */}
+                        <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                           <div>
                             <div className="text-neutral-600">at risk</div>
                             <div className="num font-medium">{rupees(incident.at_risk_amount)}</div>
+                            <div className="text-[10px] text-neutral-500">detection window</div>
                           </div>
                           <div>
                             <div className="text-neutral-600">recovered</div>
                             <div className="num font-medium text-green-700">
                               {rupees(incident.recovered_amount)}
                             </div>
+                            <div className="text-[10px] text-neutral-500">whole incident</div>
+                          </div>
+                          <div>
+                            <div className="text-neutral-600">actions</div>
+                            <div className="num font-medium">{count(incident.actions)}</div>
+                            <div className="text-[10px] text-neutral-500">not messages</div>
                           </div>
                         </div>
                         {incident.escalated && (
@@ -252,8 +338,8 @@ export default function OverviewPage() {
                 </div>
               </Panel>
             </>
-          )
-        }
+          );
+        }}
       </Region>
     </div>
   );

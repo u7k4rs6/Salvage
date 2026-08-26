@@ -369,7 +369,13 @@ export default function IncidentDetailPage() {
                 </div>
               }
             >
-              <div className="grid gap-3 sm:grid-cols-5">
+              {/* at risk and recovered are never shown as a ratio, a percentage or a bar. The
+                  API computes them over different windows and different populations: at risk is
+                  a single detection window, counting orders unpaid at the moment the incident
+                  opened, while recovered spans the incident's whole life and is not restricted
+                  to those orders. Dividing one by the other produces a number that means
+                  nothing, so each carries its scope instead. */}
+              <div className="grid gap-3 sm:grid-cols-6">
                 <div>
                   <div className="text-xs text-neutral-600">status</div>
                   <StatusBadge status={data.incident.status} />
@@ -389,11 +395,22 @@ export default function IncidentDetailPage() {
                   <div className="num text-sm font-semibold">
                     {rupees(data.incident.at_risk_amount)}
                   </div>
+                  <div className="text-[10px] text-neutral-500">
+                    detection window, unpaid at open
+                  </div>
                 </div>
                 <div>
                   <div className="text-xs text-neutral-600">recovered</div>
                   <div className="num text-sm font-semibold text-green-700">
                     {rupees(data.incident.recovered_amount)}
+                  </div>
+                  <div className="text-[10px] text-neutral-500">whole incident, all cases</div>
+                </div>
+                <div>
+                  <div className="text-xs text-neutral-600">actions</div>
+                  <div className="num text-sm font-semibold">{count(data.incident.actions)}</div>
+                  <div className="text-[10px] text-neutral-500">
+                    on {count(data.incident.cases)} cases, not messages
                   </div>
                 </div>
               </div>
