@@ -6,12 +6,11 @@
  * for a world to produce it. Nothing here fetches, and nothing here is real. The numbers are
  * chosen to sit on the boundaries that matter, which is why several of them look implausible.
  *
- * The board tile markup below is duplicated from `pages/Overview.tsx` rather than imported,
- * because Overview does not export it and this sheet was built under an instruction not to touch
- * that file. That is a drift risk and it is the reason to import it instead as soon as the two
- * are allowed to move together.
+ * `Cell` and `CollapsedGroup` are imported from pages/Overview.tsx rather than copied, so the
+ * specimen and the board cannot drift. Overview is not restyled: the visual system lives in
+ * specimens.css, scoped under `.specimen-sheet`, and is applied to the real tile as a skin.
  */
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Badge,
   Code,
@@ -26,25 +25,44 @@ import {
   StatusBadge,
   Table,
 } from "../components/primitives";
-import { FLOOR_ATTEMPTS } from "../board/roster";
+import { Cell, CollapsedGroup } from "./Overview";
+import { FLOOR_ATTEMPTS, type BoardGroup, type BoardNode, type RosterNode } from "../board/roster";
+import type { Segment } from "../lib/types";
+import "./specimens.css";
+
+// The display face. Injected on mount rather than linked from index.html, so one route's
+// typography does not put a font request on every page of the console. Reason logged here rather
+// than in the dependency list because it adds no package: it is a stylesheet link, and the CSS
+// carries a full fallback stack for when it does not arrive.
+const FONT_HREF =
+  "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&display=swap";
+
+function useDisplayFace() {
+  useEffect(() => {
+    if (document.head.querySelector(`link[href="${FONT_HREF}"]`)) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = FONT_HREF;
+    document.head.appendChild(link);
+  }, []);
+}
 
 // -- sheet furniture -------------------------------------------------------
 
-function Section({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
+function Section({ title, note, children }: { title: string; note?: ReactNode; children: ReactNode }) {
   return (
-    <section className="border-t border-neutral-300 pt-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-900">{title}</h2>
-      {note && <p className="mt-0.5 max-w-3xl text-xs text-neutral-600">{note}</p>}
-      <div className="mt-3 flex flex-wrap items-start gap-4">{children}</div>
+    <section className="mt-8">
+      <h2 className="display text-[13px] uppercase tracking-[0.08em]">{title}</h2>
+      {note && <p className="caption mt-1 max-w-3xl">{note}</p>}
+      <div className="mt-3 flex flex-wrap items-start gap-5">{children}</div>
     </section>
   );
 }
 
-/** One specimen, under the name of the state it is in. */
 function Specimen({
   state,
   note,
-  width = "auto",
+  width,
   children,
 }: {
   state: string;
@@ -53,11 +71,13 @@ function Specimen({
   children: ReactNode;
 }) {
   return (
-    <figure className="m-0" style={{ width }}>
+    <figure className="m-0" style={width ? { width } : undefined}>
       <div>{children}</div>
-      <figcaption className="mt-1 max-w-xs">
-        <div className="num text-[11px] font-medium text-neutral-700">{state}</div>
-        {note && <div className="text-[10px] leading-tight text-neutral-500">{note}</div>}
+      <figcaption className="mt-1.5 max-w-[15rem]">
+        <div className="num text-[11px] font-medium" style={{ color: "var(--ink-soft)" }}>
+          {state}
+        </div>
+        {note && <div className="caption-faint">{note}</div>}
       </figcaption>
     </figure>
   );
@@ -65,37 +85,70 @@ function Specimen({
 
 // -- synthetic data --------------------------------------------------------
 
-type SpecimenSegment = {
-  instrument: string;
-  rate: number;
-  failure_rate: number;
-  baseline: number;
-  attempts: number;
-  incident: boolean;
-};
-
 function segment(
   instrument: string,
   failure_rate: number,
   baseline: number,
   attempts = 48,
-  incident = false,
-): SpecimenSegment {
-  return { instrument, rate: 1 - failure_rate, failure_rate, baseline, attempts, incident };
+  incident_id: string | null = null,
+): Segment {
+  return {
+    key: `upi:upi_handle:${instrument}`,
+    method: "upi",
+    instrument,
+    attempts,
+    failures: Math.round(attempts * failure_rate),
+    rate: 1 - failure_rate,
+    failure_rate,
+    baseline,
+    incident_id,
+  };
 }
 
-// One per step of the colour scale in Overview's cellColour, chosen to land just inside each
-// boundary rather than in the middle of a band.
-const SCALE: { state: string; note: string; segment: SpecimenSegment }[] = [
-  {
-    state: "excess >= 0.30",
-    note: "the top step, solid red",
-    segment: segment("okhdfcbank", 0.42, 0.1),
-  },
-  { state: "excess >= 0.15", note: "", segment: segment("oksbi", 0.27, 0.1) },
-  { state: "excess >= 0.07", note: "", segment: segment("okicici", 0.18, 0.1) },
-  { state: "excess >= 0.03", note: "the amber step", segment: segment("ybl", 0.14, 0.1) },
-  { state: "excess < 0.03", note: "inside baseline", segment: segment("paytm", 0.11, 0.1) },
+function roster(instrument: string, peak: number, marginal: boolean): RosterNode {
+  return {
+    key: `card:card_bin6:${instrument}`,
+    method: "card",
+    instrument,
+    group: "card_bin6",
+    share_of_all_attempts: 0.02,
+    expected_attempts_mean_window: peak / 2.5,
+    expected_attempts_peak_window: peak,
+    reaches_floor_at_peak: peak >= FLOOR_ATTEMPTS,
+    marginal_at_peak: marginal,
+  };
+}
+
+const measured = (s: Segment): BoardNode => ({
+  state: "measured",
+  key: s.key,
+  instrument: s.instrument,
+  segment: s,
+  roster: null,
+});
+
+const belowFloor = (node: RosterNode): BoardNode => ({
+  state: "below_floor",
+  key: node.key,
+  instrument: node.instrument,
+  roster: node,
+});
+
+const collapsed = (
+  id: string,
+  title: string,
+  label: string,
+  detail: string,
+  nodeCount: number,
+): BoardGroup => ({ id, title, nodes: [], collapsed: { label, detail, nodeCount } });
+
+// One per step of the scale in Overview's cellColour, each just inside its boundary.
+const SCALE: { state: string; note: string; node: BoardNode }[] = [
+  { state: "excess >= 0.30", note: "top step", node: measured(segment("okhdfcbank", 0.42, 0.1)) },
+  { state: "excess >= 0.15", note: "", node: measured(segment("oksbi", 0.27, 0.1)) },
+  { state: "excess >= 0.07", note: "", node: measured(segment("okicici", 0.18, 0.1)) },
+  { state: "excess >= 0.03", note: "amber step", node: measured(segment("ybl", 0.14, 0.1)) },
+  { state: "excess < 0.03", note: "inside baseline", node: measured(segment("paytm", 0.11, 0.1)) },
 ];
 
 const TABLE_ROWS = [
@@ -104,129 +157,243 @@ const TABLE_ROWS = [
   { opened: "18:15", segment: "all", cause: "gateway degradation", risk: "1,02,455.00" },
 ];
 
-// -- the board tile, mirrored from Overview --------------------------------
-
-function cellColour(s: SpecimenSegment): string {
-  const excess = s.failure_rate - s.baseline;
-  if (s.attempts === 0) return "bg-neutral-50 text-neutral-400";
-  if (excess >= 0.3) return "bg-red-600 text-white";
-  if (excess >= 0.15) return "bg-red-400 text-white";
-  if (excess >= 0.07) return "bg-red-200 text-red-900";
-  if (excess >= 0.03) return "bg-amber-100 text-amber-900";
-  return "bg-neutral-100 text-neutral-700";
-}
-
-function MeasuredTile({ s }: { s: SpecimenSegment }) {
-  return (
-    <div
-      className={`h-full w-36 border ${
-        s.incident ? "border-2 border-red-600" : "border-neutral-200"
-      } ${cellColour(s)} px-2 py-1.5`}
-    >
-      <div className="truncate text-[11px] font-medium">{s.instrument}</div>
-      <div className="num text-sm font-semibold">{(s.rate * 100).toFixed(1)}%</div>
-      <div className="num text-[10px] opacity-80">
-        base {((1 - s.baseline) * 100).toFixed(1)}% / n {s.attempts}
-      </div>
-      {s.incident && <div className="mt-0.5 text-[10px] font-semibold">incident</div>}
-    </div>
-  );
-}
-
-function BelowFloorTile({ instrument }: { instrument: string }) {
-  return (
-    <div className="h-full w-36 border border-dashed border-neutral-300 bg-neutral-50 px-2 py-1.5 text-neutral-400">
-      <div className="truncate text-[11px] font-medium">{instrument}</div>
-      <div className="text-[10px] leading-tight">below detection floor</div>
-    </div>
-  );
-}
-
-function CollapsedRow({ title, label, detail }: { title: string; label: string; detail: string }) {
-  return (
-    <div className="flex w-full max-w-2xl flex-wrap items-baseline gap-x-2 gap-y-1 border border-dashed border-neutral-300 bg-neutral-50 px-2 py-1.5">
-      <span className="text-[11px] font-medium text-neutral-500">{title}</span>
-      <span className="text-[11px] text-neutral-500">{label}</span>
-      <span className="text-[10px] text-neutral-400">{detail}</span>
-    </div>
-  );
-}
-
 // -- the sheet -------------------------------------------------------------
 
 export default function SpecimensPage() {
-  // Region takes a live-looking state object. These are the four it must handle.
+  useDisplayFace();
   const [retried, setRetried] = useState(0);
   const noop = () => setRetried((n) => n + 1);
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="specimen-sheet">
       <header>
-        <h1 className="text-lg font-semibold text-neutral-900">Specimen sheet</h1>
-        <p className="mt-1 max-w-3xl text-sm text-neutral-700">
+        <h1 className="text-[22px]">Specimen sheet</h1>
+        <p className="caption mt-1.5 max-w-3xl text-[12px]">
           Every primitive at every state, on synthetic data. Nothing here is measured and nothing
-          here fetches. Numbers sit on the boundaries of the scales they belong to, so several of
-          them are deliberately implausible as traffic.
-        </p>
-        <p className="mt-1 max-w-3xl text-xs text-neutral-600">
-          The visual brief for depth, colour direction, token shape and typeface has not been
-          applied: it was not in the thread this file was built from. What is below uses the
-          tokens the console ships with today.
+          here fetches. Numbers sit on the boundaries of the scales they belong to, so several are
+          deliberately implausible as traffic. The board tile and the collapsed group row are the
+          real components imported from Overview, wearing this sheet&rsquo;s skin; Overview itself
+          is unchanged.
         </p>
       </header>
 
       <Section
-        title="Board tile, measured"
-        note="Five steps on the excess failure rate, not a gradient. Each specimen sits just inside its boundary."
+        title="Depth, three levels on identical shapes"
+        note="Every raised element is a border darker than its surface, an inset top highlight, and a cast shadow. Take one away and the object flattens, which is what the fourth specimen is for."
+      >
+        <Specimen state="level 1, flat" note="information. Tone difference only, no shadow.">
+          <div className="lvl lvl-1">
+            <div className="display text-[12px]">nb_bank</div>
+            <div className="caption-faint mt-1">below detection floor</div>
+          </div>
+        </Specimen>
+        <Specimen state="level 2, default" note="border, inset highlight, 0 2px 3px at 12 percent.">
+          <div className="lvl lvl-2">
+            <div className="display text-[12px]">okicici</div>
+            <div className="num mt-0.5 text-[15px] font-semibold">83.3%</div>
+            <div className="num caption-faint">n 30</div>
+          </div>
+        </Specimen>
+        <Specimen state="level 3, active" note="0 4px 8px at 16 percent, lifted 1px, stronger highlight.">
+          <div className="lvl lvl-3">
+            <div className="display text-[12px]">okhdfcbank</div>
+            <div className="num mt-0.5 text-[15px] font-semibold">5.6%</div>
+            <div className="num caption-faint">n 54</div>
+          </div>
+        </Specimen>
+        <Specimen state="level 0, banned" note="border only. Here so the miss is visible, and nowhere else.">
+          <div className="lvl lvl-0" style={{ opacity: 0.85 }}>
+            <div className="text-[12px] font-medium">okhdfcbank</div>
+            <div className="num mt-0.5 text-[15px] font-semibold">5.6%</div>
+            <div className="num caption-faint">n 54</div>
+          </div>
+        </Specimen>
+      </Section>
+
+      <Section
+        title="Surface tones"
+        note="A tile can only sit on something if that something is a different colour. Page, board and group region are three steps of one warm ivory, and the region is recessed into the board rather than drawn on it."
+      >
+        <Specimen state="page" note="#F2EDE4">
+          <div className="swatch" style={{ background: "var(--page)" }} />
+        </Specimen>
+        <Specimen state="board" note="raised off the page">
+          <div className="swatch" style={{ background: "var(--board)", boxShadow: "var(--highlight), var(--cast-2)" }} />
+        </Specimen>
+        <Specimen state="group region" note="recessed into the board">
+          <div className="swatch" style={{ background: "var(--region)", boxShadow: "var(--recess)" }} />
+        </Specimen>
+        <Specimen state="tile face" note="raised off the region">
+          <div className="swatch" style={{ background: "var(--face)", boxShadow: "var(--highlight), var(--cast-2)" }} />
+        </Specimen>
+        <Specimen state="all four, assembled" width="100%" note="the same three tones doing their job">
+          <div className="board">
+            <div className="display mb-2 text-[12px]">upi</div>
+            <div className="region flex flex-wrap gap-2">
+              {SCALE.slice(0, 3).map((entry) => (
+                <div key={entry.state} className="tile-host">
+                  <Cell node={entry.node} />
+                </div>
+              ))}
+              <div className="tile-host is-below">
+                <Cell node={belowFloor(roster("601136", 7.9, false))} />
+              </div>
+            </div>
+          </div>
+        </Specimen>
+      </Section>
+
+      <Section
+        title="Board tile, the real component"
+        note="Imported from Overview. The five steps of the excess scale, remapped into the ivory world's reds so the board is one material rather than two."
       >
         {SCALE.map((entry) => (
           <Specimen key={entry.state} state={entry.state} note={entry.note}>
-            <MeasuredTile s={entry.segment} />
+            <div className="tile-host">
+              <Cell node={entry.node} />
+            </div>
           </Specimen>
         ))}
       </Section>
 
       <Section title="Board tile, other states">
-        <Specimen state="inside an open incident" note="red outline, links to the incident">
-          <MeasuredTile s={segment("okhdfcbank", 0.94, 0.1, 54, true)} />
+        <Specimen state="inside an open incident" note="state colour on the edge, and it is level 3">
+          <div className="tile-host is-selected">
+            <Cell node={measured(segment("okhdfcbank", 0.944, 0.1, 54, "inc_1"))} />
+          </div>
         </Specimen>
         <Specimen state="measured, zero attempts" note="tested window, no traffic in it">
-          <MeasuredTile s={segment("508500", 0, 0.16, 0)} />
+          <div className="tile-host">
+            <Cell node={measured(segment("508500", 0, 0.16, 0))} />
+          </div>
         </Specimen>
         <Specimen
           state="below detection floor"
-          note={`in the roster, absent from the response. Fewer than ${FLOOR_ATTEMPTS} attempts.`}
+          note={`in the roster, absent from the response. Fewer than ${FLOOR_ATTEMPTS} attempts, so it is recessed, not raised.`}
         >
-          <BelowFloorTile instrument="601136" />
+          <div className="tile-host is-below">
+            <Cell node={belowFloor(roster("601136", 7.9, false))} />
+          </div>
         </Specimen>
-        <Specimen
-          state="below floor, marginal"
-          note="identical face, different tooltip. Sits close enough to the floor to flip window to window."
-        >
-          <BelowFloorTile instrument="MasterCard" />
+        <Specimen state="below floor, marginal" note="same face, different tooltip. Flips window to window.">
+          <div className="tile-host is-below">
+            <Cell node={belowFloor(roster("MasterCard", 19.7, true))} />
+          </div>
         </Specimen>
         <Specimen state="long instrument name" note="truncation, not wrapping">
-          <MeasuredTile s={segment("a-very-long-handle-name", 0.12, 0.1)} />
+          <div className="tile-host">
+            <Cell node={measured(segment("a-very-long-handle-name", 0.12, 0.1))} />
+          </div>
         </Specimen>
       </Section>
 
       <Section
         title="Board group, collapsed"
-        note="Two different claims. One is about measurement, the other is about the detector's dimensions."
+        note="Two different claims. One is about measurement, the other about the detector's dimensions, and they should not read alike."
       >
-        <Specimen state="below floor at all hours" note="netbanking banks">
-          <CollapsedRow
-            title="bank"
-            label="below detection floor at all hours"
-            detail="All 5 exist as segment keys. The busiest sees about 9 attempts in a peak 15-minute window against a floor of 20."
-          />
+        <Specimen state="below floor at all hours" note="netbanking banks" width="100%">
+          <div className="collapsed-host">
+            <CollapsedGroup
+              group={collapsed(
+                "nb_bank",
+                "bank",
+                "below detection floor at all hours",
+                "All 5 exist as segment keys. The busiest sees about 9 attempts in a peak 15-minute window against a floor of 20.",
+                5,
+              )}
+            />
+          </div>
         </Specimen>
-        <Specimen state="no instrument dimension" note="wallet">
-          <CollapsedRow
-            title="instrument"
-            label="no instrument dimension"
-            detail="wallet is not one of the detector's INSTRUMENT_DIMENSIONS, so wallet attempts only ever produce the `all` and `wallet` keys."
-          />
+        <Specimen state="no instrument dimension" note="wallet" width="100%">
+          <div className="collapsed-host">
+            <CollapsedGroup
+              group={collapsed(
+                "wallet_none",
+                "instrument",
+                "no instrument dimension",
+                "wallet is not one of the detector's INSTRUMENT_DIMENSIONS, so wallet attempts only ever produce the `all` and `wallet` keys.",
+                0,
+              )}
+            />
+          </div>
+        </Specimen>
+      </Section>
+
+      <Section
+        title="Tokens"
+        note="Objects, not dots. Radial highlight offset toward the top left so the light agrees with every raised surface around it, and a tight contact shadow directly beneath so they sit on the surface rather than float over it."
+      >
+        {(["10", "12", "14"] as const).map((size) => (
+          <Specimen key={size} state={`${size}px, neutral`}>
+            <span className={`token token-${size} token-neutral`} />
+          </Specimen>
+        ))}
+        <Specimen state="incident" note="active incident, refused action">
+          <span className="token token-12 token-incident" />
+        </Specimen>
+        <Specimen state="pending" note="escalation awaiting a human, deferred action">
+          <span className="token token-12 token-pending" />
+        </Specimen>
+        <Specimen state="recovered">
+          <span className="token token-12 token-recovered" />
+        </Specimen>
+        <Specimen state="in a tile" width="100%" note="the status indicator sitting on the tile face">
+          <div className="lvl lvl-2" style={{ width: "180px" }}>
+            <div className="flex items-center justify-between">
+              <span className="display text-[12px]">okhdfcbank</span>
+              <span className="token token-10 token-incident" />
+            </div>
+            <div className="num mt-0.5 text-[15px] font-semibold">5.6%</div>
+            <div className="num caption-faint">base 89.7% / n 54</div>
+          </div>
+        </Specimen>
+      </Section>
+
+      <Section
+        title="Chrome"
+        note="Milled into the board, not painted a different colour. The rail is the same ivory recessed a step, with the active item raised back out of it. No navy against cream."
+      >
+        <Specimen state="top bar" width="100%">
+          <div className="chrome flex items-center justify-between px-3 py-1.5">
+            <span className="display text-[13px]">Salvage</span>
+            <span className="num caption">sim 20:45 &middot; dev</span>
+          </div>
+        </Specimen>
+        <Specimen state="nav rail" width="12rem">
+          <div className="chrome py-1.5">
+            {["Overview", "Incidents", "Escalations", "Ledger"].map((item, index) => (
+              <div key={item} className={`chrome-item ${index === 1 ? "is-active" : ""}`}>
+                {item}
+              </div>
+            ))}
+          </div>
+        </Specimen>
+      </Section>
+
+      <Section
+        title="Shape"
+        note="Radius varies on purpose. Physical blocks 3px, information panels 1px. Not everything the same."
+      >
+        <Specimen state="physical block, 3px">
+          <div className="lvl lvl-2" style={{ borderRadius: "3px" }} />
+        </Specimen>
+        <Specimen state="information panel, 1px">
+          <div className="lvl lvl-1" style={{ borderRadius: "1px" }} />
+        </Specimen>
+      </Section>
+
+      <Section
+        title="Typography"
+        note="Display face for headings and node names. UI sans for prose. Monospace strictly for numbers, ids, hashes and timestamps, which is what the `.num` class already marks."
+      >
+        <Specimen state="display" width="16rem">
+          <div className="display text-[18px]">okhdfcbank</div>
+        </Specimen>
+        <Specimen state="UI sans" width="16rem">
+          <div className="text-[13px]">Two consecutive windows above threshold.</div>
+        </Specimen>
+        <Specimen state="mono, numbers" width="16rem">
+          <div className="num text-[13px]">25,631.93 &middot; 20:45:00 &middot; inc_upi_okhdfcbank</div>
         </Specimen>
       </Section>
 
@@ -263,27 +430,14 @@ export default function SpecimensPage() {
       </Section>
 
       <Section title="Badge">
-        <Specimen state="neutral">
-          <Badge>neutral</Badge>
-        </Specimen>
-        <Specimen state="red">
-          <Badge tone="red">red</Badge>
-        </Specimen>
-        <Specimen state="amber">
-          <Badge tone="amber">escalated</Badge>
-        </Specimen>
-        <Specimen state="green">
-          <Badge tone="green">recovered</Badge>
-        </Specimen>
-        <Specimen state="accent">
-          <Badge tone="accent">accent</Badge>
-        </Specimen>
+        {(["neutral", "red", "amber", "green", "accent"] as const).map((tone) => (
+          <Specimen key={tone} state={tone}>
+            <Badge tone={tone}>{tone}</Badge>
+          </Specimen>
+        ))}
       </Section>
 
-      <Section
-        title="StatusBadge"
-        note="Colour is never the only signal, so every state carries its own word."
-      >
+      <Section title="StatusBadge" note="Colour is never the only signal, so every state carries its own word.">
         {["open", "recovering", "escalated", "paused", "closed", "unknown"].map((status) => (
           <Specimen key={status} state={status}>
             <StatusBadge status={status} />
@@ -294,7 +448,7 @@ export default function SpecimensPage() {
       <Section title="Panel">
         <Specimen state="title only" width="20rem">
           <Panel title="Active incidents">
-            <p className="text-sm text-neutral-700">Body.</p>
+            <p className="text-sm">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="title and subtitle" width="24rem">
@@ -302,17 +456,17 @@ export default function SpecimensPage() {
             title="Success rate by segment"
             subtitle="Current 15-minute window. 19 of 33 segments cleared the 20-attempt floor."
           >
-            <p className="text-sm text-neutral-700">Body.</p>
+            <p className="text-sm">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="title and right slot" width="22rem">
           <Panel title="Incident" right={<StatusBadge status="escalated" />}>
-            <p className="text-sm text-neutral-700">Body.</p>
+            <p className="text-sm">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="no header" width="16rem">
           <Panel>
-            <p className="text-sm text-neutral-700">Body with no header.</p>
+            <p className="text-sm">Body with no header.</p>
           </Panel>
         </Specimen>
       </Section>
@@ -369,7 +523,12 @@ export default function SpecimensPage() {
         </Specimen>
         <Specimen state="error" width="22rem">
           <Region
-            state={{ data: null, error: new Error("502 from /api/overview"), loading: false, reload: noop }}
+            state={{
+              data: null,
+              error: new Error("502 from /api/overview"),
+              loading: false,
+              reload: noop,
+            }}
           >
             {() => null}
           </Region>
@@ -384,7 +543,7 @@ export default function SpecimensPage() {
         </Specimen>
         <Specimen state="data" width="18rem" note={`reload fired ${retried} time(s)`}>
           <Region state={{ data: "loaded", error: null, loading: false, reload: noop }}>
-            {(data) => <p className="text-sm text-neutral-700">{data}</p>}
+            {(data) => <p className="text-sm">{data}</p>}
           </Region>
         </Specimen>
       </Section>
@@ -392,15 +551,17 @@ export default function SpecimensPage() {
       <Section title="Disclosure and Code">
         <Specimen state="Disclosure, closed" width="20rem" note="click to open">
           <Disclosure summary="Show prompt and raw response">
-            <Code>{"{\n  \"cause\": \"issuer_outage\"\n}"}</Code>
+            <Code>{'{\n  "cause": "issuer_outage"\n}'}</Code>
           </Disclosure>
         </Specimen>
         <Specimen state="Code, short" width="20rem">
-          <Code>{"upi:upi_handle:okhdfcbank"}</Code>
+          <Code>upi:upi_handle:okhdfcbank</Code>
         </Specimen>
         <Specimen state="Code, long" width="24rem" note="scrolls inside its own box">
           <Code>
-            {Array.from({ length: 24 }, (_, i) => `line ${i + 1}: a fairly long line of output`).join("\n")}
+            {Array.from({ length: 24 }, (_, i) => `line ${i + 1}: a fairly long line of output`).join(
+              "\n",
+            )}
           </Code>
         </Specimen>
       </Section>
@@ -410,11 +571,7 @@ export default function SpecimensPage() {
         note="Stateful. The idle and locked states are shown; clicking a live one opens its confirm panel in place."
       >
         <Specimen state="accent, enabled">
-          <ConfirmButton
-            label="Close incident"
-            prompt="Close this incident?"
-            onConfirm={async () => {}}
-          />
+          <ConfirmButton label="Close incident" prompt="Close this incident?" onConfirm={async () => {}} />
         </Specimen>
         <Specimen state="red, enabled">
           <ConfirmButton

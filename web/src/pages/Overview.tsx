@@ -49,7 +49,9 @@ function cellColour(segment: Segment): string {
  * tested at all, and most instruments are under that line for most of the day. The node stays on
  * the board because its absence from measurement is the thing worth seeing.
  */
-function Cell({ node }: { node: BoardNode }) {
+// Exported for web/src/pages/Specimens.tsx. The specimen sheet renders the real tile rather
+// than a copy of it, so the two cannot drift apart. Export only: nothing here changed.
+export function Cell({ node }: { node: BoardNode }) {
   if (node.state === "below_floor") {
     const peak = node.roster.expected_attempts_peak_window;
     // A node sitting near the floor is not reliably absent, it flips window to window on
@@ -97,7 +99,7 @@ function Cell({ node }: { node: BoardNode }) {
 }
 
 /** A whole dimension folded into one row, because five empty tiles say less than one sentence. */
-function CollapsedGroup({ group }: { group: BoardGroup }) {
+export function CollapsedGroup({ group }: { group: BoardGroup }) {
   const collapsed = group.collapsed;
   if (!collapsed) return null;
   return (
