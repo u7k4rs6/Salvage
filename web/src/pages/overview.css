@@ -1,174 +1,456 @@
 /*
- * The Overview's visual language. Scoped under `.ov` and `.chrome-ui` so that pages which have
- * not been redesigned keep exactly the styling they had.
+ * The Overview's visual language: dark editorial.
  *
- * Foundation is cool near-white with near-black ink and hard rules instead of cards. Colour is
- * semantic and nothing else: each of the six carries one meaning from the pipeline, and a colour
- * never appears without a word beside it.
+ * Scoped under `.ov`, so the six pages that have not been redesigned keep the light frame they
+ * already had. The one thing that reaches outside `.ov` is the chrome override at the bottom,
+ * and it is gated on an attribute the Overview sets while it is mounted and removes when it
+ * unmounts, so no other route can see it.
+ *
+ * The page is one continuous surface divided by full-bleed rules. There are no cards. A region is
+ * a numbered band: its ordinal sits in the left margin in the accent, the content sits beside it,
+ * and a hairline runs edge to edge between one band and the next.
+ *
+ * Colour is semantic and nothing else. Red is for incidents and refusals, amber for pending,
+ * teal for recovered, blue for diagnosis. The lime accent is the brand and the interactive
+ * colour, and it never carries a state.
  */
 
-.ov,
-.chrome-ui {
-  --paper: #fafafa;
-  --surface: #ffffff;
-  --sunken: #f4f4f5;
-  --line: #e4e4e7;
-  --line-strong: #d4d4d8;
-  --ink: #09090b;
-  --ink-2: #52525b;
-  --ink-3: #a1a1aa;
+.ov {
+  /* Surfaces */
+  --base: #0a0a0b;
+  --elevated: #141416;
+  --raised: #1b1b1e;
 
-  /* One meaning each, from the pipeline. Never decorative. */
-  --detect: #7c3aed;
-  --diagnose: #2563eb;
-  --gate: #a16207;
-  --execute: #0f766e;
-  --escalate: #ea580c;
-  --recover: #15803d;
-  --incident: #dc2626;
+  /* Rules */
+  --hair: rgba(255, 255, 255, 0.08);
+  --hair-strong: rgba(255, 255, 255, 0.14);
 
-  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  /* Text */
+  --text: #fafafa;
+  --text-2: #a1a1a6;
+  --text-3: #6e6e73;
+
+  /* Interactive and brand. Never a state. */
+  --accent: #b8ff2e;
+
+  /* States */
+  --incident: #ff4a4a;
+  --pending: #ffb627;
+  --recovered: #2ee6a8;
+  --diagnosis: #5b8cff;
+
+  --font-display: "Space Grotesk", "Archivo", ui-sans-serif, system-ui, sans-serif;
   --font-ui: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Vertical rhythm. Half of 80 on each side of a hairline, so the gap between two regions is
+     80 and the gap between the content and its own rule is not doubled. 24 inside a region. */
+  --region-y: 40px;
+  --stack: 24px;
+  --gutter: 48px;
+  --rail: 4.5rem;
+}
+
+/* `.chrome-ui` is the top bar and the left nav, which exist on every page. All this rule does is
+   give them the UI face; the surface colours below are gated on the Overview's own attribute. */
+.chrome-ui {
+  --font-ui: "Inter", ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-ui);
 }
 
 .ov {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: var(--font-ui);
-  font-feature-settings: "cv05" 1;
+  /* The main element pads every page by 1rem. The Overview is full bleed, so it takes that back. */
   margin: -1rem;
   padding: 0;
   min-height: calc(100vh - 42px);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 1.5;
+  /* The one gradient on the page: a 0 to 8 percent wash down the base. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 100%),
+    var(--base);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
 }
 
-.chrome-ui {
-  font-family: var(--font-ui);
-}
+/* -- type ----------------------------------------------------------------- */
 
 .ov .display {
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 0.92;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Small tracked labels do a lot of the work in this layout: they name the scope of a number so a
-   figure never floats without one. */
-.ov .label {
+.ov .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+/* The microlabel is half the identity. It sits above every number and names the population. */
+.ov .microlabel {
+  font-family: var(--font-ui);
   font-size: 10px;
-  font-weight: 600;
+  line-height: 1.4;
+  font-weight: 500;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--text-3);
 }
-.ov .label-ink {
-  color: var(--ink-2);
+.ov .microlabel-ink {
+  color: var(--text-2);
 }
-
-.ov .rule {
-  border-top: 1px solid var(--line);
-}
-.ov .rule-strong {
-  border-top: 1px solid var(--ink);
+.ov .microlabel-accent {
+  color: var(--accent);
 }
 
-.ov .band {
-  padding: 28px 32px;
+/* The scope note under a figure. Sentence case, because it is a sentence. */
+.ov .scope {
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-3);
 }
 
-/* -- the deviation lane ---------------------------------------------------
+.ov .body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text-2);
+}
+.ov .body-sm {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+.ov .hero-stat {
+  font-size: clamp(60px, 9vw, 104px);
+}
+.ov .stat-2 {
+  font-size: clamp(34px, 4.4vw, 56px);
+}
+.ov .heading {
+  font-size: clamp(24px, 2.8vw, 32px);
+}
+
+/* -- regions -------------------------------------------------------------- */
+
+/* Full bleed hairlines, edge to edge, with the padding on the inner element so the rule is not
+   inset. The page is a stack of rules, not a grid of boxes. */
+.ov .region {
+  border-top: 1px solid var(--hair);
+}
+.ov .region:first-child {
+  border-top: 0;
+}
+.ov .region-inner {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: 0 var(--stack);
+  padding: var(--region-y) var(--gutter) var(--region-y) var(--gutter);
+}
+.ov .rail {
+  position: sticky;
+  top: 12px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ov .rail-no {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+.ov .rail-name {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  /* The name turns down the left margin so a long word does not push the content column. */
+  writing-mode: horizontal-tb;
+}
+.ov .stack > * + * {
+  margin-top: var(--stack);
+}
+
+/* -- the stat row --------------------------------------------------------- */
+
+/* Four numbers on one baseline, separated by vertical hairlines. No boxes. */
+.ov .stat-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.ov .stat-cell {
+  padding: 0 28px;
+  border-left: 1px solid var(--hair);
+}
+.ov .stat-cell:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.ov .stat-cell:last-child {
+  padding-right: 0;
+}
+
+/* -- deviation lanes ------------------------------------------------------
  *
- * One row per segment, all on a shared 0 to 100 percent axis so the eye can run down the column
- * and find the outlier without reading a single number. The bar spans from the segment's own
- * baseline to where it actually is, so its length is the excess and its direction is the sign.
- * A lane with no bar is a segment the detector could not test.
+ * One row per segment, all on a shared 0 to 100 percent axis, so the eye runs down the column and
+ * finds the outlier without reading a number. The bar spans from the segment's own baseline to
+ * where it actually is: its length is the excess and its direction is the sign.
+ *
+ * A lane with no bar is a segment the detector could not test. It is drawn as a dashed rule
+ * rather than left out, because absence from measurement is a fact about the detector.
  */
 .ov .lane-track {
   position: relative;
-  height: 22px;
-  background: var(--sunken);
-  border-left: 1px solid var(--line-strong);
+  height: 20px;
+  background: var(--elevated);
 }
 .ov .lane-fill {
   position: absolute;
   top: 0;
   bottom: 0;
-  transition: left 220ms ease, width 220ms ease;
+  transition: left 220ms ease-out, width 220ms ease-out;
 }
+/* The baseline is a full height white rule at 30 percent, so it reads as the reference and not
+   as another bar. */
 .ov .lane-baseline {
   position: absolute;
-  top: -2px;
-  bottom: -2px;
+  top: 0;
+  bottom: 0;
   width: 1px;
-  background: var(--ink);
-  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.3);
 }
 .ov .lane-value {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 2px;
-  background: var(--ink);
+  width: 1px;
+  background: rgba(255, 255, 255, 0.55);
 }
-.ov .lane-muted {
-  background: repeating-linear-gradient(
-    135deg,
-    var(--sunken),
-    var(--sunken) 5px,
-    #ededf0 5px,
-    #ededf0 10px
-  );
+.ov .lane-empty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed rgba(255, 255, 255, 0.06);
 }
 
+.ov .lane-row {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr) 5rem 4.5rem;
+  align-items: center;
+  gap: 14px;
+  padding: 3px 0;
+}
+
+/* -- interaction ---------------------------------------------------------- */
+
+/* Everything that is not a decode is 150ms opacity and 4px translate. Nothing more. */
+.ov .lift {
+  transition: opacity 150ms ease-out, transform 150ms ease-out, color 150ms ease-out;
+}
+.ov .lift:hover {
+  opacity: 1;
+  transform: translateX(4px);
+}
+.ov .row-hover {
+  transition: background-color 150ms ease-out;
+}
 .ov .row-hover:hover {
-  background: var(--surface);
+  background: var(--elevated);
+}
+
+.ov a.focus-ring:focus-visible,
+.ov button.focus-ring:focus-visible,
+.ov .focus-ring:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* The scramble runs on a value that changed state. While it runs the glyphs are not the value,
+   so it is hidden from assistive technology and the settled value is announced instead. */
+.ov .scrambling {
+  color: var(--text-2);
 }
 
 /* -- lifecycle ------------------------------------------------------------ */
 
 .ov .stage {
-  border: 1px solid var(--line-strong);
-  background: var(--surface);
-  padding: 8px 12px 9px;
-  min-width: 104px;
+  background: var(--elevated);
+  border: 1px solid var(--hair);
+  padding: 10px 14px 11px;
+  min-width: 116px;
   max-width: 13rem;
-  min-height: 52px;
+  min-height: 58px;
 }
 .ov .stage-done {
-  border-color: var(--ink);
+  border-color: var(--hair-strong);
+  background: var(--raised);
 }
 .ov .stage-active {
   border-color: currentColor;
-  box-shadow: inset 0 0 0 1px currentColor;
 }
 .ov .stage-idle {
-  background: var(--sunken);
-  color: var(--ink-3);
+  background: transparent;
+  color: var(--text-3);
 }
 .ov .connector {
   height: 1px;
-  background: var(--line-strong);
-  flex: 1 1 12px;
-  min-width: 12px;
+  background: var(--hair);
+  flex: 1 1 14px;
+  min-width: 14px;
 }
 .ov .connector-done {
-  background: var(--ink);
+  background: var(--hair-strong);
 }
 /* A terminal branch stops. The bar is the visual full stop, and it is why nothing is ever drawn
    from ESCALATE onward to RECOVER. */
 .ov .terminal-stop {
   width: 3px;
+  height: 24px;
+  background: var(--pending);
+}
+
+/* -- states --------------------------------------------------------------- */
+
+.ov .skeleton {
+  background: var(--elevated);
   height: 22px;
-  background: var(--escalate);
+  animation: ov-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ov-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
 }
 
-.ov .focus-ring:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
+/* A planner failure is an error, not a decision. It is drawn as one so it is never read as an
+   escalation somebody chose. */
+.ov .error-block {
+  border-left: 2px solid var(--incident);
+  background: var(--elevated);
+  padding: 12px 16px;
+}
+.ov .notice-block {
+  border-left: 2px solid var(--pending);
+  background: var(--elevated);
+  padding: 12px 16px;
 }
 
-@media (max-width: 900px) {
-  .ov .band {
-    padding: 20px 18px;
+/* -- chrome, only while the Overview is mounted ---------------------------
+ *
+ * The top bar and the left nav belong to every page. Restyling them unconditionally would darken
+ * six pages nobody asked me to touch, so the Overview sets `data-surface="dark"` on <html> on
+ * mount and drops it on unmount, and every rule here is gated on it.
+ */
+html[data-surface="dark"] {
+  background: #0a0a0b;
+}
+html[data-surface="dark"] body {
+  background: #0a0a0b;
+  color: #fafafa;
+}
+html[data-surface="dark"] header.chrome-ui {
+  background: #0a0a0b;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+html[data-surface="dark"] header.chrome-ui span,
+html[data-surface="dark"] header.chrome-ui label {
+  color: #a1a1a6;
+}
+html[data-surface="dark"] header.chrome-ui .num {
+  color: #fafafa;
+}
+html[data-surface="dark"] header.chrome-ui .num.text-red-700,
+html[data-surface="dark"] header.chrome-ui .text-red-700 {
+  color: #ff4a4a;
+}
+html[data-surface="dark"] header.chrome-ui input {
+  background: #141416;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #fafafa;
+}
+html[data-surface="dark"] header.chrome-ui button {
+  background: #141416;
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #fafafa;
+}
+/* The nav is the Overview's sibling in the same flex row, so it is the same height and takes the
+   same wash. Without this the wash stops at the nav's edge and the seam reads as a mistake. */
+html[data-surface="dark"] nav {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 100%),
+    #0a0a0b;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+html[data-surface="dark"] nav a {
+  color: #6e6e73;
+  border-left-color: transparent;
+}
+html[data-surface="dark"] nav a:hover {
+  color: #fafafa;
+}
+/* The active nav marker is the accent. It is one of the three places lime is allowed. */
+html[data-surface="dark"] nav a[aria-current="page"] {
+  color: #fafafa;
+  border-left-color: #b8ff2e;
+}
+
+/* -- reduced motion ------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ov *,
+  .ov *::before,
+  .ov *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .ov {
+    --region-y: 28px;
+    --gutter: 24px;
+    --rail: 3.25rem;
+  }
+  .ov .stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 0;
+  }
+  .ov .stat-cell:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .ov .lane-row {
+    grid-template-columns: 8rem minmax(0, 1fr) 4.25rem 3.5rem;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 700px) {
+  .ov .region-inner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ov .rail {
+    position: static;
+    flex-direction: row;
+    gap: 10px;
+    margin-bottom: 16px;
   }
 }

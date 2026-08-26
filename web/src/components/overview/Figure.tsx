@@ -1,51 +1,58 @@
-import type { ReactNode } from "react";
+import { Decoded } from "./Decoded";
 
 /**
  * A number with its scope attached.
  *
- * Every figure on this page names the population and the window it covers, because three of the
- * four headline numbers cover different ones. Two of them cannot be divided by each other, and a
- * reader who is not told the scope will try.
+ * Microlabel above, number, scope note below. Every figure names the population and the window
+ * it covers, because the four in the stat row do not share one and two of them cannot be divided
+ * by each other. A figure without a scope note is a figure a reader will misread.
+ *
+ * The number decodes when it changes, which on this page means when the window advances. It does
+ * not decode on first paint; `useScramble` holds the first value still.
  */
+
+type Tone = "ink" | "incident" | "recovered" | "pending" | "muted";
+
+const TONE: Record<Tone, string> = {
+  ink: "var(--text)",
+  incident: "var(--incident)",
+  recovered: "var(--recovered)",
+  pending: "var(--pending)",
+  muted: "var(--text-3)",
+};
+
 export function Figure({
   value,
   label,
   scope,
   tone = "ink",
-  size = "lg",
+  size = "stat",
   prefix,
-  suffix,
+  decode = true,
 }: {
-  value: ReactNode;
+  value: string;
   label: string;
   scope?: string;
-  tone?: "ink" | "incident" | "recover";
-  size?: "xl" | "lg" | "md";
+  tone?: Tone;
+  size?: "hero" | "stat";
   prefix?: string;
-  suffix?: string;
+  decode?: boolean;
 }) {
-  const colour =
-    tone === "incident"
-      ? "var(--incident)"
-      : tone === "recover"
-        ? "var(--recover)"
-        : "var(--ink)";
-  const type =
-    size === "xl"
-      ? "text-[clamp(3.5rem,7vw,5.75rem)]"
-      : size === "lg"
-        ? "text-[clamp(2rem,3.4vw,3rem)]"
-        : "text-[clamp(1.5rem,2.2vw,2rem)]";
-
   return (
     <div>
-      <div className={`display ${type} tabular-nums`} style={{ color: colour }}>
-        {prefix && <span className="align-top text-[0.42em] font-600">{prefix}</span>}
-        {value}
-        {suffix && <span className="text-[0.44em]">{suffix}</span>}
+      <div className="microlabel">{label}</div>
+      <div
+        className={`display ${size === "hero" ? "hero-stat" : "stat-2"} mt-3`}
+        style={{ color: TONE[tone] }}
+      >
+        {prefix && (
+          <span className="align-top" style={{ fontSize: "0.38em", lineHeight: 1.6 }}>
+            {prefix}
+          </span>
+        )}
+        <Decoded value={value} enabled={decode} />
       </div>
-      <div className="label label-ink mt-2">{label}</div>
-      {scope && <div className="label mt-1 normal-case tracking-normal text-[10.5px]">{scope}</div>}
+      {scope && <div className="scope mt-3 max-w-[22rem]">{scope}</div>}
     </div>
   );
 }
