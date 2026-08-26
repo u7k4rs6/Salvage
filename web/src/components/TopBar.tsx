@@ -1,10 +1,34 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { post, describe } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { useSession } from "../lib/session";
-import { useStream, useStreamConnected } from "../lib/useStream";
+import { useStream, useStreamState } from "../lib/useStream";
 import { Badge, ConfirmButton } from "./primitives";
 import type { Health, Overview } from "../lib/types";
+
+/** One compact label-and-value pair. The top bar is a strip of these, not a row of cards. */
+function Readout({
+  label,
+  tone = "ink",
+  children,
+}: {
+  label: string;
+  tone?: "ink" | "red";
+  children: ReactNode;
+}) {
+  return (
+    <span className="flex items-baseline gap-1.5">
+      <span className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
+        {label}
+      </span>
+      <span
+        className={`num text-[11.5px] font-medium ${tone === "red" ? "text-red-700" : "text-neutral-900"}`}
+      >
+        {children}
+      </span>
+    </span>
+  );
+}
 
 /**
  * Environment, clock, active incident count, kill switch, token entry (spec section 2).
@@ -16,7 +40,7 @@ export function TopBar() {
   const { token, setToken } = useSession();
   const health = useApi<Health>("/api/health");
   const overview = useApi<Overview>("/api/overview");
-  const connected = useStreamConnected();
+  const stream = useStreamState();
   const [error, setError] = useState<unknown>(null);
 
   useStream(["incident.opened", "incident.closed", "sim.finished"], () => overview.reload());
@@ -27,52 +51,48 @@ export function TopBar() {
 
   return (
     <header
-      className={`flex flex-wrap items-center gap-4 border-b px-4 py-2 ${
-        killed ? "border-red-500 bg-red-50" : "border-neutral-300 bg-neutral-50"
+      className={`chrome-ui flex flex-wrap items-center gap-x-5 gap-y-2 border-b px-4 py-2 ${
+        killed ? "border-red-500 bg-red-50" : "border-neutral-200 bg-white"
       }`}
     >
-      <span className="text-sm font-semibold tracking-tight">Salvage</span>
+      <span className="text-[13px] font-semibold tracking-[-0.01em]">Salvage</span>
 
       <Badge tone={health.data?.env === "demo" ? "amber" : "neutral"}>
         {health.data?.env ?? "..."}
       </Badge>
 
-      <span className="num text-xs text-neutral-600">
-        {clock}
-        {overview.data ? ` ${new Date(overview.data.now * 1000).toLocaleString("en-IN", {
-          timeZone: "Asia/Kolkata",
-          hour12: false,
-        })}` : ""}
-      </span>
+      <Readout label={clock}>
+        {overview.data
+          ? new Date(overview.data.now * 1000).toLocaleString("en-IN", {
+              timeZone: "Asia/Kolkata",
+              hour12: false,
+            })
+          : "..."}
+      </Readout>
 
-      <span className="text-xs">
-        <span className="text-neutral-600">active incidents </span>
-        <span className={`num font-semibold ${open > 0 ? "text-red-700" : "text-neutral-900"}`}>
-          {open}
-        </span>
-      </span>
+      <Readout label="active incidents" tone={open > 0 ? "red" : "ink"}>
+        {open}
+      </Readout>
 
-      <span className="text-xs text-neutral-600">
-        stream {connected ? "connected" : "disconnected"}
-      </span>
+      <Readout label="stream" tone={stream === "disconnected" ? "red" : "ink"}>
+        {stream}
+      </Readout>
 
-      <span className="text-xs text-neutral-600">
-        model {health.data?.llm_provider ?? "..."}
-      </span>
+      <Readout label="model">{health.data?.llm_provider ?? "..."}</Readout>
 
       {killed && (
         <span className="text-xs font-semibold text-red-700">Outbound actions suspended</span>
       )}
 
       <div className="ml-auto flex items-center gap-3">
-        <label className="flex items-center gap-2 text-xs text-neutral-700">
+        <label className="flex items-center gap-2 text-[9.5px] font-semibold uppercase tracking-[0.12em] text-neutral-400">
           token
           <input
             type="password"
             value={token ?? ""}
             onChange={(event) => setToken(event.target.value || null)}
             placeholder="SALVAGE_DASHBOARD_TOKEN"
-            className="num w-56 border border-neutral-300 px-2 py-1 text-xs"
+            className="num w-48 border border-neutral-300 px-2 py-[3px] text-[11px]"
           />
         </label>
 

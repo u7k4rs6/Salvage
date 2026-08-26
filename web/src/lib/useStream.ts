@@ -31,21 +31,29 @@ export interface StreamEvent {
  */
 type Listener = (event: StreamEvent) => void;
 
+/**
+ * `connecting` is a real state, not a cosmetic one. The API's event source yields nothing until
+ * its fifteen second keepalive, so the response headers are not flushed and `onopen` does not
+ * fire until the first ping. Reporting that as "disconnected" told an operator the stream was
+ * broken every time they loaded a page.
+ */
+export type StreamState = "connecting" | "connected" | "disconnected";
+
 const listeners = new Set<Listener>();
 let source: EventSource | null = null;
-let connected = false;
-const connectionListeners = new Set<(state: boolean) => void>();
+let streamState: StreamState = "connecting";
+const connectionListeners = new Set<(state: StreamState) => void>();
 
-function setConnected(state: boolean) {
-  connected = state;
+function setStreamState(state: StreamState) {
+  streamState = state;
   connectionListeners.forEach((listener) => listener(state));
 }
 
 function ensureSource() {
   if (source) return;
   source = new EventSource("/api/stream");
-  source.onopen = () => setConnected(true);
-  source.onerror = () => setConnected(false);
+  source.onopen = () => setStreamState("connected");
+  source.onerror = () => setStreamState("disconnected");
   EVENT_NAMES.forEach((name) => {
     source!.addEventListener(name, (raw) => {
       let data: Record<string, unknown> = {};
@@ -78,8 +86,8 @@ export function useStream(names: readonly EventName[], onEvent: (event: StreamEv
   }, [wanted]);
 }
 
-export function useStreamConnected(): boolean {
-  const [state, setState] = useState(connected);
+export function useStreamState(): StreamState {
+  const [state, setState] = useState<StreamState>(streamState);
   useEffect(() => {
     ensureSource();
     connectionListeners.add(setState);
@@ -88,4 +96,9 @@ export function useStreamConnected(): boolean {
     };
   }, []);
   return state;
+}
+
+/** Kept for callers that only need the boolean. */
+export function useStreamConnected(): boolean {
+  return useStreamState() === "connected";
 }

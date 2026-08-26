@@ -6,9 +6,9 @@
  * for a world to produce it. Nothing here fetches, and nothing here is real. The numbers are
  * chosen to sit on the boundaries that matter, which is why several of them look implausible.
  *
- * `Cell` and `CollapsedGroup` are imported from pages/Overview.tsx rather than copied, so the
- * specimen and the board cannot drift. Overview is not restyled: the visual system lives in
- * specimens.css, scoped under `.specimen-sheet`, and is applied to the real tile as a skin.
+ * `Cell` and `CollapsedGroup` are imported from components/board/Tile.tsx rather than copied.
+ * They moved there when Overview was redesigned around deviation lanes, and this sheet is now
+ * their only caller. The visual system lives in specimens.css, scoped under `.specimen-sheet`.
  */
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -25,7 +25,7 @@ import {
   StatusBadge,
   Table,
 } from "../components/primitives";
-import { Cell, CollapsedGroup } from "./Overview";
+import { Cell, CollapsedGroup } from "../components/board/Tile";
 import { FLOOR_ATTEMPTS, type BoardGroup, type BoardNode, type RosterNode } from "../board/roster";
 import type { Segment } from "../lib/types";
 import "./specimens.css";

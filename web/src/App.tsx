@@ -28,19 +28,20 @@ const NAV = [
 export default function App() {
   return (
     <SessionProvider>
-      <div className="min-h-screen">
+      <div className="chrome-ui min-h-screen">
         <TopBar />
         <div className="flex">
-          <nav className="min-h-[calc(100vh-42px)] w-48 shrink-0 border-r border-neutral-300 bg-neutral-50 py-2">
+          <nav className="min-h-[calc(100vh-42px)] w-48 shrink-0 border-r border-neutral-200 bg-white py-3">
             {NAV.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) =>
-                  `block px-4 py-1.5 text-sm ${
+                  // A 2px marker and weight, nothing else. No pill, no card.
+                  `block border-l-2 px-4 py-[7px] text-[12.5px] tracking-[0.01em] ${
                     isActive
-                      ? "border-l-2 border-accent bg-white font-medium text-accent-hover"
-                      : "border-l-2 border-transparent text-neutral-700 hover:bg-neutral-100"
+                      ? "border-neutral-900 font-semibold text-neutral-900"
+                      : "border-transparent text-neutral-500 hover:border-neutral-300 hover:text-neutral-900"
                   }`
                 }
               >
