@@ -99,25 +99,33 @@ def overview(connection_factory: ConnFactory) -> dict[str, Any]:
             "attempts": int(row["attempts"]),
             "failures": int(row["failures"]),
         }
+        # Bounded above at `window_end`, which is this page's "now". Without the upper bound the
+        # sparkline ran to the end of the simulated world, because the simulator writes the whole
+        # day before the detector sees any of it. 136 buckets where 96 had happened.
         for row in conn.execute(
             "SELECT (created_at / 900) * 900 AS bucket, COUNT(*) AS attempts, "
             "SUM(status = 'failed') AS failures FROM v_payment_attempts "
-            "WHERE created_at >= ? GROUP BY bucket ORDER BY bucket",
-            (window_end - 24 * 3600,),
+            "WHERE created_at >= ? AND created_at < ? GROUP BY bucket ORDER BY bucket",
+            (window_end - 24 * 3600, window_end),
         )
     ]
 
     hour = conn.execute(
         "SELECT COUNT(*) AS attempts, SUM(status = 'failed') AS failures "
-        "FROM v_payment_attempts WHERE created_at >= ?",
-        (window_end - 3600,),
+        "FROM v_payment_attempts WHERE created_at >= ? AND created_at < ?",
+        (window_end - 3600, window_end),
     ).fetchone()
     attempts_last_hour = int(hour["attempts"] or 0)
     failures_last_hour = int(hour["failures"] or 0)
 
+    # "All time" means all time up to now. `recovery_routes.paid_at` is a real timestamp and
+    # rows exist for payments the simulated world has not reached yet, so an unbounded sum put
+    # future recoveries on the tile beside an attempts count that stops at the window.
     recovered = conn.execute(
         "SELECT COALESCE(SUM(o.amount), 0) AS total FROM recovery_routes r "
-        "JOIN v_orders o ON o.id = r.order_id WHERE r.route IN ('link', 'steer')"
+        "JOIN v_orders o ON o.id = r.order_id "
+        "WHERE r.route IN ('link', 'steer') AND r.paid_at < ?",
+        (window_end,),
     ).fetchone()
 
     return {

@@ -291,12 +291,17 @@ def at_risk_amount(conn, *, segment_key: str, window_start: int, evaluated_at: i
         conditions.append("a.error_step = ?")
         args.append(value)
 
+    # Unpaid *at evaluated_at*, not unpaid forever. `paid_at IS NULL` alone reads the future: the
+    # agent runs over a completed simulation, so an order the customer pays at 22:30 already
+    # carries that timestamp when the incident opens at 20:10, and the at-risk figure silently
+    # excluded exactly the customers who were about to come back. Same defect as WHAT_BROKE
+    # entries 1 and 14, in the number the dashboard puts on an incident card.
     row = conn.execute(
         "SELECT COALESCE(SUM(o.amount), 0) AS total FROM v_orders o WHERE o.id IN ("
         "  SELECT DISTINCT a.order_id FROM v_payment_attempts a WHERE "
         + " AND ".join(conditions)
-        + ") AND o.paid_at IS NULL",
-        tuple(args),
+        + ") AND (o.paid_at IS NULL OR o.paid_at > ?)",
+        (*args, evaluated_at),
     ).fetchone()
     return int(row["total"])
 

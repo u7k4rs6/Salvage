@@ -320,7 +320,7 @@ was not fetching. Guarded by three tests: one that an order paid later still get
 an order already paid does not, and one that greps the file for the status comparison, because the
 shape of this regression is a single line and it has now happened twice.
 
-### What this costs, and it is not small
+### What entry 14 costs, and it is not small
 
 `docs/RESULTS.md` was produced by the pre-fix code. This branch no longer reproduces it, and
 re-running `salvage eval run` is not enough to make it reproduce it.
@@ -336,3 +336,63 @@ Regenerating the results on this branch therefore needs the planner fixtures re-
 live model, which is a spend and a provenance decision rather than a command to run. Until that
 happens, `docs/RESULTS.md` describes the frozen build at `e92a71c` and this branch's code does not
 produce it. The freeze note at the top of `docs/BUILD_LOG.md` still describes `master`.
+
+### 15. The at-risk figure on every incident card excluded the customers about to come back
+
+`at_risk_amount()` in `salvage/detect/incidents.py` closed its query with `AND o.paid_at IS NULL`.
+There is no time comparison in that clause, so it means "never paid, in the whole run" rather than
+"not paid yet". Entry 14 again, one file over, in the number the dashboard puts in front of an
+operator.
+
+The signature already carries what it needed: the function takes `evaluated_at` and uses it to
+bound which failed attempts count, then ignores it when deciding which of those orders are still
+unpaid. Fixed with `AND (o.paid_at IS NULL OR o.paid_at > ?)`.
+
+Measured on the same incident, S1 seed 1 at 20:45 sim time: **21,04,883 paise before, 25,63,193
+after.** The shipped figure was 18 percent light, and light in a specific direction: it left out
+the orders that were about to be paid organically, which is the same population entry 14 stopped
+the agent from opening cases for.
+
+This one touches no table in `docs/RESULTS.md`. The at-risk revenue in section 1 is accumulated by
+`salvage/eval/metrics.py` over the fault-scheduled at-risk order set and never calls this function.
+What it changes is the incident card, the incident list, the merchant-wide at-risk tile, and the
+at-risk figure shown beside an escalation, which is to say every place a human reads it.
+
+### 16. Three of the overview's numbers ran past the end of the world
+
+The same query shape in three places in `salvage/api/routes_incidents.py`, all of them "as of now"
+numbers with no upper bound:
+
+- `attempts_last_hour` and the merchant success rate under it: `WHERE created_at >= ?`, so the last
+  hour ran from one hour before the window to the end of the simulated world. 4,808 attempts where
+  1,227 had happened.
+- the volume and failures sparkline: same, so it drew 136 buckets where 96 had happened and the
+  line continued past the right edge of the window the page said it was showing.
+- the recovered tile: `WHERE r.route IN ('link', 'steer')` with no time clause at all, summing
+  recoveries whose `recovery_routes.paid_at` had not arrived.
+
+All three are bounded at `window_end`, which is the value the route already returns as `now`.
+
+Unlike entries 14 and 15 this one is only wrong against a simulator. A production database has no
+rows dated in the future, so an unbounded `created_at >= ?` is harmless there. It is wrong here
+because the simulator writes the whole day before the detector sees any of it, and this project's
+dashboard is only ever pointed at the simulator. A number that is right in a deployment nobody has
+and wrong in the only one that exists is still a wrong number.
+
+The recovered tile was not in the list of two I was asked to fix. It is in the same function as the
+other two, it is the same missing clause, and leaving it would have produced a stats row where two
+tiles stop at the window and the third does not. Reverting it is one clause.
+
+**How all three were found.** By the same capture script as entry 14, which stops a world at a
+chosen minute by deleting every row dated after it. Every number that changed when the future was
+deleted was a number that had been reading it. That diff is the whole method, and it found four
+defects: the case count, the at-risk amount, the attempts count and the sparkline. The recovered
+tile came from reading the remaining query in the same function.
+
+**And the check that they are all closed.** Capture the same world twice, once with the future
+deleted and once with it left in, and diff the two payloads. Before these fixes they disagreed on
+the case count, the at-risk amount, the attempts count, the success rate, the sparkline length and
+the recovered tile. After them the two responses are byte identical, which is the same statement as
+"no number on this page depends on data the world has not reached". `s1_detected_untrimmed.json`
+was kept in `web/src/board/fixtures` as the A/B evidence and has been deleted, because it is now a
+duplicate of the trimmed capture and a duplicate is the result.

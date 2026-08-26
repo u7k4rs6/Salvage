@@ -358,3 +358,46 @@ def _seed_attempts(conn, *, start: int, count: int, method: str, fail_every: int
         )
     repo.upsert_orders_batch(conn, orders)
     repo.upsert_attempts_batch(conn, attempts)
+
+
+def test_at_risk_counts_an_order_that_gets_paid_after_the_incident_opened(conn):
+    """`paid_at IS NULL` alone reads the future.
+
+    The agent runs over a completed simulation, so an order the customer pays at 22:30 already
+    carries that timestamp when the incident opens at 20:10. The at-risk figure excluded those
+    orders, which are exactly the customers who were about to come back, and so understated the
+    money the incident had put at risk. Same defect as WHAT_BROKE entries 1 and 14.
+    """
+    from salvage.detect.incidents import at_risk_amount
+
+    opened_at = 1_786_200_000
+    conn.execute(
+        "INSERT INTO customers (id, ref_hash, consent, locale, preferred_method, typical_amount, "
+        "created_at) VALUES ('c1', 'h1', 1, 'en', 'upi', 100000, ?)",
+        (opened_at - 86400,),
+    )
+    for order_id, paid_at in (
+        ("order_later", opened_at + 9000),  # pays two and a half hours from now
+        ("order_already", opened_at - 60),  # paid a minute ago
+        ("order_never", None),
+    ):
+        conn.execute(
+            "INSERT INTO orders (id, customer_id, amount, currency, status, source, created_at, "
+            "paid_at) VALUES (?, 'c1', 100000, 'INR', ?, 'sim', ?, ?)",
+            (order_id, "paid" if paid_at else "attempted", opened_at - 600, paid_at),
+        )
+        conn.execute(
+            "INSERT INTO payment_attempts (id, order_id, customer_id, method, upi_handle, status, "
+            "created_at, raw_json) VALUES (?, ?, 'c1', 'upi', 'okhdfcbank', 'failed', ?, '{}')",
+            (f"pay_{order_id}", order_id, opened_at - 300),
+        )
+    conn.commit()
+
+    total = at_risk_amount(
+        conn,
+        segment_key="upi:upi_handle:okhdfcbank",
+        window_start=opened_at - 900,
+        evaluated_at=opened_at,
+    )
+    # order_later and order_never. Not order_already, which really had been paid by then.
+    assert total == 200000

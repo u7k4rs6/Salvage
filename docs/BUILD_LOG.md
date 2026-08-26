@@ -2029,3 +2029,26 @@ produces `docs/RESULTS.md`. This entry records that branch `ui/board` no longer 
   still gets a case, an order already paid does not, and a source check that no case path decides
   paid by comparing the status column. The third exists because this regression is one line and has
   now happened twice. All three were confirmed to fail against the old line before being kept.
+
+- **Three more of the same, in the numbers rather than the behaviour.** `WHAT_BROKE.md` entries 15
+  and 16. `at_risk_amount()` closed on `AND o.paid_at IS NULL`, which means "never paid in the whole
+  run" rather than "not paid yet", so the at-risk figure on every incident card left out the orders
+  about to be paid organically: 21,04,883 paise against 25,63,193 on the same incident. And the
+  overview route's `attempts_last_hour`, its sparkline and its recovered tile had no upper bound at
+  all, so each ran to the end of the simulated world: 4,808 attempts against 1,227, and 136
+  sparkline buckets against 96. All four are bounded at `window_end` now, which the route already
+  returns as `now`.
+
+  None of these touch `docs/RESULTS.md`. Section 1's at-risk revenue is accumulated by
+  `salvage/eval/metrics.py` over the fault-scheduled order set and never calls
+  `detect.incidents.at_risk_amount`. What they change is every figure a human reads on the console.
+
+  Guarded by two tests, in `test_detect.py` and `test_api_routes.py`, both confirmed to fail
+  against the old queries before being kept.
+
+- **The method, since it generalises.** Every one of these was found by stopping a world at a
+  chosen minute, deleting every row dated after it, and diffing the API's answers against the same
+  world with the future left in. Anything that changed had been reading the future. That diff found
+  the case count, the at-risk amount, the attempts count and the sparkline; the recovered tile came
+  from reading the one remaining unbounded query in the same function. It is worth running again
+  against any number this project adds.
