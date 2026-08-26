@@ -1970,3 +1970,22 @@ behaviour change. Nothing in `salvage/` was touched.
 - **The docstring in `salvage/detect/run.py` repeats the same wrong sentence** and was left alone,
   because editing it is a code change and the freeze covers `salvage/`. It is wrong in the same
   way and for the same reason. A reader who finds it should read this entry.
+
+- **A hand-written limitation in a generated document needs a guard, and the real fix is
+  deferred.** `docs/RESULTS.md` is written by `salvage eval report`, which renders `_limitations()`
+  in `salvage/eval/report.py`. The comparability note added in this entry's commit was added by
+  hand, so the next regeneration would drop it and the document would go on looking complete. That
+  is the same failure `check_freshness()` exists to catch from the other side: an artifact nobody
+  can see is stale.
+
+  The permanent fix is one entry in the `items` list in `_limitations()`, and it is deferred
+  because `salvage/` is frozen. In its place, `docs/required_notes/` holds the canonical text of
+  every note `docs/RESULTS.md` must carry, one file each, and
+  `test_results_still_carries_every_required_note` in `tests/unit/test_docs_claims.py` asserts each
+  appears verbatim and fails by filename when one does not. The guard was checked by deleting the
+  note from `docs/RESULTS.md` and confirming the failure, not by assuming it. When the freeze
+  lifts, add the text to `items`, delete the note file, and the guard has nothing left to guard.
+
+  `tests/` is outside the freeze's "no code, no parameter, no simulator constant" wording but is
+  still a change after the freeze commit, so it is recorded here rather than made quietly. It adds
+  one test and no dependency.
