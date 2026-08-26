@@ -10,6 +10,9 @@ import Ledger from "./pages/Ledger";
 import Results from "./pages/Results";
 import Storefront from "./pages/Storefront";
 import ScenarioRunner from "./pages/ScenarioRunner";
+// Not in NAV. The specimen sheet is a design surface, not a page of the console, and it is
+// reached by typing the path.
+import Specimens from "./pages/Specimens";
 
 // Seven entries in the order docs/04_FRONTEND_SPEC.md section 2 fixes.
 const NAV = [
@@ -60,6 +63,7 @@ export default function App() {
                 <Route path="/results" element={<Results />} />
                 <Route path="/storefront" element={<Storefront />} />
                 <Route path="/runner" element={<ScenarioRunner />} />
+                <Route path="/specimens" element={<Specimens />} />
                 <Route path="*" element={<Navigate to="/overview" replace />} />
               </Routes>
             </ErrorBoundary>
