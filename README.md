@@ -37,10 +37,14 @@ npm install
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`, paste `demo-token` into the token box in the top bar, and go to
-Scenario Runner. Pick a scenario, a seed and a policy, and press run. The run resets the database
-first, because a scenario is a whole world and two worlds in one database collide on the first
-customer they share.
+Open `http://127.0.0.1:5173` and paste `demo-token` into the token box in the top bar. That token
+is needed only for the routes that change something: the kill switch, and approving or rejecting an
+escalation. Everything else reads.
+
+Scenario Runner needs neither the token nor the backend. It replays a recording committed to
+`web/src/board/fixtures/`, because `POST /api/sim/run` simulates, detects, diagnoses, acts and
+settles in one uninterruptible call and there is nothing to watch while it does. To run a scenario
+for real, use the CLI below and then read the result on the other pages.
 
 The token lives in React state and is never written to `localStorage`, so a page reload asks for it
 again. Read routes are open on loopback; every mutating route requires the bearer token. The API

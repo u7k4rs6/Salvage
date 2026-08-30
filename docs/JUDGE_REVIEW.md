@@ -161,3 +161,103 @@ the provider a type carrying the prompt and its hash and nothing else; and `asse
 prompt containing a scenario id, a seed or a cause name. The weakness is that this is only true of
 the 41 diagnosis fixtures, and the 81 planner fixtures are keyed on prompt hashes that mostly no
 longer occur on this branch, which `docs/RESULTS.md` and `docs/BUILD_LOG.md` now both state.
+
+---
+
+## Round 2
+
+Scope: the four passes round 1 deferred, plus the demo build as a stranger meets it.
+
+### Fixed
+
+**F6. Results was empty in the public demo.** Severity: critical, and it defeated the point of the
+demo. Results is one of the two pages a static build ships and it reads the sweep through
+`/api/results`, which does not exist without a backend, so it rendered "Nothing here yet." twice. An
+error panel would have been bad; an empty state is worse, because it does not read as a missing
+connection, it reads as a project with no measurements. A build with no backend now answers
+`/api/results` and `/api/results/{id}`, and only those, from a verbatim capture of the same routes
+committed at `web/src/board/fixtures/results.api.json`. Nothing is recomputed in the browser and no
+other route is intercepted. Verified: every cell of the demo's primary table matches the recompute
+in pass 4 below, and the secondary whole-run table, the one where the baselines beat the agent, is
+visible in the demo rather than only in the document.
+
+**F7. The README described a Scenario Runner that no longer exists.** Severity: medium. It said to
+pick a scenario, a seed and a policy and press run, which was true of the old page and is not true
+of the replay. Corrected, along with a note that the page needs neither the token nor the backend.
+
+### Queued
+
+**Q6. `docs/PITCH.md` says the agent "loses some seeds outright" on S3; it loses one of ten.**
+Recomputed: mean difference 5,840 rupees, paired standard deviation 15,993, and the agent is behind
+on exactly one seed. The plural overstates how badly the agent does, so this is under-claiming and
+under-claiming is not a finding. It is queued only because it is loose, and because rewording a
+negative finding is not something to do unattended.
+
+**Q7. A new committed fixture exists that was not there before.**
+`web/src/board/fixtures/results.api.json`, 137 kB, a verbatim capture of two API routes reading
+`data/results/`. It changes no number and transforms nothing, and F6 could not be fixed without it,
+but it is a new committed artifact and worth an explicit look.
+
+### Passes
+
+**1. Cold start.** Clean. Cloned `ui/board` to an empty directory in `/tmp` and followed the README
+with nothing from memory. `uv sync --all-extras`, `cp .env.example .env`, `uv run salvage db
+migrate`, `uv run salvage agent run --scenario S1 --seed 1 --policy B1` and `uv run salvage ledger
+verify` all ran with no undocumented flag and no missing prerequisite. `cd web && npm ci && npm run
+build` produced `dist` including the `404.html` copy. The clone is 13 MB; `data/` is empty in it and
+`db migrate` creates the database, which the README already implies and which worked.
+
+The headless run on the clean clone reported `stream_digest=6a6e30230725aae5`, which is byte for
+byte the digest `data/results/main.json` records for S1 seed 1. A fresh clone reproduces the frozen
+sweep's world exactly.
+
+**2. Static build.** Clean, and covered in round 1. Rechecked after F6: bundle is 29.5 kB of
+JavaScript and 8.0 kB of CSS gzipped, plus a 9.0 kB gzipped results capture fetched only when
+Results opens.
+
+**3. Every page, every state.** Contrast rescanned over the demo build in three states, Results, the
+entry screen, and the replay paused mid-run at the first refusal, including the header and the nav
+this time: 0 failures. The narration at that position reads "Salvage refused to act here, because
+those shoppers never agreed to be contacted."
+
+**4. Reconciliation.** Clean. A different sample from round 1, recomputed from
+`data/results/main.json` and `data/results/diagnosis.json`, never the reverse:
+
+- Section 1, every cell of at-risk recovered revenue and at-risk messages across five scenarios and
+  five arms: matches to the rupee. At-risk order counts are identical across all five arms in every
+  scenario, which is the property that makes the comparison fair, and a test already asserts it.
+- Section 3 decomposition for S1 and S2, recovered orders split by link, steer and organic: matches.
+- README's "26 percent on 32 percent of B2's messages" for S1 and "29 percent on 31 percent" for S2:
+  recomputed 26.3 and 31.8, 28.8 and 31.4.
+- The S3 non-claim: 5,840 rupees on a paired standard deviation of 15,993, message share 86 percent.
+  All three exact.
+- The echo comparison: 16,066 more on S1, 6,081 less on S2, 15,266 less on S3, identical on S4, and
+  the four summing to about minus five thousand. All exact, signs included.
+- Whole-run, "baselines beat the agent by 29 to 44 percent": recomputed 36, 39, 29 and 44.
+- Diagnosis accuracy over 41 incidents: rules 90.2 percent, reconciled 97.6 percent. Both exact.
+- Opt-out cost "2.6 percent": 3,212 opt-outs over 125,785 messages is 2.55 percent.
+- Policy violations across all 250 rows: 0, as claimed. Stream digests identical across all five
+  arms in all 50 worlds: 0 mismatches.
+
+**5. Claim versus evidence.** Clean, with Q6 the only note. The strongest claims are the ones with
+the most careful hedging around them: S3 is explicitly called not a win in both PITCH and
+SUBMISSION, the whole-run reversal is stated in both, and the language model's null result is stated
+as a null result. No caveat present in `docs/RESULTS.md` is missing from PITCH or SUBMISSION. The
+reverse is not true and does not need to be.
+
+**6. The thirty-second test.** Unchanged from round 1; no copy was rewritten, so the same terms and
+the same open questions stand.
+
+**7. Freeze integrity.** Clean. `master` is `eaaa7f7`, which is `e92a71c` plus one commit that
+changes 14 lines of `docs/BUILD_LOG.md` and nothing else, so the FROZEN note's claim that "the only
+commit that follows it is this note" is accurate. Nothing in rounds 1 or 2 touched `salvage/`,
+`tests/`, `data/`, `migrations/` or `scripts/`: the whole diff is `web/`, `README.md`,
+`docs/BUILD_LOG.md`, `docs/RESULTS.md` and this file. The world digest check above closes it from
+the other side: the simulator on this branch still produces the world the frozen sweep measured.
+
+### Documents checked for the mechanical faults
+
+No em dashes or en dashes in `README.md` or any file in `docs/`. Every relative link and every
+backtick-quoted repository path in `README.md` and all nine documents resolves to a file that
+exists. Both scans clean.
+

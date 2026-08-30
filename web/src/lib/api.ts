@@ -1,3 +1,6 @@
+import { FULL_CONSOLE } from "./build";
+import resultsFixtureUrl from "../board/fixtures/results.api.json?url";
+
 // The one place that talks to the API.
 //
 // Two rules from docs/03_SECURITY_AND_ACCESS.md section 9 and docs/04_FRONTEND_SPEC.md section 3:
@@ -35,7 +38,42 @@ async function parse(response: Response): Promise<any> {
   return body;
 }
 
+/**
+ * The demo build has no API, and Results is one of its two pages.
+ *
+ * Everything else the demo ships reads a committed recording directly. Results reads the sweep
+ * through `/api/results`, and in a static deployment that fetch 404s, which Results renders as
+ * "Nothing here yet." twice. An empty Results page is the worst thing this project could show a
+ * stranger: it reads as a project with no measurements, when the measurements are the strongest
+ * part of it.
+ *
+ * So in a build with no backend those two paths are answered from a committed capture of the same
+ * routes, taken verbatim from the API reading `data/results/`. Nothing is recomputed here and no
+ * other path is intercepted: a call to any other route in a demo build still fails, and should.
+ */
+let resultsFixture: Promise<any> | null = null;
+
+async function demoResults(path: string): Promise<any> {
+  if (resultsFixture === null) {
+    resultsFixture = fetch(resultsFixtureUrl).then((response) => {
+      if (!response.ok) {
+        throw new ApiError(`recorded results unavailable`, response.status);
+      }
+      return response.json();
+    });
+  }
+  const doc = await resultsFixture;
+  if (path === "/api/results") return doc["GET /api/results"];
+  const runId = decodeURIComponent(path.slice("/api/results/".length));
+  const run = doc.runs?.[runId];
+  if (!run) throw new ApiError(`no recorded results for run ${runId}`, 404);
+  return run;
+}
+
 export async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  if (!FULL_CONSOLE && path.startsWith("/api/results")) {
+    return demoResults(path) as Promise<T>;
+  }
   const response = await fetch(path, { signal, headers: { Accept: "application/json" } });
   return parse(response) as Promise<T>;
 }

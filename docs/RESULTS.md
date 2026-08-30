@@ -6,6 +6,16 @@ Generated 26 August 2026 from run `main`. Every table in this document was produ
 Read the provenance and the limits at the top before the numbers, because they change what the
 numbers mean.
 
+**This document describes commit `e92a71c` and is not reproducible from branch `ui/board`.** That
+branch fixed a defect in `_open_cases` that the tables here were produced with, and the fix moves
+the planner prompt's eligibility counts, so the recorded planner fixtures are keyed on hashes that
+mostly no longer occur: four of twenty scenario and seed pairs still hit, and the rest fall back to
+`default_plan` and escalate. Section 3's agent link and steer columns are understated and its
+organic column inflated for the same reason. `docs/BUILD_LOG.md` under 2026-08-26 and 2026-08-31,
+and `docs/WHAT_BROKE.md` entry 14, carry the measurements. Regenerating these tables needs the
+planner fixtures re-recorded against a live model, which is a spend and a provenance decision that
+has not been made.
+
 ## Where the agent's answers came from
 
 **The agent arm is measured, from fixtures recorded blind.** 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 81 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.

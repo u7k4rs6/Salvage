@@ -2052,3 +2052,225 @@ produces `docs/RESULTS.md`. This entry records that branch `ui/board` no longer 
   the case count, the at-risk amount, the attempts count and the sparkline; the recovered tile came
   from reading the one remaining unbounded query in the same function. It is worth running again
   against any number this project adds.
+
+## 2026-08-31, branch ui/board: the Scenario Runner as a ledger replay
+
+- **Which planner fixtures still hit on this branch, measured.** The entry above records that the
+  81 recorded planner fixtures are keyed on prompt hashes that no longer occur, because the planner
+  prompt carries the eligibility counts and `_open_cases` changed them. It did not say how many
+  still land, and the answer is not zero, which matters for anything that needs a complete agent
+  run out of this branch.
+
+  Swept `agent run --provider fixture` over S1 to S4, seeds 0 to 4, twenty runs, counting
+  `FixtureProvider.misses`:
+
+  | pairs | result |
+  |---|---|
+  | S2 seed 1, S2 seed 2 | planner fixture hits, model plan, gates evaluated, links sent |
+  | S4 seed 0, S4 seed 3 | planner fixture hits, model plan, and the plan is a single ESCALATE_HUMAN |
+  | the other 16 | one miss each, `plan_incident` returns `default_plan`, the run escalates |
+
+  Four of twenty. S4's two are a genuine model escalation rather than a fallback: `planner_error`
+  is null and the action matrix forbids customer contact for `merchant_config`, so the model has
+  nothing else to propose. The sixteen misses are the fallback, and they are distinguishable from a
+  real handover exactly as `plannerErrorOf` in the console distinguishes them, by the
+  `planner_error` field rather than by the status.
+
+  What this means in practice: a run of this branch that is expected to send a link, evaluate a
+  gate ladder or refuse anything has to be S2 seed 1 or S2 seed 2. Every other pair produces one
+  ESCALATE_HUMAN and stops. That is not a property of the scenarios; it is a property of which
+  prompt hashes survived the counts changing.
+
+  It does not change a number in `docs/RESULTS.md`, which was produced at `e92a71c` where all 81
+  hit. It is the reason the document is not reproducible here, and it is now written down at the
+  resolution somebody would need to act on it.
+
+- **The Scenario Runner is a recorded run replayed from its own ledger.** `POST /api/sim/run`
+  simulates, detects, diagnoses, acts and settles in one uninterruptible call, so there is no
+  moment at which the running system holds a partial world and nothing to watch while it works.
+  The backend is unchanged. The page replays a recording instead, client side, at a controllable
+  speed, and every frame in it is recorded data.
+
+  Two recordings, in `web/src/board/fixtures/`. `s2_seed1.run.json` is the whole arc: detect at
+  seven sim minutes, diagnose, plan, four distinct gate outcomes, 61 links, 20 paid, 42 steer
+  recoveries, close. `s4_seed0.run.json` is the terminal branch: a merchant-side cause, nothing
+  customer-facing, ends at a human. The pair is chosen from the table above, not for variety.
+
+  Captured with the command below, run from the repository root once per recording, with
+  `SCENARIO=S4 SEED=0` for the second. It adds nothing to the repository, runs the scenario into a
+  throwaway database in the system temporary directory, and reads that database read only.
+
+```
+SCENARIO=S2 SEED=1 uv run python3 - <<'PY'
+import json, os, sqlite3, subprocess, tempfile, time
+from pathlib import Path
+from salvage.db import open_migrated
+from salvage.decide import policy as P
+from salvage.detect.thresholds import FROZEN
+from salvage.diagnose.reconcile import ACTION_CONFIDENCE_THRESHOLD
+from salvage.eval.agent_run import run_policy_scenario
+from salvage.ledger import GENESIS_HASH
+from salvage.llm.provider import FIXTURE_DIR, FixtureProvider
+
+SCEN, SEED = os.environ.get("SCENARIO", "S2"), int(os.environ.get("SEED", "1"))
+OUT = Path(f"web/src/board/fixtures/{SCEN.lower()}_seed{SEED}.run.json")
+db = Path(tempfile.gettempdir()) / f"salvage_replay_{SCEN}_{SEED}.db"
+for s in ("", "-wal", "-shm"):
+    Path(str(db) + s).unlink(missing_ok=True)
+
+conn = open_migrated(db)
+provider = FixtureProvider(FIXTURE_DIR, strict=False)
+result = run_policy_scenario(conn, scenario=SCEN, seed=SEED, policy="agent", provider=provider)
+conn.close()
+if provider.misses:
+    print(f"WARNING: {len(provider.misses)} fixture miss(es). The plan is a fallback, not a model plan.")
+
+c = sqlite3.connect(f"file:{db}?mode=ro", uri=True); c.row_factory = sqlite3.Row
+q = lambda s, *a: [dict(r) for r in c.execute(s, a)]
+run = q("SELECT * FROM sim_runs ORDER BY started_at DESC LIMIT 1")[0]
+led = q("SELECT seq,ts,kind,ref_type,ref_id,payload_json,prev_hash,hash FROM ledger ORDER BY seq")
+seg = q("SELECT segment_key,window_start,attempts,failures,baseline_rate,p_value FROM segments_stats ORDER BY window_start,segment_key")
+span_end = max(e["ts"] for e in led if e["kind"] != "sim.run.finished")
+span_start = min(r["window_start"] for r in seg)
+keys = sorted({r["segment_key"] for r in seg}); ki = {k: i for i, k in enumerate(keys)}
+rows = [[ki[r["segment_key"]], r["window_start"], r["attempts"], r["failures"],
+         round(r["baseline_rate"], 6), round(r["p_value"], 6)] for r in seg]
+
+doc = {
+    "_note": (
+        f"One complete `salvage agent run --scenario {SCEN} --seed {SEED} --policy agent --provider fixture` "
+        "recorded off a throwaway database. `ledger` is the whole hash chain, entries verbatim including "
+        "payload_json, so the chain verifies from this file alone. `segments_stats`, `recovery_cases` and "
+        "`recovery_routes` are read-only dumps of tables the same run wrote; they carry the per-window "
+        "segment health and the case outcomes the ledger does not record. Nothing here is generated, "
+        "interpolated or edited. A segments_stats row exists only for a window where the key had at least "
+        f"{FROZEN.min_attempts} attempts, and a row's window covers [window_start, window_start + "
+        f"{FROZEN.window_seconds}]."
+    ),
+    "meta": {
+        "artifact": "salvage.run.recording", "version": 1,
+        "run_id": run["run_id"], "scenario": SCEN, "seed": SEED, "variant": "peak",
+        "policy": "agent", "provider": "fixture", "fixture_misses": len(provider.misses),
+        "params_hash": run["params_hash"], "sim_start": run["sim_start"], "sim_end": run["sim_end"],
+        "eval_day_start": result.sim.eval_day_start,
+        "span": {"start": span_start, "end": span_end},
+        "genesis_hash": GENESIS_HASH, "captured_at": int(time.time()),
+        "git_rev": subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                                  capture_output=True, text=True).stdout.strip(),
+        "detector": {"window_seconds": FROZEN.window_seconds, "step_seconds": FROZEN.step_seconds,
+                     "min_attempts": FROZEN.min_attempts,
+                     "min_absolute_excess": FROZEN.min_absolute_excess,
+                     "consecutive_windows": FROZEN.consecutive_windows,
+                     "close_within_of_baseline": FROZEN.close_within_of_baseline,
+                     "close_consecutive_windows": FROZEN.close_consecutive_windows},
+        "thresholds": {"action_confidence": ACTION_CONFIDENCE_THRESHOLD,
+                       "value_paise": P.VALUE_THRESHOLD_PAISE,
+                       "max_nudges_per_incident": P.MAX_NUDGES_PER_INCIDENT,
+                       "max_nudges_per_7_days": P.MAX_NUDGES_PER_7_DAYS,
+                       "quiet_hours_start": P.QUIET_HOURS_START,
+                       "quiet_hours_end": P.QUIET_HOURS_END,
+                       "order_ttl_seconds": P.ORDER_TTL_SECONDS},
+    },
+    "ledger": led,
+    "segments_stats": {"keys": keys,
+                       "fields": ["key_index", "window_start", "attempts", "failures",
+                                  "baseline_rate", "p_value"],
+                       "rows": rows},
+    "recovery_cases": q("SELECT id,order_id,incident_id,state,outcome,attempts,link_id,ttl_at,"
+                        "updated_at FROM recovery_cases ORDER BY id"),
+    "recovery_routes": q("SELECT order_id,route,paid_at,case_id FROM recovery_routes "
+                         "WHERE case_id IS NOT NULL OR route <> 'organic' "
+                         "OR order_id IN (SELECT order_id FROM recovery_cases) ORDER BY paid_at"),
+    "incidents": q("SELECT * FROM incidents"),
+    "escalations": q("SELECT * FROM escalations"),
+    "sim_truth_incidents": q("SELECT * FROM sim_truth_incidents"),
+}
+OUT.parent.mkdir(parents=True, exist_ok=True)
+OUT.write_text(json.dumps(doc, separators=(",", ":")) + "\n", encoding="utf-8")
+print(f"wrote {OUT} ({OUT.stat().st_size} bytes)")
+PY
+```
+
+  `recovery_routes` is filtered to routes belonging to a recovery case or not organic. Unfiltered
+  it is 87,702 rows and 8.7 MB of orders the page does not show, against 81 rows filtered.
+
+- **What the ledger cannot reconstruct, and where the page gets it instead.** Steps the page has to
+  show, against what the chain actually holds:
+
+  - Per window per segment success against baseline is **not in the chain**. `detect/run.py`
+    persists it to `segments_stats` and writes nothing about it to the ledger. The recording dumps
+    that table. A key with fewer than 20 attempts in a window has no row, and the page draws a
+    dashed empty lane there rather than carrying the last value forward, because the absence is the
+    detector declining to measure and not missing data.
+  - Two case terminals are **not in the chain**. RECOVERED has `execute.link_paid` and OPTED_OUT
+    has `channel.opt_out`, but ABANDONED and PAID_ELSEWHERE are reached by `_to_state` with no
+    append. On S2 seed 1 that is 103 of 126 cases. The recording dumps `recovery_cases`, whose
+    `updated_at` is the moment of the last transition, and the case board labels which of the two
+    sources each state came from.
+  - Neither input confidence is recorded. The rules verdict has none by design, and the model's own
+    number is consumed by `reconcile()` before anything is written. Both cells on the page read
+    "not recorded". They are not filled with the reconciled number.
+  - Rules and model land in one entry at one sim second, so the page lands them together. There is
+    no recorded ordering between them to stage.
+  - Link creation has no entry. The page derives it from the first executed SEND_RECOVERY_LINK per
+    case, which is exact: the executor creates the link and records the action at the same `now`.
+  - Organic recovery is not in the chain and the page does not show it. Link and steer are the two
+    routes the agent caused and the two the chain records.
+
+- **Ordering is `(ts, seq)`, never `seq`.** The detector writes every incident entry before the
+  agent writes anything, so on S2 seed 1 `detect.incident.closed` is sequence 4 at 22:42 while
+  `execute.action.executed` is sequence 7 at 19:59. Sorting by sequence alone plays the run
+  backwards. Sequence still does the work inside a single sim second, of which this run has two
+  crowded ones: the detection, diagnosis, plan and first 46 deferrals all carry 19:59:00, and 58
+  refusals and 101 quiet-hours queues all carry 22:42:00.
+
+  Because those clusters have no recorded duration, the speed multiplier cannot pace them and the
+  page does not pretend otherwise. Sim time runs at the multiplier between entries; entries sharing
+  a second are stepped at a fixed reading pace, and the first entry of each kind and the first
+  action decided by each rule are held longer than the rest. The novelty rule is computed from the
+  data, so a run with a fifth gate outcome would get a fifth hold without anybody editing a list.
+
+- **The chain verifies from the fixture alone.** The recording keeps `payload_json` as the exact
+  string the hash commits to, so the Verify control recomputes the whole chain in the browser with
+  Web Crypto against the same pre-image `salvage/ledger.py` uses, with no server and no
+  re-serialisation. On `s2_seed1.run.json`: intact, 508 entries, head `9bc5ac71bd95`.
+
+- **Nothing outside `web/` changed except this entry and one line in `docs/RESULTS.md`.** No
+  backend change, no new endpoint, no new script in the repo.
+
+- **The public demo's Results page reads a committed capture of its own API.** Results is one of
+  the two pages a static build ships, and it reads the sweep through `/api/results`. With no
+  backend that fetch 404s and Results renders "Nothing here yet." twice, which is the worst thing
+  this project could show a stranger: a page saying it has no measurements, when the measurements
+  are the strongest part of it.
+
+  So a build with no backend answers those two paths, and only those two, from a verbatim capture
+  of the same routes. Nothing is recomputed in the browser and no other path is intercepted; a call
+  to any other route in a demo build still fails, and should. Recapture with the API running:
+
+```
+uv run python3 - <<'PY'
+import json, subprocess, time, urllib.request
+from pathlib import Path
+get = lambda p: json.loads(urllib.request.urlopen("http://127.0.0.1:8000" + p).read())
+listing = get("/api/results")
+runs = {r["run_id"]: get(f"/api/results/{r['run_id']}") for r in listing["runs"]}
+doc = {
+    "_note": (
+        "GET /api/results and GET /api/results/{id} for every run, captured verbatim from the API "
+        "reading data/results/. Nothing is transformed: these are the bytes the route returns, so "
+        "the static demo shows exactly what the console shows against a live backend. No number "
+        "here is computed in the browser."
+    ),
+    "captured_at": int(time.time()),
+    "git_rev": subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                              capture_output=True, text=True).stdout.strip(),
+    "GET /api/results": listing,
+    "runs": runs,
+}
+out = Path("web/src/board/fixtures/results.api.json")
+out.write_text(json.dumps(doc, separators=(",", ":")) + "\n", encoding="utf-8")
+print(f"wrote {out} ({out.stat().st_size} bytes), {len(runs)} runs")
+PY
+```
+
