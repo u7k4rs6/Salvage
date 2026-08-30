@@ -50,21 +50,21 @@ export default function LedgerPageView() {
                   setVerifyError(cause);
                 }
               }}
-              className="border border-accent bg-accent-soft px-2 py-1 text-xs text-accent-hover hover:bg-teal-100"
+              className="border border-[color:var(--info)] bg-[color:var(--info-bg)] px-2 py-1 text-xs text-[color:var(--info)] hover:bg-[color:var(--info-bg)]"
             >
               Verify chain
             </button>
             <a
               href="/api/ledger/export"
               download="salvage-ledger.jsonl"
-              className="border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-100"
+              className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-xs hover:bg-[color:var(--panel-3)]"
             >
               Export JSONL
             </a>
           </div>
         }
       >
-        <p className="max-w-3xl text-xs text-neutral-700">
+        <p className="max-w-3xl text-xs text-[color:var(--fg-2)]">
           {state.data?.proves ??
             "This chain proves the record has not been altered after it was written. It does not prove the process wrote the truth."}
         </p>
@@ -80,8 +80,8 @@ export default function LedgerPageView() {
             role="status"
             className={`mt-3 border px-3 py-2 text-sm ${
               verify.ok
-                ? "border-green-300 bg-green-50 text-green-900"
-                : "border-red-300 bg-red-50 text-red-900"
+                ? "border-[color:var(--ok)] bg-[color:var(--ok-bg)] text-[color:var(--ok)]"
+                : "border-[color:var(--crit)] bg-[color:var(--crit-bg)] text-[color:var(--crit)]"
             }`}
           >
             {/* The server's message already opens with the verdict, so the banner shows it
@@ -104,7 +104,7 @@ export default function LedgerPageView() {
                 setKind(event.target.value);
                 setCursor(0);
               }}
-              className="border border-neutral-300 px-2 py-1"
+              className="border border-[color:var(--line-2)] px-2 py-1"
             >
               <option value="">all</option>
               {(state.data?.kinds ?? []).map((value) => (
@@ -122,7 +122,7 @@ export default function LedgerPageView() {
                 setRefType(event.target.value);
                 setCursor(0);
               }}
-              className="border border-neutral-300 px-2 py-1"
+              className="border border-[color:var(--line-2)] px-2 py-1"
             >
               {REF_TYPES.map((value) => (
                 <option key={value} value={value}>
@@ -140,7 +140,7 @@ export default function LedgerPageView() {
                 setCursor(0);
               }}
               placeholder="incident or order id"
-              className="num w-64 border border-neutral-300 px-2 py-1"
+              className="num w-64 border border-[color:var(--line-2)] px-2 py-1"
             />
           </label>
         </div>
@@ -156,7 +156,7 @@ export default function LedgerPageView() {
                   align={["right", "left", "left", "left", "left", "left"]}
                 >
                   {data.entries.map((entry) => (
-                    <tr key={entry.seq} className="border-b border-neutral-100 align-top">
+                    <tr key={entry.seq} className="border-b border-[color:var(--line)] align-top">
                       <td className="cell-pad num text-right text-xs">{entry.seq}</td>
                       <td className="cell-pad num whitespace-nowrap text-xs">
                         {timestamp(entry.ts)}
@@ -164,32 +164,32 @@ export default function LedgerPageView() {
                       <td className="cell-pad">
                         <Badge>{entry.kind}</Badge>
                       </td>
-                      <td className="cell-pad num text-xs text-neutral-600">
+                      <td className="cell-pad num text-xs text-[color:var(--fg-2)]">
                         {entry.ref_type}
-                        <div className="text-neutral-500">{entry.ref_id}</div>
+                        <div className="text-[color:var(--fg-3)]">{entry.ref_id}</div>
                       </td>
                       <td className="cell-pad text-xs">
                         {summarise(entry)}
                         <Disclosure summary="payload" className="mt-1">
                           <Code>{JSON.stringify(entry.payload, null, 2)}</Code>
-                          <div className="num mt-1 text-[11px] text-neutral-500">
+                          <div className="num mt-1 text-[11px] text-[color:var(--fg-3)]">
                             previous {shortHash(entry.prev_hash)}
                           </div>
                         </Disclosure>
                       </td>
-                      <td className="cell-pad num text-xs text-neutral-600">
+                      <td className="cell-pad num text-xs text-[color:var(--fg-2)]">
                         {shortHash(entry.hash)}
                       </td>
                     </tr>
                   ))}
                 </Table>
-                <div className="mt-3 flex items-center gap-3 text-xs text-neutral-600">
+                <div className="mt-3 flex items-center gap-3 text-xs text-[color:var(--fg-2)]">
                   <span className="num">{data.total} entries</span>
                   <button
                     type="button"
                     disabled={cursor === 0}
                     onClick={() => setCursor(0)}
-                    className="border border-neutral-300 px-2 py-1 disabled:opacity-40"
+                    className="border border-[color:var(--line-2)] px-2 py-1 disabled:opacity-40"
                   >
                     First page
                   </button>
@@ -197,7 +197,7 @@ export default function LedgerPageView() {
                     type="button"
                     disabled={data.next_cursor === null}
                     onClick={() => setCursor(data.next_cursor ?? cursor)}
-                    className="border border-neutral-300 px-2 py-1 disabled:opacity-40"
+                    className="border border-[color:var(--line-2)] px-2 py-1 disabled:opacity-40"
                   >
                     Next 50
                   </button>

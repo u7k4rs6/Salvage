@@ -1,9 +1,8 @@
 /*
  * The Overview's visual language: an operational control plane.
  *
- * Scoped under `.ov`, so the six pages that have not been redesigned keep the light frame they
- * already had. The one thing that reaches outside `.ov` is the chrome block at the bottom, gated
- * on an attribute the Overview sets while it is mounted and removes when it unmounts.
+ * Scoped under `.ov`, which is the layout and the component vocabulary. The palette it was written
+ * against now lives at `:root` in index.css, because every page uses it.
  *
  * The register is engineering tooling, not a product page: a very dark neutral ground, thin
  * dividers instead of floating cards, an 8px spacing grid, and monospace on every number so a
@@ -15,38 +14,6 @@
  * being important is not a reason to make it red, so the large figures are plain and the colour
  * sits on the deltas and the status chips, where it means something.
  */
-
-.ov {
-  /* Ground and surfaces. Not pure black: pure black flattens the dividers. */
-  --bg: #0b0c0e;
-  --panel: #101215;
-  --panel-2: #16191d;
-  --panel-3: #1c2025;
-
-  --line: #22262c;
-  --line-2: #2d333b;
-
-  --fg: #e6e8eb;
-  --fg-2: #99a1ab;
-  --fg-3: #69727d;
-
-  /* Semantic. Red is scarce. */
-  --ok: #3fb950;
-  --warn: #d29922;
-  --crit: #f85149;
-  --info: #58a6ff;
-
-  --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-
-  /* 8px grid. */
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 16px;
-  --s4: 24px;
-  --s5: 32px;
-  --gutter: 24px;
-}
 
 /* `.chrome-ui` is the top bar and the left nav, which exist on every page. All this does is give
    them the UI face; the surface colours are gated on the Overview's own attribute. */
@@ -395,79 +362,76 @@
   to { background-color: transparent; }
 }
 
-/* -- chrome, only while the Overview is mounted ---------------------------
+/* -- chrome ---------------------------------------------------------------
  *
- * The top bar and the left nav belong to every page. Restyling them unconditionally would darken
- * six pages nobody asked for, so the Overview sets `data-surface="ops"` on <html> on mount and
- * drops it on unmount, and every rule here is gated on it.
+ * The top bar and the left nav belong to every page and are written with light utility classes.
+ * These rules give them the ground everything else is on. They used to be gated on an attribute
+ * the Overview set while it was mounted, because darkening the chrome would have darkened six
+ * pages that were still on the light frame. Those six are converted, so the gate has nothing left
+ * to protect and the chrome is simply dark.
+ *
+ * The values are the tokens, not copies of them, so the chrome cannot drift from the pages.
  */
-html[data-surface="ops"] {
-  background: #0b0c0e;
+html,
+.chrome-ui {
+  background: var(--bg);
 }
-html[data-surface="ops"] body {
-  background: #0b0c0e;
-  color: #e6e8eb;
+header.chrome-ui {
+  border-color: var(--line);
 }
-
-html[data-surface="ops"] .chrome-ui {
-  background: #0b0c0e;
+.bar-label {
+  color: var(--fg-3);
 }
-html[data-surface="ops"] header.chrome-ui {
-  border-color: #22262c;
+.bar-value {
+  color: var(--fg);
 }
-html[data-surface="ops"] .bar-label {
-  color: #69727d;
+.bar-sep {
+  background: var(--line);
 }
-html[data-surface="ops"] .bar-value {
-  color: #e6e8eb;
+.bar-crit {
+  color: var(--crit);
 }
-html[data-surface="ops"] .bar-sep {
-  background: #22262c;
+.bar-warn {
+  color: var(--warn);
 }
-html[data-surface="ops"] .bar-crit {
-  color: #f85149;
+.bar-ok {
+  color: var(--ok);
 }
-html[data-surface="ops"] .bar-warn {
-  color: #d29922;
+header.chrome-ui input {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+  color: var(--fg);
 }
-html[data-surface="ops"] .bar-ok {
-  color: #3fb950;
+header.chrome-ui input::placeholder {
+  color: var(--fg-3);
 }
-html[data-surface="ops"] header.chrome-ui input {
-  background: #16191d;
-  border-color: #2d333b;
-  color: #e6e8eb;
+header.chrome-ui button {
+  background: var(--panel-2);
+  border-color: var(--line-2);
+  color: var(--fg);
 }
-html[data-surface="ops"] header.chrome-ui input::placeholder {
-  color: #69727d;
-}
-html[data-surface="ops"] header.chrome-ui button {
-  background: #16191d;
-  border-color: #2d333b;
-  color: #e6e8eb;
-}
-html[data-surface="ops"] header.chrome-ui button:hover:not(:disabled) {
-  background: #1c2025;
+header.chrome-ui button:hover:not(:disabled) {
+  background: var(--panel-3);
 }
 
-html[data-surface="ops"] nav {
-  background: #0b0c0e;
-  border-color: #22262c;
+nav {
+  background: var(--bg);
+  border-color: var(--line);
 }
-html[data-surface="ops"] nav a {
-  color: #69727d;
+nav a {
+  color: var(--fg-3);
   border-left-color: transparent;
 }
-html[data-surface="ops"] nav a:hover {
-  color: #e6e8eb;
-  background: #101215;
+nav a:hover {
+  color: var(--fg);
+  background: var(--panel);
 }
-html[data-surface="ops"] nav a[aria-current="page"] {
-  color: #e6e8eb;
-  background: #101215;
-  border-left-color: #58a6ff;
+nav a[aria-current="page"] {
+  color: var(--fg);
+  background: var(--panel);
+  border-left-color: var(--info);
 }
-html[data-surface="ops"] nav .nav-group {
+nav .nav-group {
   color: #4c545e;
 }
 

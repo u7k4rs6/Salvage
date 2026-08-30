@@ -27,7 +27,7 @@ export default function IncidentsPage() {
       title="Incidents"
       subtitle="Every incident the detector opened, newest first."
       right={
-        <label className="text-xs text-neutral-700">
+        <label className="text-xs text-[color:var(--fg-2)]">
           status{" "}
           <select
             value={status}
@@ -35,7 +35,7 @@ export default function IncidentsPage() {
               setStatus(event.target.value);
               setOffset(0);
             }}
-            className="border border-neutral-300 px-2 py-1 text-xs"
+            className="border border-[color:var(--line-2)] px-2 py-1 text-xs"
           >
             {STATUSES.map((value) => (
               <option key={value} value={value}>
@@ -80,11 +80,11 @@ export default function IncidentsPage() {
                 ]}
               >
                 {data.incidents.map((incident) => (
-                  <tr key={incident.id} className="border-b border-neutral-100 hover:bg-neutral-50">
+                  <tr key={incident.id} className="border-b border-[color:var(--line)] hover:bg-[color:var(--panel-2)]">
                     <td className="cell-pad num whitespace-nowrap text-xs">
                       <Link
                         to={`/incidents/${incident.id}`}
-                        className="text-accent hover:text-accent-hover"
+                        className="text-[color:var(--info)] hover:text-[color:var(--fg)]"
                       >
                         {timestamp(incident.opened_at)}
                       </Link>
@@ -92,7 +92,7 @@ export default function IncidentsPage() {
                     <td className="cell-pad num">{segmentLabel(incident.segment_key)}</td>
                     <td className="cell-pad">
                       {isSyntheticIncident(incident.id) ? (
-                        <span className="text-neutral-500">synthetic (baseline policy)</span>
+                        <span className="text-[color:var(--fg-3)]">synthetic (baseline policy)</span>
                       ) : (
                         causeLabel(incident.root_cause)
                       )}
@@ -104,7 +104,7 @@ export default function IncidentsPage() {
                       <StatusBadge status={incident.status} />
                     </td>
                     <td className="cell-pad num text-right">{rupees(incident.at_risk_amount)}</td>
-                    <td className="cell-pad num text-right text-green-700">
+                    <td className="cell-pad num text-right text-[color:var(--ok)]">
                       {rupees(incident.recovered_amount)}
                     </td>
                     <td className="cell-pad num text-right">{count(incident.actions)}</td>
@@ -114,7 +114,7 @@ export default function IncidentsPage() {
                   </tr>
                 ))}
               </Table>
-              <div className="mt-3 flex items-center gap-3 text-xs text-neutral-600">
+              <div className="mt-3 flex items-center gap-3 text-xs text-[color:var(--fg-2)]">
                 <span className="num">
                   {offset + 1} to {Math.min(offset + data.limit, data.total)} of {data.total}
                 </span>
@@ -122,7 +122,7 @@ export default function IncidentsPage() {
                   type="button"
                   disabled={offset === 0}
                   onClick={() => setOffset(Math.max(0, offset - data.limit))}
-                  className="border border-neutral-300 px-2 py-1 disabled:opacity-40"
+                  className="border border-[color:var(--line-2)] px-2 py-1 disabled:opacity-40"
                 >
                   Previous
                 </button>
@@ -130,7 +130,7 @@ export default function IncidentsPage() {
                   type="button"
                   disabled={offset + data.limit >= data.total}
                   onClick={() => setOffset(offset + data.limit)}
-                  className="border border-neutral-300 px-2 py-1 disabled:opacity-40"
+                  className="border border-[color:var(--line-2)] px-2 py-1 disabled:opacity-40"
                 >
                   Next
                 </button>

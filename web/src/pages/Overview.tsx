@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useApi, type ApiState } from "../lib/useApi";
 import { useStream } from "../lib/useStream";
@@ -42,20 +41,7 @@ import "./overview.css";
  * as a handover somebody chose. Both land at ESCALATE_HUMAN and they mean opposite things.
  */
 
-/**
- * The dark surface reaches the top bar and the left nav, which belong to every page. Rather than
- * restyle six pages nobody asked for, the attribute lives only while this page is mounted and
- * every chrome rule in overview.css is gated on it.
- */
-function useOpsChrome() {
-  useEffect(() => {
-    document.documentElement.setAttribute("data-surface", "ops");
-    return () => document.documentElement.removeAttribute("data-surface");
-  }, []);
-}
-
 export default function OverviewPage() {
-  useOpsChrome();
   const state = useApi<OverviewData>("/api/overview");
   const ledger = useApi<LedgerPage>("/api/ledger?limit=10");
 
