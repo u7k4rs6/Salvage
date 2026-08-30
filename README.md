@@ -67,7 +67,58 @@ Seven pages, in the build order of `docs/04_FRONTEND_SPEC.md` section 9.
 - **Results** the sweep tables, served from the same JSON that produced `docs/RESULTS.md`.
 - **Storefront** a checkout page that shows what a customer sees when the agent sets a display
   hint. It says plainly when it cannot take a real order because no Razorpay key is configured.
-- **Scenario Runner** start a run, watch it over server-sent events, and flip the kill switch.
+- **Scenario Runner** a recorded run, replayed from its own ledger at a speed you choose.
+  `POST /api/sim/run` simulates, detects, diagnoses, acts and settles in one uninterruptible call,
+  so there is no moment at which the running system holds a partial world and nothing to watch
+  while it works. The page replays a recording committed to `web/src/board/fixtures/` instead.
+  Every frame is recorded data: the position of the playhead is the only state, every panel is a
+  function of it, and where the run did not record something the page shows nothing rather than a
+  guess.
+
+## The public demo
+
+Two of those pages need no backend: the Scenario Runner reads a committed recording, and Results
+reads a committed artifact. Those two are what a production build ships. The other five all read a
+live FastAPI process, and five error panels are a worse first impression than five absent pages, so
+a production build leaves them out. There is nothing to configure at deploy time and no environment
+variable the deployed page reads.
+
+```
+cd web
+npm ci
+npm run build          # writes web/dist, including 404.html for hosts without a rewrite rule
+npx vite preview       # serves it on 127.0.0.1:4173 with the rewrite in place
+```
+
+Deploying to Vercel, from the repository root. `web/vercel.json` carries the build command, the
+output directory and the rewrite that makes a deep link like `/runner` work on a hard refresh:
+
+```
+npx vercel --cwd web            # preview deployment, prints the URL
+npx vercel --prod --cwd web     # production
+```
+
+Deploying to GitHub Pages. Pages has no rewrite rule, so the build copies `index.html` to
+`404.html` and Pages serves that for any unknown path, which does the same job. A project site
+lives under a repository subpath, so the build needs to know it:
+
+```
+cd web
+VITE_BASE=/salvage/ npm run build
+npx gh-pages -d dist
+```
+
+To build the full console instead, for a deployment that will sit in front of a running backend:
+
+```
+VITE_SALVAGE_FULL=1 npm run build
+```
+
+Bundle, measured on the last build: 30 kB of JavaScript and 8 kB of CSS, both gzipped, before any
+recording is fetched. The two recordings are static assets rather than bundled modules, so the
+1.5 MB one (129 kB gzipped) is fetched when the Scenario Runner opens and the other only if you
+switch to it. Recharts is 151 kB gzipped and is split into its own chunk that only Results pulls
+in, so a visitor who never opens Results never downloads it.
 
 ## Status
 

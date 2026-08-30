@@ -364,76 +364,11 @@
 
 /* -- chrome ---------------------------------------------------------------
  *
- * The top bar and the left nav belong to every page and are written with light utility classes.
- * These rules give them the ground everything else is on. They used to be gated on an attribute
- * the Overview set while it was mounted, because darkening the chrome would have darkened six
- * pages that were still on the light frame. Those six are converted, so the gate has nothing left
- * to protect and the chrome is simply dark.
- *
- * The values are the tokens, not copies of them, so the chrome cannot drift from the pages.
+ * The top bar and the left nav used to be overridden from here, because they were written with
+ * light utility classes and the Overview needed them dark while it was mounted. They carry the
+ * tokens themselves now, so there is one source for each of their colours and nothing here to
+ * override. `.chrome-ui` keeps only the typeface it always set.
  */
-html,
-.chrome-ui {
-  background: var(--bg);
-}
-header.chrome-ui {
-  border-color: var(--line);
-}
-.bar-label {
-  color: var(--fg-3);
-}
-.bar-value {
-  color: var(--fg);
-}
-.bar-sep {
-  background: var(--line);
-}
-.bar-crit {
-  color: var(--crit);
-}
-.bar-warn {
-  color: var(--warn);
-}
-.bar-ok {
-  color: var(--ok);
-}
-header.chrome-ui input {
-  background: var(--panel-2);
-  border-color: var(--line-2);
-  color: var(--fg);
-}
-header.chrome-ui input::placeholder {
-  color: var(--fg-3);
-}
-header.chrome-ui button {
-  background: var(--panel-2);
-  border-color: var(--line-2);
-  color: var(--fg);
-}
-header.chrome-ui button:hover:not(:disabled) {
-  background: var(--panel-3);
-}
-
-nav {
-  background: var(--bg);
-  border-color: var(--line);
-}
-nav a {
-  color: var(--fg-3);
-  border-left-color: transparent;
-}
-nav a:hover {
-  color: var(--fg);
-  background: var(--panel);
-}
-nav a[aria-current="page"] {
-  color: var(--fg);
-  background: var(--panel);
-  border-left-color: var(--info);
-}
-nav .nav-group {
-  color: #4c545e;
-}
 
 /* -- reduced motion ------------------------------------------------------- */
 

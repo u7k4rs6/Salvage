@@ -10,10 +10,12 @@ import { Diagnosis } from "../components/replay/Diagnosis";
 import { Gates } from "../components/replay/Gates";
 import { Cases } from "../components/replay/Cases";
 import { Tail } from "../components/replay/Tail";
+import { Entry } from "../components/replay/Entry";
 import { SCENARIOS, loadReplay, type ScenarioChoice } from "../replay/load";
 import type { Replay } from "../replay/model";
 import { stateAt, stageOf } from "../replay/state";
 import { useReplay } from "../replay/useReplay";
+import { narrate } from "../replay/narrate";
 import { PROVES } from "../replay/verify";
 import { count, rupeesShort, timeOnly, timestamp } from "../lib/format";
 import { elapsed } from "../lib/health";
@@ -47,6 +49,9 @@ import "./replay.css";
 export default function ScenarioRunnerPage() {
   const [choice, setChoice] = useState<ScenarioChoice>(SCENARIOS[0]);
   const [replay, setReplay] = useState<Replay | null>(null);
+  // Held above the Runner, which is remounted whenever the recording changes. The entry screen is
+  // shown once per visit, not once per recording.
+  const [started, setStarted] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
@@ -90,17 +95,21 @@ export default function ScenarioRunnerPage() {
     );
   }
 
-  return <Runner key={choice.id} replay={replay} choice={choice} onChoose={setChoice} />;
+  return <Runner key={choice.id} replay={replay} choice={choice} onChoose={setChoice} started={started} onStarted={setStarted} />;
 }
 
 function Runner({
   replay,
   choice,
   onChoose,
+  started,
+  onStarted,
 }: {
   replay: Replay;
   choice: ScenarioChoice;
   onChoose: (choice: ScenarioChoice) => void;
+  started: boolean;
+  onStarted: (value: boolean) => void;
 }) {
   const transport = useReplay(replay);
   // Presentation mode. It removes the furniture that exists to drive the page and keeps the
@@ -164,6 +173,21 @@ function Runner({
   const fault = replay.faults[0] ?? null;
   const detectSeconds =
     fault && state.incident ? state.incident.openedAt - fault.start : null;
+  const narration = narrate(replay, state, transport.ts, transport.inGap !== null);
+
+  if (!started) {
+    return (
+      <div className="ov rp">
+        <Entry
+          replay={replay}
+          onStart={() => {
+            onStarted(true);
+            transport.play();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="ov rp">
@@ -175,6 +199,12 @@ function Runner({
         presenting={presenting}
         onTogglePresenting={() => setPresenting((current) => !current)}
       />
+
+      <Section title="What is happening" tight>
+        <p className="narration" key={narration.key}>
+          {narration.text}
+        </p>
+      </Section>
 
       <Section title="Sim time" tight>
         <Scrubber

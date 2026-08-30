@@ -362,3 +362,70 @@
     grid-column: 2;
   }
 }
+
+/* -- the entry screen ------------------------------------------------------
+ *
+ * The one place on this page where the register is prose rather than telemetry, because it is
+ * addressed to somebody who has not decided to read telemetry yet. Wider measure, larger type, and
+ * the only serif-scale heading in the console. It is shown once and then never again.
+ */
+
+.rp .entry {
+  min-height: calc(100vh - 38px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s5) var(--gutter);
+}
+.rp .entry-inner {
+  max-width: 46rem;
+}
+.rp .entry-title {
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--fg);
+  max-width: 34rem;
+}
+.rp .entry-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--fg-2);
+  max-width: 42rem;
+}
+.rp .entry-strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+.rp .entry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--fg);
+  border: 1px solid var(--fg);
+  border-radius: 2px;
+  padding: 10px 20px;
+  transition: background-color 120ms linear;
+}
+.rp .entry-button:hover {
+  background: #ffffff;
+}
+
+/* -- the narration line ----------------------------------------------------
+ *
+ * One sentence, in plain English, under the transport. It is the largest prose on the page while
+ * the run is playing, because for a visitor who reads nothing else it is the whole explanation.
+ */
+.rp .narration {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--fg);
+  max-width: 62rem;
+}

@@ -4,6 +4,7 @@ import { useApi } from "../lib/useApi";
 import { useSession } from "../lib/session";
 import { useStream, useStreamState } from "../lib/useStream";
 import { ConfirmButton } from "./primitives";
+import { FULL_CONSOLE } from "../lib/build";
 import type { Health, Overview } from "../lib/types";
 
 /**
@@ -30,16 +31,16 @@ function Readout({
 }) {
   const light =
     tone === "crit"
-      ? "text-red-700"
+      ? "text-[color:var(--crit)]"
       : tone === "warn"
-        ? "text-amber-700"
+        ? "text-[color:var(--warn)]"
         : tone === "ok"
-          ? "text-green-700"
-          : "text-neutral-900";
+          ? "text-[color:var(--ok)]"
+          : "text-[color:var(--fg)]";
   const dark = tone === "crit" ? "bar-crit" : tone === "warn" ? "bar-warn" : tone === "ok" ? "bar-ok" : "";
   return (
     <span className="flex items-baseline gap-1.5">
-      <span className="bar-label text-[9.5px] font-medium uppercase tracking-[0.1em] text-neutral-400">
+      <span className="bar-label text-[9.5px] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
         {label}
       </span>
       <span className={`num bar-value text-[11.5px] font-medium ${light} ${dark}`}>{children}</span>
@@ -48,10 +49,41 @@ function Readout({
 }
 
 function Separator() {
-  return <span aria-hidden="true" className="bar-sep h-3.5 w-px shrink-0 bg-neutral-200" />;
+  return <span aria-hidden="true" className="bar-sep h-3.5 w-px shrink-0 bg-[color:var(--line)]" />;
 }
 
+/**
+ * The bar picks which of the two below to render, and it has to be a fork between components
+ * rather than a branch inside one, because the live bar opens an event stream and polls three
+ * routes from hooks that cannot be called conditionally.
+ */
 export function TopBar() {
+  return FULL_CONSOLE ? <LiveBar /> : <DemoBar />;
+}
+
+/**
+ * The public demo's bar: what this is, and that it is a recording.
+ *
+ * No clock, no incident count, no model, no stream, no token field and no kill switch. Every one
+ * of those reads a backend that a static deployment does not have, and a row of readouts showing
+ * "..." next to a red "disconnected" is a worse first impression than no row at all. The kill
+ * switch in particular is a control over a running agent; there is no agent running here.
+ */
+function DemoBar() {
+  return (
+    <header className="chrome-ui flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-[color:var(--line)] px-4 py-[7px]">
+      <span className="text-[12.5px] font-semibold tracking-[0.02em]">SALVAGE</span>
+      <span className="text-[11.5px] text-[color:var(--fg-2)]">
+        Payment failure recovery for Indian merchants on Razorpay
+      </span>
+      <span className="ml-auto text-[11px] text-[color:var(--fg-3)]">
+        A recorded run, replayed. Nothing here is live.
+      </span>
+    </header>
+  );
+}
+
+function LiveBar() {
   const { token, setToken } = useSession();
   const health = useApi<Health>("/api/health");
   const overview = useApi<Overview>("/api/overview");
@@ -68,13 +100,13 @@ export function TopBar() {
   return (
     <header
       className={`chrome-ui flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-[7px] ${
-        killed ? "border-red-500 bg-red-50" : "border-neutral-200 bg-white"
+        killed ? "border-[color:var(--crit)] bg-[color:var(--crit-bg)]" : "border-[color:var(--line)] bg-[color:var(--bg)]"
       }`}
     >
       {/* Identity. The product name is a label in the corner, not a headline. */}
       <span className="flex items-baseline gap-2">
         <span className="text-[12.5px] font-semibold tracking-[0.02em]">SALVAGE</span>
-        <span className="num bar-label text-[9.5px] font-medium uppercase tracking-[0.1em] text-neutral-400">
+        <span className="num bar-label text-[9.5px] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
           {env} &middot; sim
         </span>
       </span>
@@ -105,21 +137,21 @@ export function TopBar() {
       {killed && (
         <>
           <Separator />
-          <span className="bar-crit text-[11px] font-semibold text-red-700">
+          <span className="bar-crit text-[11px] font-semibold text-[color:var(--crit)]">
             Outbound actions suspended
           </span>
         </>
       )}
 
       <div className="ml-auto flex items-center gap-3">
-        <label className="bar-label flex items-center gap-2 text-[9.5px] font-medium uppercase tracking-[0.1em] text-neutral-400">
+        <label className="bar-label flex items-center gap-2 text-[9.5px] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
           token
           <input
             type="password"
             value={token ?? ""}
             onChange={(event) => setToken(event.target.value || null)}
             placeholder="SALVAGE_DASHBOARD_TOKEN"
-            className="num w-44 border border-neutral-300 px-2 py-[3px] text-[11px]"
+            className="num w-44 border border-[color:var(--line-2)] px-2 py-[3px] text-[11px]"
           />
         </label>
 
@@ -148,7 +180,7 @@ export function TopBar() {
       </div>
 
       {error !== null && (
-        <div className="bar-crit w-full text-xs text-red-700" role="alert">
+        <div className="bar-crit w-full text-xs text-[color:var(--crit)]" role="alert">
           {describe(error)}
         </div>
       )}
