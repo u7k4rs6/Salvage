@@ -481,3 +481,100 @@ project is visible to anyone who opens the second page of the demo.
 documents it names, and rerunning a build and a contrast sweep against an unchanged tree would be
 manufacturing evidence of work rather than checking anything.
 
+---
+
+## Round 7
+
+Scope: all seven passes, run in full against a third clean clone.
+
+### Fixed
+
+Nothing.
+
+### Queued
+
+Nothing new.
+
+### Passes
+
+**1. Cold start.** Clean. Third clean clone, README followed with nothing from memory. `uv sync`,
+`ruff check .`, `ruff format --check .`, `db migrate`, a scenario run and `ledger verify` all ran.
+
+This round ran the scenario the demo recording came from rather than the one the README names, and
+it produced the recording: 508 entries, head hash `9bc5ac71bd95`, identical to
+`web/src/board/fixtures/s2_seed1.run.json`. The committed recording is not just a file that happens
+to be in the repository; it regenerates byte for byte from a clean clone, and the page that replays
+it can therefore be checked against the code rather than taken on trust.
+
+**2. Static build.** Clean, and reproducible. The builds from two independent clean clones hash
+identically over every file in `dist`.
+
+**3. Every page, every state.** Not rerun in the browser. The built output is byte-identical to the
+one round 5 walked, so the contrast and behaviour results carry over exactly; rerunning them would
+have measured the same bytes twice.
+
+**4. Reconciliation.** Clean. A sixth sample, the last artifact nothing had opened:
+`docs/results_by_run.csv`, 250 rows and 30 columns, checked cell by cell against
+`data/results/main.json`. 4,700 numeric cells compared, 0 mismatches, 0 rows in the CSV that are not
+in the artifact.
+
+**5. Claim versus evidence.** Clean. Nothing new beyond Q8, Q9 and Q11.
+
+**6. The thirty-second test.** Unchanged. No copy has been rewritten in any round.
+
+**7. Freeze integrity.** Clean. 496 tests pass, ruff and format clean, `master` untouched.
+
+### Stopping
+
+Round 7 produced no new findings, which is the stopping condition. Eleven items are queued and
+nothing else is outstanding.
+
+---
+
+## The queue, as it stands
+
+Nothing in this list has been touched. Each is either a claim, a limitation's wording, a layout
+decision, or something that would make the agent look better, and all four are yours by
+instruction.
+
+| | Severity | What |
+|---|---|---|
+| Q1 | low | `recovered 0.00` renders in the success colour on Incidents and Incident detail. |
+| Q2 | medium | `data/salvage.db` shows a fixture-miss as an agent escalation; the Overview labels it a planner error, Escalations does not. |
+| Q3 | low | Escalations says "Escalated for a reason the console does not have text for", which reads as a rendering bug. |
+| Q4 | low | Storefront is now on the console's dark surface, and it is the one page that is a shopper's view rather than an operator's. |
+| Q5 | low | Escalations shows "enter the token" twice on one line beside the disabled approve and reject controls. |
+| Q6 | low | `docs/PITCH.md` says the agent "loses some seeds outright" on S3; it loses one of ten. Under-claiming. |
+| Q7 | low | `web/src/board/fixtures/results.api.json` is a new committed artifact, needed to fix F6. It changes no number. |
+| Q8 | medium | `docs/PITCH.md` says "zero policy violations across 200 runs"; the sweep has 250, and README and SUBMISSION both say 250. |
+| Q9 | low | `docs/PITCH.md` says "half the faults are never detected" at 1,500 attempts a day; the sweep records 6 of 10. |
+| Q10 | low | On an empty database the top bar renders the epoch as "1/1/1970". Not visible in the public demo. |
+| Q11 | medium | `docs/04_FRONTEND_SPEC.md` section 4.7 specifies the old Scenario Runner, with two smaller instances of the same drift beside it. |
+
+## The three questions a sharp payments engineer would ask, and where they stand
+
+Unchanged in substance from round 1, with what the rounds since have added.
+
+**Is the agent actually better than messaging everybody, or does it only look better on the
+population you chose?** The honest answer is in the repository and it is not flattering: on the
+at-risk set the agent leads on S1, S2 and S3; on every order that failed that day the link-sending
+baselines beat it on every scenario, by 29 to 44 percent, recomputed this round. Both are stated.
+The weakness is placement, not honesty: `README.md` reproduces the flattering table and not the
+other one, and a reader who stops at the README does not learn the reversal exists. The public demo
+is better than the README here, because its Results page shows both tables and the reversal is on
+the same screen.
+
+**How much of the recovery is the agent and how much would have happened anyway?** Answered
+precisely, in section 3 and in the B0 arm which is organic-only by construction. On S2 seed 1, 465
+of 527 recoveries are organic against 42 steer and 20 link. The Scenario Runner deliberately counts
+only link and steer, which is the right choice for a page about what the agent did, but it means a
+viewer of the demo alone would not learn that most recovery happens without it.
+
+**Why should I believe the model was not shown the answer?** This is the strongest part of the
+repository. The recorder builds each evidence packet through the same call the agent makes, which
+cannot reach the ground-truth tables; it hands the provider a type carrying the prompt and its hash
+and nothing else; and `assert_blind` refuses any prompt containing a scenario id, a seed or a cause
+name. The limit is that this covers the 41 diagnosis fixtures, and the 81 planner fixtures are keyed
+on prompt hashes that mostly no longer occur on this branch, four of twenty scenario and seed pairs
+still hitting. `docs/RESULTS.md`, `docs/BUILD_LOG.md` and `docs/WHAT_BROKE.md` all state this now.
+
