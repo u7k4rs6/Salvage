@@ -91,7 +91,7 @@ Pages does, `/`, `/runner`, `/results` and an unknown path all boot the app and 
 them. `vite preview` does the same. Bundle before any recording is fetched: 29.4 kB of JavaScript
 and 8.0 kB of CSS, gzipped. The recordings are static assets, not modules, so the 1.5 MB one
 (129 kB gzipped) is fetched when the runner opens; Recharts, 151 kB gzipped, is its own chunk that
-only Results pulls in. No `/api/` string survives in the demo bundle.
+only Results pulls in. No `/api/` request is made: see round 5, which corrects this sentence after F6 changed what is true of it.
 
 **3. Every page, every state.** Data, empty and error states walked on all seven routes against a
 live backend and against no backend. Findings F1, F2, F3, Q1, Q2, Q3 and Q5 come from this pass.
@@ -370,4 +370,64 @@ One thing on that track is worth a reader knowing rather than fixing: GATE reads
 evaluated" while EXECUTE reads "1 executed". That is accurate. `ESCALATE_HUMAN` is an
 incident-level action the matrix always allows, so the policy engine records an empty ladder for it,
 and the gate panel says so in as many words.
+
+---
+
+## Round 5
+
+Scope: all seven passes over the state rounds 1 to 4 produced, from a clean clone.
+
+### Fixed
+
+**F10. A sentence in this document's round 1 entry stopped being true.** Severity: low, and it is
+bookkeeping about bookkeeping. Round 1 recorded "No `/api/` string survives in the demo bundle",
+which was true when it was written. F6 in round 2 made the demo answer `/api/results` from a
+committed capture, so the string is in the bundle now as a path constant that never reaches the
+network. Corrected in place, with a pointer here, rather than deleted: a review log that quietly
+edits its own history is not a review log.
+
+### Queued
+
+Nothing new. Q1 through Q10 stand.
+
+### Passes
+
+**1. Cold start.** Clean, from a second fresh clone containing every commit. `uv sync`, `ruff check
+.` (which is what CI runs, and which round 4 fixed), `db migrate`, the headless demo and `ledger
+verify` all ran. The headless run again reported `stream_digest=6a6e30230725aae5`, matching
+`data/results/main.json` for S1 seed 1, and the chain verified at 2,562 entries. `npm ci` and `npm
+run build` produced `dist` with `404.html`.
+
+**2. Static build.** Clean. Served the clean clone's build with a Pages-like 404 fallback: `/`,
+`/runner`, `/results` and an unknown path all resolve. Network trace on the demo shows exactly one
+data request, `/assets/results.api-*.json`, and no `/api/` call at all. The only third-party request
+is Google Fonts, which every font token has a system fallback for, so the page is readable if it is
+blocked.
+
+**3. Every page, every state.** Contrast rescanned on the clean clone's build across Results, the
+entry screen and the replay paused at the first refusal, including header and nav: 0 failures in all
+three. F9's fix is confirmed in the built artifact: the track reads "PLAN 3 actions" on S2 and
+"1 action" on S4.
+
+**4. Reconciliation.** Clean. A fourth sample, from the two artifacts no earlier round had opened:
+
+- `data/results/escalation_fix.json` against PITCH's escalation-to-fix paragraph: at a two hour
+  response the agent recovers 2,67,435.23 rupees and at fifteen minutes 2,77,080.14, against B2's
+  1,83,115.32, on zero messages. PITCH says "between 2,67,435 and 2,77,080 against B2's 1,83,115"
+  and "46 percent ahead" for the slowest. Recomputed: 46 percent at two hours, rising to 51. Exact,
+  and the claim is pinned to the least flattering end of its own range.
+- The same file's `beyond_the_fault` rows: at a 180 minute response the agent is back to the no-fix
+  figure exactly, which is what PITCH's "past the fault's own 180 minute duration the fix is worth
+  exactly nothing" says.
+- `data/results/steer_sensitivity.json`: `shipped_value` is 0.55 and the sweep runs 0.25 to 0.65,
+  matching AUDIT's description of the assumed constant and its sweep.
+
+**5. Claim versus evidence.** Clean. Nothing found beyond Q8 and Q9, both from round 3 and both
+still queued.
+
+**6. The thirty-second test.** Unchanged. No copy was rewritten in any round, so the terms and open
+questions recorded in round 1 stand exactly as written.
+
+**7. Freeze integrity.** Clean. 496 tests pass, `ruff check` and `ruff format --check` both clean on
+a fresh clone. `master` is untouched at `e92a71c` plus its documentation commit.
 
