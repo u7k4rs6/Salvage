@@ -2,6 +2,19 @@
 
 Version 0.1, 24 August 2026. Companion to `02_TECHNICAL_ARCHITECTURE.md`. The frontend exists to make the agent's behaviour legible in a 5-minute pitch and a panel interview. It is an ops console, not a product marketing surface.
 
+**This document records what was specified, not what was built.** It is unchanged from the version
+the build was worked to, and where the two now differ the difference is deliberate and recorded
+elsewhere rather than retrofitted into this file.
+
+The largest instance is section 4.7. The Scenario Runner was rebuilt on branch `ui/board`, after
+this spec was written, as a replay of a recorded run: `POST /api/sim/run` simulates, detects,
+diagnoses, acts and settles in one uninterruptible call, so there is no moment at which the running
+system holds a partial world and nothing to watch while it works. The form, the Run and Stop
+buttons, the live event log and the summary card specified in 4.7 therefore do not exist. Section
+3's route table and section 4.1's empty-state link refer to that same page and are historical for
+the same reason. `docs/BUILD_LOG.md` carries the reasoning and `README.md` describes the page as it
+now is.
+
 ## 1. Stack and constraints
 
 - Vite, React 18, TypeScript, Tailwind. React Router for pages. No state library; server state via a small `useApi` hook with SWR-style refetch and an SSE subscription for live updates.

@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { useApi } from "../lib/useApi";
+import { FULL_CONSOLE } from "../lib/build";
 import { Badge, Empty, Panel, Region, Table } from "../components/primitives";
 import { count, percent, rupees, rupeesShort } from "../lib/format";
 import type { ResultsRun } from "../lib/types";
@@ -133,6 +134,34 @@ function SecondaryTable({ run }: { run: ResultsRun }) {
   );
 }
 
+/**
+ * Where these figures came from, said on the page rather than left to be inferred.
+ *
+ * In the console this page reads a live API against whatever `data/results` holds right now. In the
+ * public demo there is no API, and the same routes are answered from a capture committed to the
+ * repository. The numbers are identical either way, but "identical" is a thing a reader has to be
+ * told rather than something they can see, and a table of revenue figures with no date on it reads
+ * as current by default. So the demo says plainly that it is a snapshot, and names the run it is a
+ * snapshot of, which is the same run id the tables below are keyed on.
+ */
+function CaptureNotice({ runId }: { runId: string | null }) {
+  if (FULL_CONSOLE) return null;
+  return (
+    <p className="mb-3 border-l-2 border-[color:var(--line-2)] pl-3 text-xs text-[color:var(--fg-2)]">
+      These figures are a captured snapshot of a real evaluation run
+      {runId ? (
+        <>
+          {" "}
+          (<span className="num">{runId}</span>)
+        </>
+      ) : null}
+      , not a live readout. They are the unedited output of the same API route the console reads,
+      recorded once from <span className="num">data/results/</span> and committed to the repository.
+      Nothing on this page is computed in the browser.
+    </p>
+  );
+}
+
 export default function ResultsPage() {
   const runs = useApi<RunList>("/api/results");
   const [selected, setSelected] = useState<string | null>(null);
@@ -173,6 +202,7 @@ export default function ResultsPage() {
                 </label>
               }
             >
+              <CaptureNotice runId={runId} />
               <Notes notes={list.notes} />
             </Panel>
           )

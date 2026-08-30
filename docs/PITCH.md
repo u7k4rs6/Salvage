@@ -49,7 +49,7 @@ escalation keep running, because suspending an agent should not blind it.
 
 ## What is measured, and what it says
 
-Zero policy violations across 200 runs. 45 fault injection attempts, 45 refused. Detection at 5 to
+Zero policy violations across all 250 runs. 45 fault injection attempts, 45 refused. Detection at 5 to
 10 simulated minutes on the peak, with zero false alarms on the no-fault scenario across all seeds.
 
 **The agent arm is measured now**, against a live Gemini, from diagnosis fixtures recorded blind:

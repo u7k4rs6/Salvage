@@ -545,11 +545,11 @@ instruction.
 | Q4 | low | Storefront is now on the console's dark surface, and it is the one page that is a shopper's view rather than an operator's. |
 | Q5 | low | Escalations shows "enter the token" twice on one line beside the disabled approve and reject controls. |
 | Q6 | low | `docs/PITCH.md` says the agent "loses some seeds outright" on S3; it loses one of ten. Under-claiming. |
-| Q7 | low | `web/src/board/fixtures/results.api.json` is a new committed artifact, needed to fix F6. It changes no number. |
-| Q8 | medium | `docs/PITCH.md` says "zero policy violations across 200 runs"; the sweep has 250, and README and SUBMISSION both say 250. |
+| ~~Q7~~ | resolved | Capture inspected and accepted. Verified verbatim against the live routes, and the demo's Results page now says on its face that the figures are a captured snapshot and names the run. |
+| ~~Q8~~ | resolved | Fixed. PITCH now reads "across all 250 runs", matching README and SUBMISSION and the artifact. |
 | Q9 | low | `docs/PITCH.md` says "half the faults are never detected" at 1,500 attempts a day; the sweep records 6 of 10. |
 | Q10 | low | On an empty database the top bar renders the epoch as "1/1/1970". Not visible in the public demo. |
-| Q11 | medium | `docs/04_FRONTEND_SPEC.md` section 4.7 specifies the old Scenario Runner, with two smaller instances of the same drift beside it. |
+| ~~Q11~~ | resolved | Spec left as specified. A document-level note records that it describes the original design and that 4.7 was superseded on `ui/board`. |
 
 ## The three questions a sharp payments engineer would ask, and where they stand
 
@@ -577,4 +577,57 @@ and nothing else; and `assert_blind` refuses any prompt containing a scenario id
 name. The limit is that this covers the 41 diagnosis fixtures, and the 81 planner fixtures are keyed
 on prompt hashes that mostly no longer occur on this branch, four of twenty scenario and seed pairs
 still hitting. `docs/RESULTS.md`, `docs/BUILD_LOG.md` and `docs/WHAT_BROKE.md` all state this now.
+
+---
+
+## Directed actions, after round 7
+
+Three items handled on instruction rather than as a review round.
+
+**Q8, fixed.** `data/results/main.json` holds 250 rows: five scenarios by ten seeds by five policy
+arms, 250 distinct combinations, no duplicates, and 0 policy violations summed across all of them.
+`docs/PITCH.md` now reads "Zero policy violations across all 250 runs", identical to `README.md`
+and `docs/SUBMISSION.md`. The 200 was stale from before the `echo` arm made it five arms.
+
+Every other count shared by those three files was checked for the same drift and agrees: 41
+incidents, 37 of 41 correct on rules alone, 45 fault injection attempts all refused, 10 seeds. The
+neighbouring claims in the sentence that changed were recomputed rather than assumed: zero incidents
+across all 50 S0 rows, and per-scenario detection means of 5.4, 8.6, 7.0 and 9.5 minutes, which is
+the "5 to 10 simulated minutes" the line claims.
+
+Remaining "200 run" references are historical and correct in context: `docs/WHAT_BROKE.md` twice and
+`docs/BUILD_LOG.md` twice, all describing the four-arm sweep as it was at the time. One is not
+historical, `docs/AUDIT.md` line 211, "neither breaker branch fires anywhere in the 200-run sweep",
+which reads as a live reference to the current artifact. AUDIT is outside the three files named, so
+it is untouched and noted here.
+
+**Q7, inspected and accepted with a visible notice.** The capture is
+`web/src/board/fixtures/results.api.json`, 137 kB, produced by the command in `docs/BUILD_LOG.md`,
+which calls `GET /api/results` and then `GET /api/results/{id}` for every run the first call lists
+and writes them under those keys. It adds `_note`, `captured_at` and `git_rev` and transforms
+nothing else.
+
+Verified rather than asserted: with the API running against `data/results/`, all nine responses in
+the capture, the listing plus eight runs, are deep-equal to what the routes return today. No edits.
+
+`web/src/pages/Results.tsx` now renders a notice above the tables in builds with no backend, saying
+the figures are a captured snapshot of a real evaluation run, naming the run id the tables are keyed
+on, and stating that nothing on the page is computed in the browser. It does not appear in the full
+console, where the page genuinely is live. Confirmed present in the demo build and absent in the dev
+build.
+
+**Q11, recorded rather than retrofitted.** Section 4.7 is unchanged. There was no existing
+divergence line to extend, in that document or any other, so a document-level note was added under
+the version line: 13 insertions, 0 deletions, nothing removed anywhere in the file. It states that
+the document records what was specified rather than what was built, that the Scenario Runner was
+rebuilt on `ui/board` after the spec was written and why, and that section 3's route table and
+section 4.1's empty-state link are historical for the same reason.
+
+### One new item, not acted on
+
+**Q12. `docs/04_FRONTEND_SPEC.md` section 8 lists "Dark mode, theming" as out of scope.** Severity:
+low. The whole console is now on a dark surface. This is the same class as Q11 and it is in the same
+document, but it was not part of the instruction and the note added above deliberately does not
+claim to be an exhaustive list of divergences. Flagged so the note can be extended if you want it to
+cover this too.
 
