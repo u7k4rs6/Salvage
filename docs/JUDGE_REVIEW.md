@@ -261,3 +261,113 @@ No em dashes or en dashes in `README.md` or any file in `docs/`. Every relative 
 backtick-quoted repository path in `README.md` and all nine documents resolves to a file that
 exists. Both scans clean.
 
+---
+
+## Round 3
+
+Scope: the states rounds 1 and 2 had not exercised, and a third reconciliation sample.
+
+### Fixed
+
+Nothing. Every finding this round is one whose fix would either strengthen a claim or reword a
+limitation, and both are queued by instruction.
+
+### Queued
+
+**Q8. `docs/PITCH.md` says "Zero policy violations across 200 runs"; the sweep has 250.** Severity:
+medium, and it is a disagreement between documents rather than only with the data. `README.md` and
+`docs/SUBMISSION.md` both say 250, `data/results/main.json` has 250 rows (five scenarios by ten
+seeds by five arms), and the recomputed violation count across all 250 is 0. The 200 is stale from
+before the `echo` arm was added, and `docs/WHAT_BROKE.md` refers to a "200-run sweep" historically,
+which is where it comes from. Correcting it to 250 would make the claim stronger, so it is queued
+rather than fixed.
+
+**Q9. `docs/PITCH.md` says "at 1,500 attempts a day, half the faults are never detected at all".**
+Severity: low. `data/results/volume_sweep.json` records 4 of 10 detected at that volume, so 6 of 10
+are never detected, not 5. "Half" softens a limitation, and rewording a limitation is queued by
+instruction. `docs/AUDIT.md` is precise about the same sweep, so the exact figures are already in
+the repository.
+
+**Q10. On an empty database the top bar reads "SIM CLOCK 1/1/1970, 05:45:00".** Severity: low, and
+invisible in the public demo, whose bar has no clock. `GET /api/overview` returns `now: 900` when
+nothing has been observed, and the bar renders it as a date. A first-time viewer on a fresh install
+reads 1970 as a bug. Suppressing it is a rendering change rather than a colour one, so it is queued.
+
+### Passes
+
+**3. Every page, every state.** The states not previously exercised, against a freshly migrated
+empty database and with the kill switch on:
+
+- Empty database: all four live pages explain themselves rather than showing a blank. Overview says
+  "No attempts measured. Nothing has been observed, so there is no baseline to deviate from" and
+  offers a way forward; Incidents says what would cause one to appear; Escalations and Ledger both
+  read correctly. No bare zero anywhere that could be misread as a failure. Q10 is the exception.
+- Kill switch on: the bar takes a red ground, "Outbound actions suspended" appears in red, and the
+  control becomes "Resume outbound actions" in green. All legible on the dark surface, and the red
+  is being used for exactly what the palette reserves it for.
+
+**4. Reconciliation.** Clean apart from Q8 and Q9. A third sample, from the artifacts neither
+earlier round touched:
+
+- `docs/AUDIT.md` F5's paired statistics: S1 mean +46,104 with t=2.92, S2 +26,810 with t=1.99, S3
+  +5,840 with sd 15,993 and t=1.15. All four exact, and its "the agent loses seeds outright on all
+  three scenarios, one to two of ten each" recomputes as 1, 2 and 1 of ten. AUDIT is the most
+  precise document in the repository on its own weakest result.
+- `data/results/volume_sweep.json`: the boundary string it stores matches its own rows, and PITCH's
+  "somewhere between 5,000 and 12,000 attempts a day" matches (5 of 10 within fifteen minutes at
+  5,000, 10 of 10 at 12,000).
+- `data/results/offpeak.json`: 20 rows, none opened an incident, so AUDIT's "zero of twenty trough
+  faults detected" is exact.
+- `data/results/fault_injection.json`: 45 attempts, 45 refused, no unrefused, matching README,
+  PITCH and SUBMISSION.
+
+---
+
+## Round 4
+
+Scope: the checks that prove the branch is shippable rather than only correct.
+
+### Fixed
+
+**F8. The branch failed its own CI.** Severity: high. `.github/workflows/ci.yml` runs `uv run ruff
+check .`, and `scripts/capture_board_fixture.py` had a 106 character line against a 100 character
+limit. The file exists only on `ui/board`, added by an earlier commit on this branch, so `master` is
+unaffected and its FROZEN claim of "ruff clean" still holds. `ruff format` could not fix it, because
+it will not split a string, so the f-string is split across two adjacent literals; the concatenation
+is byte-identical to the original, which is asserted rather than assumed. `ruff check` and `ruff
+format --check` are both clean now.
+
+**F9. "PLAN 1 actions" on the lifecycle track.** Severity: low, a typo. Pluralised.
+
+### Queued
+
+Nothing new.
+
+### Passes
+
+**1. Cold start.** Unchanged from round 2 and rerun implicitly: the fresh clone was rebuilt after
+the round 2 changes and produced the same output.
+
+**7. Freeze integrity.** Clean. 496 tests pass, ruff clean, format clean. The suite appeared to fail
+with 10 failures and 99 errors partway through this round, all `sqlite3.OperationalError: disk I/O
+error`. That was not a defect: the earlier scenario sweep and several full test runs had left 3.8 GB
+of simulated worlds in `/tmp`, which is a 5.5 GB tmpfs, and SQLite reports exhaustion that way. With
+the temporary databases removed the suite passes in full. Recorded because a reviewer who runs the
+suite after a sweep will hit the same thing and it looks alarming.
+
+`master` remains `e92a71c` plus a documentation-only commit. The only file outside `web/`, `README.md`
+and `docs/` that any round has touched is `scripts/capture_board_fixture.py`, which is not on a
+measured path: it writes a board fixture and no number in `docs/RESULTS.md` comes from it, which its
+own docstring states.
+
+**2 and 3. Static build, every page.** The second recording checked in the built demo. Switching to
+S4 seed 0 does not bring the entry screen back, the narration follows it correctly in plain English
+("bank transfers are failing", "a setting on the shop's own payment account is wrong"), and the
+lifecycle track puts ESCALATE at "current stage" with RECOVER "not reached". Escalation renders as
+terminal, as it must.
+
+One thing on that track is worth a reader knowing rather than fixing: GATE reads "no rules
+evaluated" while EXECUTE reads "1 executed". That is accurate. `ESCALATE_HUMAN` is an
+incident-level action the matrix always allows, so the policy engine records an empty ladder for it,
+and the gate panel says so in as many words.
+

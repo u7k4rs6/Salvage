@@ -152,7 +152,10 @@ def main(argv: list[str] | None = None) -> int:
     day_start = sim.eval_day_start
     cutoff = day_start + args.at_minute * 60
     hhmm = f"{args.at_minute // 60:02d}:{args.at_minute % 60:02d}"
-    print(f"  {sim.attempts} attempts over the run, stopping at sim minute {args.at_minute} ({hhmm} IST)")
+    print(
+        f"  {sim.attempts} attempts over the run, "
+        f"stopping at sim minute {args.at_minute} ({hhmm} IST)"
+    )
 
     for fault in sim.scheduled_faults:
         inside = "open" if fault.start_ts <= cutoff < fault.end_ts else "not active"

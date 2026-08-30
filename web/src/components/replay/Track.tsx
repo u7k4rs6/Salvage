@@ -66,7 +66,9 @@ export function Track({ state, stage }: { state: ReplayState; stage: Stage }) {
       key: "plan",
       status: statusFor("plan", stage, Boolean(state.plan)),
       colour: "var(--info)",
-      detail: state.plan ? `${state.plan.plan.actions.length} actions` : "no plan",
+      detail: state.plan
+        ? `${state.plan.plan.actions.length} action${state.plan.plan.actions.length === 1 ? "" : "s"}`
+        : "no plan",
     },
     {
       key: "gate",
