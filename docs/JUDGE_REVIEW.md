@@ -431,3 +431,53 @@ questions recorded in round 1 stand exactly as written.
 **7. Freeze integrity.** Clean. 496 tests pass, `ruff check` and `ruff format --check` both clean on
 a fresh clone. `master` is untouched at `e92a71c` plus its documentation commit.
 
+---
+
+## Round 6
+
+Scope: the two areas no earlier round had opened, the remaining sweep artifacts and the four
+specification documents.
+
+### Fixed
+
+Nothing.
+
+### Queued
+
+**Q11. `docs/04_FRONTEND_SPEC.md` section 4.7 specifies a Scenario Runner that no longer exists.**
+Severity: medium. It specifies a form with scenario, seed, policy and speed, Run and Stop buttons
+behind the token, a live log of the last 50 server-sent events, and a summary card afterwards. The
+page is now a replay of a committed recording and has none of those. A judge comparing the spec to
+the app finds a page that does not match its own contract.
+
+Resolving it means either editing the specification, which changes a contract, or adding a note to
+it, and both are a decision rather than a correction. `docs/BUILD_LOG.md` records why the page
+changed and `README.md` describes what it now is, so the reasoning is on the record; it is only
+section 4.7 that still describes the old page. Two smaller instances of the same thing sit beside
+it: section 3's route table lists `/api/sim/run`, `/api/sim/stop` and `/api/sim/status` as the
+Scenario Runner's routes, and section 4.1 says the Overview's empty state links to it to run a
+scenario, which it still does but that link now leads to a replay.
+
+### Passes
+
+**4. Reconciliation.** Clean. A fifth sample, the artifacts nothing had opened:
+
+- All 250 rows of the five per-scenario shards checked cell by cell against `main.json`: 0
+  mismatches, so the shards and the aggregate are the same run.
+- `data/results/sensitivity.json`: the B1-versus-B0 nudge multiplier sweep runs 0.5 to 1.5, which is
+  what `docs/AUDIT.md` says of it, including AUDIT's own criticism that it covers only B1 against B0
+  on five seeds.
+- `record_pass.json` and `echo_record.json`: the per-world digests are identical to each other and
+  to `main.json` for the same scenario and seed, which is the property that makes the echo arm a
+  control rather than a different experiment.
+
+**5. Claim versus evidence.** Clean apart from Q11, which is a specification rather than a claim.
+Checked specifically whether the demo drops a caveat that `docs/RESULTS.md` carries: it does not.
+The demo's Results page shows the secondary whole-run table, the one where the link-sending
+baselines beat the agent, with its explanatory line intact, so the least flattering result in the
+project is visible to anyone who opens the second page of the demo.
+
+**1, 2, 3, 6 and 7.** Not rerun. Nothing has changed since round 5 except this file and the
+documents it names, and rerunning a build and a contrast sweep against an unchanged tree would be
+manufacturing evidence of work rather than checking anything.
+
