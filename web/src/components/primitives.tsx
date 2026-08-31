@@ -117,7 +117,14 @@ export interface Column {
   key: string;
   label: ReactNode;
   align?: ColumnAlign;
-  /** A fixed width where the column should not breathe, such as a timestamp or a sequence. */
+  /**
+   * The column's share of the table, as a fraction. These are proportions, not pixels: a column
+   * declared 1.6 takes twice the width of one declared 0.8, whatever the table is given. They do
+   * not need to sum to anything, because `Table` normalises them into the colgroup, which is the
+   * single place the geometry is computed.
+   */
+  flex?: number;
+  /** An explicit width, for the rare column that should not breathe at all. Overrides `flex`. */
   width?: string;
 }
 
@@ -135,6 +142,21 @@ const ALIGN_CLASS: Record<ColumnAlign, string> = {
  * right-aligned header over left-aligned numbers, is the commonest way a table looks wrong, and
  * this shape makes it unrepresentable rather than merely discouraged.
  */
+/**
+ * Turn the declared shares into colgroup widths.
+ *
+ * One place, one calculation. Every column that declares a share gets its fraction of whatever is
+ * left after the explicit widths, so the proportions hold at any table width and cannot be thrown
+ * off by hand-computed percentages that quietly stop summing to a hundred.
+ */
+function widthsFor(columns: Column[]): (string | undefined)[] {
+  const total = columns.reduce((sum, c) => sum + (c.width ? 0 : (c.flex ?? 0)), 0);
+  if (total <= 0) return columns.map((c) => c.width);
+  return columns.map((c) =>
+    c.width ? c.width : c.flex ? `${((c.flex / total) * 100).toFixed(4)}%` : undefined,
+  );
+}
+
 export function Table({
   columns,
   children,
@@ -150,13 +172,17 @@ export function Table({
    */
   minWidth?: string;
 }) {
+  const widths = widthsFor(columns);
   return (
     <TableColumns.Provider value={columns}>
       <div className="dt-wrap">
         <table className="dt" style={minWidth ? { minWidth } : undefined}>
+          {/* The colgroup is the only place a column width is stated. With `table-layout: fixed`
+              the browser takes its geometry from here and from nowhere else, so the head and every
+              row in the body are laid out against one definition by construction. */}
           <colgroup>
-            {columns.map((column) => (
-              <col key={column.key} style={column.width ? { width: column.width } : undefined} />
+            {columns.map((column, index) => (
+              <col key={column.key} style={widths[index] ? { width: widths[index] } : undefined} />
             ))}
           </colgroup>
           <thead>

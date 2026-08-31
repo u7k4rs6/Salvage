@@ -25,14 +25,14 @@ const REF_TYPES = ["", "sim_run", "incident", "case", "action", "escalation", "w
  * reads down the left. A long payload summary is never centred.
  */
 const LEDGER_COLUMNS: Column[] = [
-  { key: "seq", label: "Seq", align: "num", width: "5%" },
+  { key: "seq", label: "Seq", align: "num", flex: 0.5 },
   // Sized so a full timestamp and the longest kind each sit on one line at the table's floor.
-  { key: "time", label: "Time", align: "text", width: "19%" },
-  { key: "kind", label: "Kind", align: "text", width: "21%" },
-  { key: "ref", label: "Reference", align: "text", width: "23%" },
+  { key: "time", label: "Time", align: "text", flex: 1.9 },
+  { key: "kind", label: "Kind", align: "text", flex: 2.1 },
+  { key: "ref", label: "Reference", align: "text", flex: 2.3 },
   // The summary absorbs the width the others do not need.
-  { key: "summary", label: "Summary", align: "text", width: "20%" },
-  { key: "hash", label: "Hash", align: "text", width: "12%" },
+  { key: "summary", label: "Summary", align: "text", flex: 2 },
+  { key: "hash", label: "Hash", align: "text", flex: 1.2 },
 ];
 
 export default function LedgerPageView() {

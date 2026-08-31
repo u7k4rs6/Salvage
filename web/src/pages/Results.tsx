@@ -59,18 +59,13 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
     // The two identifying columns are narrow because their content is: a scenario id and a count
     // of at most four digits. The five arms are the comparison, so they take the rest in equal
     // shares and every boundary between them falls at the same interval.
-    { key: "scenario", label: "Scenario", align: "text", width: "9%" },
-    { key: "at_risk", label: "At-risk orders", align: "num", width: "13%" },
-    ...policies.map((policy) => ({
-      key: policy,
-      label: policy,
-      align: "num" as const,
-      width: `${78 / policies.length}%`,
-    })),
+    { key: "scenario", label: "Scenario", align: "text", flex: 0.9 },
+    { key: "at_risk", label: "At-risk orders", align: "num", flex: 1.3 },
+    ...policies.map((policy) => ({ key: policy, label: policy, align: "num" as const, flex: 1.56 })),
   ];
 
   return (
-    <Table columns={columns}>
+    <Table columns={columns} minWidth="62rem">
       {scenarios.map((scenario) => {
         const atRisk = find(scenario, policies[0])?.at_risk_orders ?? 0;
         return (
@@ -108,16 +103,11 @@ function WholeRunTable({ run }: { run: ResultsRun }) {
   const find = (scenario: string, policy: string) =>
     run.aggregates.find((row) => row.scenario === scenario && row.policy === policy);
   const columns: Column[] = [
-    { key: "scenario", label: "Scenario", align: "text", width: "10%" },
-    ...run.policies.map((policy) => ({
-      key: policy,
-      label: policy,
-      align: "num" as const,
-      width: `${90 / run.policies.length}%`,
-    })),
+    { key: "scenario", label: "Scenario", align: "text", flex: 1 },
+    ...run.policies.map((policy) => ({ key: policy, label: policy, align: "num" as const, flex: 1.8 })),
   ];
   return (
-    <Table columns={columns}>
+    <Table columns={columns} minWidth="80rem">
       {run.scenarios.map((scenario) => (
         <tr key={scenario}>
           <Cell column="scenario">
@@ -149,16 +139,16 @@ function WholeRunTable({ run }: { run: ResultsRun }) {
 
 function SecondaryTable({ run }: { run: ResultsRun }) {
   const columns: Column[] = [
-    { key: "scenario", label: "Scenario", align: "text", width: "10%" },
-    { key: "policy", label: "Policy", align: "text", width: "10%" },
-    { key: "rate", label: "Recovery rate", align: "num", width: "16%" },
-    { key: "contacts", label: "Actions per 1,000 rupees", align: "num", width: "20%" },
-    { key: "detect", label: "Time to detect", align: "num", width: "16%" },
-    { key: "escalations", label: "Escalations", align: "num", width: "14%" },
-    { key: "violations", label: "Violations", align: "num", width: "14%" },
+    { key: "scenario", label: "Scenario", align: "text", flex: 1 },
+    { key: "policy", label: "Policy", align: "text", flex: 1 },
+    { key: "rate", label: "Recovery rate", align: "num", flex: 1.6 },
+    { key: "contacts", label: "Actions per 1,000 rupees", align: "num", flex: 2 },
+    { key: "detect", label: "Time to detect", align: "num", flex: 1.6 },
+    { key: "escalations", label: "Escalations", align: "num", flex: 1.4 },
+    { key: "violations", label: "Violations", align: "num", flex: 1.4 },
   ];
   return (
-    <Table columns={columns}>
+    <Table columns={columns} minWidth="62rem">
       {run.aggregates.map((row) => (
         <tr key={`${row.scenario}-${row.policy}`}>
           <Cell column="scenario">{row.scenario}</Cell>
@@ -326,10 +316,10 @@ export default function ResultsPage() {
               >
                 <Table
                   columns={[
-                    { key: "scenario", label: "Scenario", align: "text", width: "8rem" },
-                    { key: "incidents", label: "Incidents", align: "num", width: "8rem" },
-                    { key: "rules", label: "Rules accuracy", align: "num" },
-                    { key: "llm", label: "Model accuracy", align: "num" },
+                    { key: "scenario", label: "Scenario", align: "text", flex: 1 },
+                    { key: "incidents", label: "Incidents", align: "num", flex: 1 },
+                    { key: "rules", label: "Rules accuracy", align: "num", flex: 1.4 },
+                    { key: "llm", label: "Model accuracy", align: "num", flex: 1.4 },
                   ]}
                 >
                   {(data.diagnosis.rows ?? []).map((row: any) => (

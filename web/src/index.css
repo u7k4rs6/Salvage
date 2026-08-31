@@ -710,23 +710,21 @@
   }
   .dt th,
   .dt td {
-    padding: 9px var(--space-4);
     /*
-     * Baseline, not middle. The cells in a row are a headline figure and, beside it, a stack of a
-     * figure and two subordinate lines. Centring the short cell against the tall one floats the
-     * scenario id into the middle of its neighbour's stack; a shared first baseline puts every
-     * primary value on one line across the row, which is the line the eye reads.
+     * One horizontal padding for every cell in the table, head and body alike. The first and last
+     * columns used to take a wider inset to sit off the panel edge, which meant column one was
+     * laid out on 20/16 while the middle seven were on 16/16: a per-column padding correcting for
+     * something the column geometry should have handled, and the thing that made the first header
+     * and its data sit on a different rhythm from the rest of the row.
      */
-    vertical-align: baseline;
+    padding-block: 9px;
+    padding-inline: var(--space-4);
+    /*
+     * Middle, so a status badge sits centred in its row and a cell that wraps onto a second line
+     * does not drag its neighbours to the top of the row.
+     */
+    vertical-align: middle;
     overflow-wrap: anywhere;
-  }
-  .dt th:first-child,
-  .dt td:first-child {
-    padding-left: var(--space-5);
-  }
-  .dt th:last-child,
-  .dt td:last-child {
-    padding-right: var(--space-5);
   }
   .dt thead th {
     padding-top: var(--space-2);
@@ -737,7 +735,14 @@
     letter-spacing: var(--ls-caps);
     text-transform: uppercase;
     color: var(--text-muted);
-    white-space: nowrap;
+    /*
+     * A header wraps inside its own column rather than escaping it. With `nowrap` a long label
+     * such as "Actions per 1,000 rupees" overflowed its cell once the table narrowed, so the
+     * header ink sat over the column beside it while the cell box stayed put: the header was the
+     * one thing on the page not laid out by the column definition. Two lines in a head cell is
+     * correct; a label hanging outside its column is not.
+     */
+    white-space: normal;
   }
   .dt tbody tr + tr td {
     border-top: 1px solid var(--border);
@@ -797,6 +802,12 @@
   }
   /* Subordinate by size and colour, not by a different alignment or a decorative tint. */
   .dt-metric-secondary {
+    /*
+     * A subordinate line never wraps. Breaking "0 actions / 0 opt-out" across two lines turns one
+     * footnote into two and makes the row ragged; the table carries a `minWidth` instead, and
+     * below that it scrolls. A correct table that scrolls beats a crushed one that does not.
+     */
+    white-space: nowrap;
     font-size: var(--fs-micro);
     font-variant-numeric: tabular-nums;
     line-height: var(--lh-tight);

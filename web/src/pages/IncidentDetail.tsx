@@ -318,13 +318,13 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
 }
 
 const CASE_COLUMNS: Column[] = [
-  { key: "customer", label: "Customer", align: "text", width: "16%" },
-  { key: "order", label: "Order", align: "text", width: "18%" },
-  { key: "amount", label: "Amount", align: "num", width: "11%" },
-  { key: "state", label: "State", align: "status", width: "13%" },
-  { key: "nudges", label: "Actions", align: "num", width: "9%" },
-  { key: "link", label: "Link", align: "text", width: "15%" },
-  { key: "next", label: "Next action", align: "text", width: "18%" },
+  { key: "customer", label: "Customer", align: "text", flex: 1.6 },
+  { key: "order", label: "Order", align: "text", flex: 1.8 },
+  { key: "amount", label: "Amount", align: "num", flex: 1.1 },
+  { key: "state", label: "State", align: "status", flex: 1.3 },
+  { key: "nudges", label: "Actions", align: "num", flex: 0.9 },
+  { key: "link", label: "Link", align: "text", flex: 1.5 },
+  { key: "next", label: "Next action", align: "text", flex: 1.8 },
 ];
 
 export default function IncidentDetailPage() {
