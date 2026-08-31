@@ -65,13 +65,11 @@
   font-size: var(--fs-micro);
   line-height: var(--lh-normal);
   color: var(--text-muted);
-  max-width: var(--measure);
 }
 .ov .txt {
   font-size: var(--fs-body);
   line-height: var(--lh-relaxed);
   color: var(--text-secondary);
-  max-width: var(--measure);
 }
 
 /* Figures. Restrained: telemetry, not a marketing statistic. */
@@ -240,11 +238,23 @@
 
 .ov .lane {
   display: grid;
-  grid-template-columns: 9.5rem minmax(0, 1fr) 4.5rem 4rem 5rem;
+  /*
+   * One column model for the whole chart. The four method rails and the segment lanes below them
+   * used to declare their trailing columns separately (4.5/5/4 against 4.5/4/5), so the axis ticks
+   * belonged to one grid and the summary bars started 52px to the left of it, and a two digit
+   * delta wrapped onto a second line in the lanes but not in the rails. Both now read from here.
+   */
+  grid-template-columns: 9.5rem minmax(0, 1fr) 5.75rem 5.5rem 4.5rem;
   align-items: center;
   gap: var(--space-4);
   padding: 3px var(--space-2);
   border-radius: 2px;
+}
+
+/* The four rails carry more vertical weight than a segment lane, and nothing else. */
+.ov .lane-tall {
+  padding-top: 9px;
+  padding-bottom: 9px;
 }
 
 /* -- rows ----------------------------------------------------------------- */

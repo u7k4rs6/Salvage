@@ -27,7 +27,7 @@ export function Panel({
           <div className="min-w-0">
             {title && <h2 className="section-title">{title}</h2>}
             {subtitle && (
-              <p className="mt-1 max-w-[var(--measure)] text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
+              <p className="mt-1 text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
                 {subtitle}
               </p>
             )}
@@ -142,14 +142,22 @@ const ALIGN_CLASS: Record<ColumnAlign, string> = {
 export function Table({
   columns,
   children,
+  minWidth,
 }: {
   columns: Column[];
   children: ReactNode;
+  /**
+   * The width below which the columns stop being readable and the wrapper should scroll instead.
+   * Percentage columns divide whatever they are given, so a table of long identifiers needs a
+   * floor: without one the shares resolve against a narrow viewport and a timestamp breaks across
+   * three lines. Defaults to the 46rem in `.dt-wrap > .dt`.
+   */
+  minWidth?: string;
 }) {
   return (
     <TableColumns.Provider value={columns}>
       <div className="dt-wrap">
-        <table className="dt">
+        <table className="dt" style={minWidth ? { minWidth } : undefined}>
           <colgroup>
             {columns.map((column) => (
               <col key={column.key} style={column.width ? { width: column.width } : undefined} />
@@ -232,7 +240,7 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="py-8 text-center">
-      <p className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)] max-w-[var(--measure)]">{children}</p>
+      <p className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">{children}</p>
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
@@ -367,7 +375,7 @@ export function ConfirmButton({
 
   return (
     <div className="rounded-[var(--radius-sm)] border border-[color:var(--border-strong)] bg-[color:var(--surface-raised)] p-4">
-      <p className="max-w-[var(--measure)] text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-primary)]">
+      <p className=" text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-primary)]">
         {prompt}
       </p>
       {requireNote && (

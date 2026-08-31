@@ -95,9 +95,25 @@
   --ls-caps: 0.06em;
   --ls-tight: -0.01em;
 
-  /* Prose measure. Sentences in a full-bleed console panel will run to 150 characters if nothing
-     stops them. */
-  --measure: 62ch;
+  /*
+   * Measure. There are two, and conflating them was the bug that made every page look left-biased.
+   *
+   * `--measure-prose` caps a page description or a long explanation, where a line that runs the
+   * width of a monitor is genuinely hard to read. It is deliberately generous: the previous single
+   * value pinned text to about 480px inside a 974px panel, which left half of every alert empty.
+   *
+   * Operational content does not get a measure at all. An alert body, a panel subtitle, a metric,
+   * a table cell and an incident rationale are data surfaces, and a data surface uses the width it
+   * is given. The old value was applied to all of them by a blanket script, which is what produced
+   * the dead right-hand half on Overview, Storefront and Results.
+   */
+  /*
+   * In rem, not ch, and deliberately so. `ch` resolves against the element's own font size, so a
+   * 15px description wrapped at 910px while the 13px caveat directly beneath it wrapped at 608px:
+   * two different ragged edges stacked on top of each other, which is what read as "stuck on the
+   * left". One constant edge for every piece of prose on a page, whatever size it is set in.
+   */
+  --measure-prose: 56rem;
 
   /* -- space ------------------------------------------------------------ */
   --space-1: 4px;
@@ -233,7 +249,7 @@
   }
   .intro-caveat {
     margin-top: var(--space-4);
-    max-width: var(--measure);
+    max-width: var(--measure-prose);
     font-size: var(--fs-meta);
     line-height: var(--lh-normal);
     color: var(--text-muted);
@@ -269,6 +285,9 @@
     flex: 1 1 auto;
     min-width: 0;
     padding: var(--page-pad-y) var(--page-pad-x) var(--space-9);
+    /* One ceiling, at the shell, so an ultrawide monitor does not stretch a seven column table to
+       three thousand pixels. Sections inside it span it; none of them carries its own width. */
+    max-width: 1720px;
   }
   /* Wide enough for a twelve column table to breathe, narrow enough that a line of prose never
      runs the width of a monitor. Pages that are genuinely full-bleed opt out. */
@@ -365,7 +384,7 @@
   }
   .page-sub {
     margin-top: var(--space-2);
-    max-width: var(--measure);
+    max-width: var(--measure-prose);
     font-size: var(--fs-body);
     line-height: var(--lh-normal);
     color: var(--text-secondary);
@@ -565,9 +584,21 @@
     width: 100%;
     overflow-x: auto;
   }
+  .dt-wrap > .dt {
+    min-width: 46rem;
+  }
   .dt {
     width: 100%;
     border-collapse: collapse;
+    /*
+     * Fixed, so the colgroup is the authority on column geometry and the content is not.
+     *
+     * Under the default auto layout the browser sizes columns from what is in them, so five
+     * columns declared identically measured 144, 144, 144, 144 and 149, and every table shifted
+     * its own boundaries as the data changed. Fixed makes the declared widths the grid, which is
+     * what "the header sits above its column in every row" actually requires.
+     */
+    table-layout: fixed;
     font-size: var(--fs-table);
     line-height: var(--lh-normal);
   }
@@ -575,6 +606,7 @@
   .dt td {
     padding: 10px var(--space-4);
     vertical-align: baseline;
+    overflow-wrap: anywhere;
   }
   .dt th:first-child,
   .dt td:first-child {

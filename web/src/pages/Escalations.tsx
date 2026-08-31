@@ -97,13 +97,13 @@ function Card({
             Planner error
           </div>
           <div className="dt-mono mt-1 text-[color:var(--text-primary)]">{escalation.reason}</div>
-          <p className="mt-2 max-w-[var(--measure)] text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
+          <p className="mt-2 text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
             No action was chosen. The executor escalated because planning failed, which is not an
             agent deciding a human should take this one.
           </p>
         </div>
       ) : (
-        <p className="mt-3 max-w-[var(--measure)] text-[length:var(--fs-body)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
+        <p className="mt-3 text-[length:var(--fs-body)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
           {REASONS[escalation.reason] ?? escalation.reason}
         </p>
       )}
@@ -156,7 +156,7 @@ function Card({
           </div>
           {typeof (escalation.proposed_action.params as Record<string, unknown> | undefined)
             ?.reason === "string" ? (
-            <p className="mt-1 max-w-[var(--measure)] text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
+            <p className="mt-1 text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
               {String((escalation.proposed_action.params as Record<string, unknown>).reason)}
             </p>
           ) : null}

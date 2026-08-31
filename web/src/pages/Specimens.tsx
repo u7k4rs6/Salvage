@@ -55,7 +55,7 @@ function Section({ title, note, children }: { title: string; note?: ReactNode; c
   return (
     <section className="mt-8">
       <h2 className="display text-[length:var(--fs-meta)] uppercase tracking-[0.08em]">{title}</h2>
-      {note && <p className="caption mt-1 max-w-[var(--measure)]">{note}</p>}
+      {note && <p className="caption mt-1">{note}</p>}
       <div className="mt-3 flex flex-wrap items-start gap-5">{children}</div>
     </section>
   );
@@ -177,7 +177,7 @@ export default function SpecimensPage() {
     <div className="specimen-sheet">
       <header>
         <h1 className="text-[length:var(--fs-page-title)]">Specimen sheet</h1>
-        <p className="caption mt-1.5 max-w-[var(--measure)] text-[length:var(--fs-meta)]">
+        <p className="caption mt-1.5 text-[length:var(--fs-meta)]">
           Every primitive at every state, on synthetic data. Nothing here is measured and nothing
           here fetches. Numbers sit on the boundaries of the scales they belong to, so several are
           deliberately implausible as traffic. The board tile and the collapsed group row are the
@@ -457,7 +457,7 @@ export default function SpecimensPage() {
       <Section title="Panel">
         <Specimen state="title only" width="20rem">
           <Panel title="Active incidents">
-            <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">Body.</p>
+            <p className="text-[length:var(--fs-meta)]">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="title and subtitle" width="24rem">
@@ -465,17 +465,17 @@ export default function SpecimensPage() {
             title="Success rate by segment"
             subtitle="Current 15-minute window. 19 of 33 segments cleared the 20-attempt floor."
           >
-            <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">Body.</p>
+            <p className="text-[length:var(--fs-meta)]">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="title and right slot" width="22rem">
           <Panel title="Incident" right={<StatusBadge status="escalated" />}>
-            <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">Body.</p>
+            <p className="text-[length:var(--fs-meta)]">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="no header" width="16rem">
           <Panel>
-            <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">Body with no header.</p>
+            <p className="text-[length:var(--fs-meta)]">Body with no header.</p>
           </Panel>
         </Specimen>
       </Section>
@@ -553,7 +553,7 @@ export default function SpecimensPage() {
         </Specimen>
         <Specimen state="data" width="18rem" note={`reload fired ${retried} time(s)`}>
           <Region state={{ data: "loaded", error: null, loading: false, reload: noop }}>
-            {(data) => <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">{data}</p>}
+            {(data) => <p className="text-[length:var(--fs-meta)]">{data}</p>}
           </Region>
         </Specimen>
       </Section>

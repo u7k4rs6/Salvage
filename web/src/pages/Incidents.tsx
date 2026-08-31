@@ -33,15 +33,18 @@ const STATUSES = ["all", "open", "escalated", "paused", "recovering", "closed"];
  * read back by every cell, so a header can never sit over values aligned the other way.
  */
 const INCIDENT_COLUMNS: Column[] = [
-  { key: "opened", label: "Opened", align: "text", width: "13rem" },
-  { key: "segment", label: "Segment", align: "text" },
-  { key: "cause", label: "Root cause", align: "text" },
-  { key: "confidence", label: "Confidence", align: "num", width: "7rem" },
-  { key: "status", label: "Status", align: "status", width: "7rem" },
-  { key: "at_risk", label: "At risk", align: "num", width: "9rem" },
-  { key: "recovered", label: "Recovered", align: "num", width: "9rem" },
-  { key: "actions", label: "Actions", align: "num", width: "6rem" },
-  { key: "escalation", label: "Escalation", align: "status", width: "8rem" },
+  // Shares, not pixels, so the row spans whatever the panel gives it. The two nowrap columns, the
+  // timestamp and the escalation badge, get enough of the share that they cannot bleed into their
+  // neighbour, and `minWidth` on the table below is the floor where that stays true.
+  { key: "opened", label: "Opened", align: "text", width: "17%" },
+  { key: "segment", label: "Segment", align: "text", width: "14%" },
+  { key: "cause", label: "Root cause", align: "text", width: "12%" },
+  { key: "confidence", label: "Confidence", align: "num", width: "9%" },
+  { key: "status", label: "Status", align: "status", width: "10%" },
+  { key: "at_risk", label: "At risk", align: "num", width: "11%" },
+  { key: "recovered", label: "Recovered", align: "num", width: "11%" },
+  { key: "actions", label: "Actions", align: "num", width: "7%" },
+  { key: "escalation", label: "Escalation", align: "status", width: "9%" },
 ];
 
 export default function IncidentsPage() {
@@ -99,7 +102,7 @@ export default function IncidentsPage() {
             </Empty>
           ) : (
             <>
-              <Table columns={INCIDENT_COLUMNS}>
+              <Table columns={INCIDENT_COLUMNS} minWidth="70rem">
                 {data.incidents.map((incident) => (
                   <tr key={incident.id}>
                     <Cell column="opened">

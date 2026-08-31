@@ -147,11 +147,11 @@ export default function StorefrontPage() {
                   <div className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-[0.08em] text-[color:var(--warning)]">
                     Checkout is switched off, not broken
                   </div>
-                  <p className="mt-1.5 text-[length:var(--fs-meta)] leading-relaxed text-[color:var(--text-primary)] max-w-[var(--measure)]">
+                  <p className="mt-1.5 text-[length:var(--fs-meta)] leading-relaxed text-[color:var(--text-primary)]">
                     {data.reason} Checkout is disabled rather than opened against a key that is not
                     there, so the Buy buttons below do nothing on purpose.
                   </p>
-                  <p className="mt-2 text-[length:var(--fs-meta)] leading-relaxed text-[color:var(--text-secondary)] max-w-[var(--measure)]">
+                  <p className="mt-2 text-[length:var(--fs-meta)] leading-relaxed text-[color:var(--text-secondary)]">
                     To turn it on, put a Razorpay <span className="num">test</span> key pair in{" "}
                     <span className="num">.env</span> as{" "}
                     <span className="num">RAZORPAY_KEY_ID</span> and{" "}
@@ -253,7 +253,7 @@ export default function StorefrontPage() {
 
           Simulate my payment failing
         </button>
-        <p className="mt-2 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)] max-w-[var(--measure)]">
+        <p className="mt-2 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
           This writes one failed attempt. It does not fabricate a webhook, so nothing appears in
           the webhook ledger for it.
         </p>

@@ -174,7 +174,7 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
       )}
 
       {diagnosis.rationale && (
-        <p className="mt-3 whitespace-pre-wrap text-[length:var(--fs-meta)] text-[color:var(--text-primary)] max-w-[var(--measure)]">{diagnosis.rationale}</p>
+        <p className="mt-3 whitespace-pre-wrap text-[length:var(--fs-meta)] text-[color:var(--text-primary)]">{diagnosis.rationale}</p>
       )}
 
       <Disclosure summary="Show prompt and raw response" className="mt-3">
@@ -190,7 +190,7 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
             </div>
           </div>
         ) : (
-          <p className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)] max-w-[var(--measure)]">
+          <p className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
             No prompt was recorded for this incident. Either no model ran, or the diagnosis came
             from cache.
           </p>
@@ -207,7 +207,7 @@ function PlanPanel({ plan }: { plan: Plan }) {
       subtitle="What the planner proposed and what the policy engine did with it. A refused action names the rule that refused it."
     >
       {plan.rationale && (
-        <p className="mb-3 whitespace-pre-wrap text-[length:var(--fs-meta)] text-[color:var(--text-primary)] max-w-[var(--measure)]">{plan.rationale}</p>
+        <p className="mb-3 whitespace-pre-wrap text-[length:var(--fs-meta)] text-[color:var(--text-primary)]">{plan.rationale}</p>
       )}
 
       {plan.proposed.length > 0 && (
@@ -276,7 +276,7 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
         <Empty>No recovery cases were opened for this incident.</Empty>
       ) : (
         <div className="max-h-[32rem] overflow-y-auto">
-          <Table columns={CASE_COLUMNS}>
+          <Table columns={CASE_COLUMNS} minWidth="62rem">
             {cases.map((item) => (
               <tr key={item.id}>
                 <Cell column="customer">
@@ -318,13 +318,13 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
 }
 
 const CASE_COLUMNS: Column[] = [
-  { key: "customer", label: "Customer", align: "text", width: "11rem" },
-  { key: "order", label: "Order", align: "text", width: "13rem" },
-  { key: "amount", label: "Amount", align: "num", width: "8rem" },
-  { key: "state", label: "State", align: "status", width: "9rem" },
-  { key: "nudges", label: "Actions", align: "num", width: "6rem" },
-  { key: "link", label: "Link", align: "text", width: "11rem" },
-  { key: "next", label: "Next action", align: "text" },
+  { key: "customer", label: "Customer", align: "text", width: "16%" },
+  { key: "order", label: "Order", align: "text", width: "18%" },
+  { key: "amount", label: "Amount", align: "num", width: "11%" },
+  { key: "state", label: "State", align: "status", width: "13%" },
+  { key: "nudges", label: "Actions", align: "num", width: "9%" },
+  { key: "link", label: "Link", align: "text", width: "15%" },
+  { key: "next", label: "Next action", align: "text", width: "18%" },
 ];
 
 export default function IncidentDetailPage() {

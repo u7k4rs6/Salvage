@@ -243,7 +243,6 @@
   font-size: var(--fs-body);
   line-height: var(--lh-normal);
   color: var(--text-secondary);
-  max-width: var(--measure);
 }
 
 /* -- confidence scale ----------------------------------------------------- */
@@ -364,7 +363,6 @@
   font-size: var(--fs-body);
   line-height: var(--lh-relaxed);
   color: var(--text-secondary);
-  max-width: var(--measure);
 }
 .rp .entry-strong {
   color: var(--text-primary);
@@ -388,5 +386,4 @@
   font-size: var(--fs-section);
   line-height: var(--lh-relaxed);
   color: var(--text-primary);
-  max-width: var(--measure);
 }

@@ -1,5 +1,10 @@
 import { Link } from "react-router-dom";
-import { buildBoard, FLOOR_ATTEMPTS, type BoardGroup, type BoardNode } from "../../board/roster";
+import {
+  buildBoard,
+  FLOOR_ATTEMPTS,
+  type BoardGroup,
+  type BoardNode,
+} from "../../board/roster";
 import {
   SEVERITY_CLASS,
   SEVERITY_COLOUR,
@@ -32,7 +37,13 @@ import type { Segment } from "../../lib/types";
 
 const AXIS = [0, 25, 50, 75, 100];
 
-function DeviationBar({ segment, small }: { segment: Segment; small?: boolean }) {
+function DeviationBar({
+  segment,
+  small,
+}: {
+  segment: Segment;
+  small?: boolean;
+}) {
   const baseline = baselineSuccess(segment);
   const value = segment.rate;
   const worse = value < baseline;
@@ -64,7 +75,9 @@ function Delta({ segment }: { segment: Segment }) {
   const points = deviationPoints(segment);
   const severity = deviationSeverity(points);
   return (
-    <span className={`mono text-[length:var(--fs-micro)] ${SEVERITY_CLASS[severity]}`}>
+    <span
+      className={`mono text-[length:var(--fs-micro)] ${SEVERITY_CLASS[severity]}`}
+    >
       {deviationArrow(points)} {formatPoints(points)}
     </span>
   );
@@ -76,23 +89,25 @@ function MethodSummary({ board }: { board: ReturnType<typeof buildBoard> }) {
     <div className="divide">
       {board.methods.map((entry) => {
         const node = entry.methodNode;
-        const measured = node && node.state === "measured" ? node.segment : null;
+        const measured =
+          node && node.state === "measured" ? node.segment : null;
         return (
-          <div
-            key={entry.method}
-            className="row-hover grid grid-cols-[6rem_minmax(0,1fr)_4.5rem_5rem_4rem] items-center gap-4 px-2 py-2.5"
-          >
+          <div key={entry.method} className="row-hover lane lane-tall">
             <div className="text-[length:var(--fs-meta)] font-medium uppercase tracking-[0.04em]">
               {entry.method}
             </div>
             {measured ? (
               <>
                 <DeviationBar segment={measured} />
-                <div className="fig-md text-right">{percent(measured.rate)}</div>
+                <div className="fig-md text-right">
+                  {percent(measured.rate)}
+                </div>
                 <div className="text-right">
                   <Delta segment={measured} />
                 </div>
-                <div className="mono note text-right">n {count(measured.attempts)}</div>
+                <div className="mono note text-right">
+                  n {count(measured.attempts)}
+                </div>
               </>
             ) : (
               <>
@@ -101,7 +116,9 @@ function MethodSummary({ board }: { board: ReturnType<typeof buildBoard> }) {
                 </div>
                 <div className="note text-right">below floor</div>
                 <div className="note text-right">-</div>
-                <div className="mono note text-right">n &lt; {FLOOR_ATTEMPTS}</div>
+                <div className="mono note text-right">
+                  n &lt; {FLOOR_ATTEMPTS}
+                </div>
               </>
             )}
           </div>
@@ -143,12 +160,16 @@ function Lane({ node }: { node: BoardNode }) {
             style={{ background: "var(--danger)" }}
           />
         )}
-        <span className={`mono truncate text-[length:var(--fs-meta)] ${inIncident ? "crit" : "mid"}`}>
+        <span
+          className={`mono truncate text-[length:var(--fs-meta)] ${inIncident ? "crit" : "mid"}`}
+        >
           {node.instrument}
         </span>
       </div>
       <DeviationBar segment={segment} />
-      <div className="fig-md text-right text-[length:var(--fs-meta)]">{percent(segment.rate)}</div>
+      <div className="fig-md text-right text-[length:var(--fs-meta)]">
+        {percent(segment.rate)}
+      </div>
       <div className="text-right">
         <Delta segment={segment} />
       </div>
@@ -173,7 +194,9 @@ function Collapsed({ group }: { group: BoardGroup }) {
       <div className="mono note truncate">{group.title}</div>
       <div className="note">
         {collapsed.label}
-        {collapsed.nodeCount > 0 && <span className="dim"> &middot; {collapsed.nodeCount} keys</span>}
+        {collapsed.nodeCount > 0 && (
+          <span className="dim"> &middot; {collapsed.nodeCount} keys</span>
+        )}
       </div>
     </div>
   );
@@ -228,8 +251,9 @@ export function PaymentHealth({ segments }: { segments: Segment[] }) {
 
         <p className="note mt-4">
           <span className="mono">{board.measured}</span> of{" "}
-          <span className="mono">{board.total}</span> segments cleared the {FLOOR_ATTEMPTS}-attempt
-          floor this window. Bars run from each segment&rsquo;s own baseline; length is the excess.
+          <span className="mono">{board.total}</span> segments cleared the{" "}
+          {FLOOR_ATTEMPTS}-attempt floor this window. Bars run from each
+          segment&rsquo;s own baseline; length is the excess.
         </p>
       </div>
     </div>

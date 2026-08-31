@@ -38,7 +38,7 @@ function Notes({ notes }: { notes: string[] }) {
       {notes.map((note, index) => (
         <p
           key={index}
-          className={`max-w-[var(--measure)] leading-[var(--lh-normal)] ${index > 0 ? "mt-2" : ""}`}
+          className={` leading-[var(--lh-normal)] ${index > 0 ? "mt-2" : ""}`}
         >
           {note}
         </p>
@@ -56,9 +56,16 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
   // Every policy column is numeric, so the recovered figure, the action count and the rate all
   // share one right edge down the whole table, whatever their digit lengths.
   const columns: Column[] = [
-    { key: "scenario", label: "Scenario", align: "text", width: "7rem" },
-    { key: "at_risk", label: "At-risk orders", align: "num", width: "9rem" },
-    ...policies.map((policy) => ({ key: policy, label: policy, align: "num" as const })),
+    { key: "scenario", label: "Scenario", align: "text", width: "8%" },
+    { key: "at_risk", label: "At-risk orders", align: "num", width: "12%" },
+    // The five arms are the comparison, so they share the remaining width equally and each one is
+    // wider than the two identifying columns.
+    ...policies.map((policy) => ({
+      key: policy,
+      label: policy,
+      align: "num" as const,
+      width: `${80 / policies.length}%`,
+    })),
   ];
 
   return (
@@ -100,8 +107,13 @@ function WholeRunTable({ run }: { run: ResultsRun }) {
   const find = (scenario: string, policy: string) =>
     run.aggregates.find((row) => row.scenario === scenario && row.policy === policy);
   const columns: Column[] = [
-    { key: "scenario", label: "Scenario", align: "text", width: "7rem" },
-    ...run.policies.map((policy) => ({ key: policy, label: policy, align: "num" as const })),
+    { key: "scenario", label: "Scenario", align: "text", width: "10%" },
+    ...run.policies.map((policy) => ({
+      key: policy,
+      label: policy,
+      align: "num" as const,
+      width: `${90 / run.policies.length}%`,
+    })),
   ];
   return (
     <Table columns={columns}>
@@ -136,13 +148,13 @@ function WholeRunTable({ run }: { run: ResultsRun }) {
 
 function SecondaryTable({ run }: { run: ResultsRun }) {
   const columns: Column[] = [
-    { key: "scenario", label: "Scenario", align: "text", width: "6rem" },
-    { key: "policy", label: "Policy", align: "text", width: "6rem" },
-    { key: "rate", label: "Recovery rate", align: "num" },
-    { key: "contacts", label: "Actions per 1,000 rupees", align: "num" },
-    { key: "detect", label: "Time to detect", align: "num" },
-    { key: "escalations", label: "Escalations", align: "num" },
-    { key: "violations", label: "Violations", align: "num" },
+    { key: "scenario", label: "Scenario", align: "text", width: "10%" },
+    { key: "policy", label: "Policy", align: "text", width: "10%" },
+    { key: "rate", label: "Recovery rate", align: "num", width: "16%" },
+    { key: "contacts", label: "Actions per 1,000 rupees", align: "num", width: "20%" },
+    { key: "detect", label: "Time to detect", align: "num", width: "16%" },
+    { key: "escalations", label: "Escalations", align: "num", width: "14%" },
+    { key: "violations", label: "Violations", align: "num", width: "14%" },
   ];
   return (
     <Table columns={columns}>
@@ -184,7 +196,7 @@ function SecondaryTable({ run }: { run: ResultsRun }) {
 function CaptureNotice({ runId }: { runId: string | null }) {
   if (FULL_CONSOLE) return null;
   return (
-    <p className="mb-4 max-w-[var(--measure)] border-l-2 border-[color:var(--border-strong)] pl-3 text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
+    <p className="mb-4 border-l-2 border-[color:var(--border-strong)] pl-3 text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
       These figures are a captured snapshot of a real evaluation run
       {runId ? (
         <>
@@ -380,7 +392,7 @@ export default function ResultsPage() {
                     <h3 className="text-[length:var(--fs-meta)] font-medium uppercase tracking-wide text-[color:var(--text-secondary)]">
                       Adversarial set
                     </h3>
-                    <p className="mt-1 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)] max-w-[var(--measure)]">
+                    <p className="mt-1 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
                       Organic retry probability raised to 0.60 everywhere and every response
                       multiplier set to 1.0. Customers recover on their own; the agent has no
                       advantage here, by design.

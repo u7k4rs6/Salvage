@@ -32,7 +32,7 @@ export class ErrorBoundary extends Component<{ name: string; children: ReactNode
         >
           <div className="font-medium">{this.props.name} could not be rendered</div>
           <div className="num mt-1 break-words text-[length:var(--fs-meta)]">{this.state.error.message}</div>
-          <p className="mt-1 text-[length:var(--fs-meta)] max-w-[var(--measure)]">
+          <p className="mt-1 text-[length:var(--fs-meta)]">
             The rest of the page is unaffected. The full stack is in the browser console.
           </p>
         </div>

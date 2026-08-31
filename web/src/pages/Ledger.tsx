@@ -25,12 +25,14 @@ const REF_TYPES = ["", "sim_run", "incident", "case", "action", "escalation", "w
  * reads down the left. A long payload summary is never centred.
  */
 const LEDGER_COLUMNS: Column[] = [
-  { key: "seq", label: "Seq", align: "num", width: "5rem" },
-  { key: "time", label: "Time", align: "text", width: "13rem" },
-  { key: "kind", label: "Kind", align: "text", width: "15rem" },
-  { key: "ref", label: "Reference", align: "text", width: "16rem" },
-  { key: "summary", label: "Summary", align: "text" },
-  { key: "hash", label: "Hash", align: "text", width: "10rem" },
+  { key: "seq", label: "Seq", align: "num", width: "5%" },
+  // Sized so a full timestamp and the longest kind each sit on one line at the table's floor.
+  { key: "time", label: "Time", align: "text", width: "19%" },
+  { key: "kind", label: "Kind", align: "text", width: "21%" },
+  { key: "ref", label: "Reference", align: "text", width: "20%" },
+  // The summary absorbs the width the others do not need.
+  { key: "summary", label: "Summary", align: "text", width: "23%" },
+  { key: "hash", label: "Hash", align: "text", width: "12%" },
 ];
 
 export default function LedgerPageView() {
@@ -167,7 +169,7 @@ export default function LedgerPageView() {
               <Empty>No entries match this filter.</Empty>
             ) : (
               <>
-                <Table columns={LEDGER_COLUMNS}>
+                <Table columns={LEDGER_COLUMNS} minWidth="68rem">
                   {data.entries.map((entry) => (
                     <tr key={entry.seq} className="align-top">
                       <Cell column="seq">{entry.seq}</Cell>
