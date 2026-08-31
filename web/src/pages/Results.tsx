@@ -11,7 +11,16 @@ import {
 } from "recharts";
 import { useApi } from "../lib/useApi";
 import { FULL_CONSOLE } from "../lib/build";
-import { Badge, Empty, Panel, Region, Table } from "../components/primitives";
+import {
+  Badge,
+  Cell,
+  Empty,
+  Metric,
+  Panel,
+  Region,
+  Table,
+  type Column,
+} from "../components/primitives";
 import { count, percent, rupees, rupeesShort } from "../lib/format";
 import type { ResultsRun } from "../lib/types";
 import { PageIntro } from "../components/PageIntro";
@@ -25,7 +34,7 @@ interface RunList {
 function Notes({ notes }: { notes: string[] }) {
   if (notes.length === 0) return null;
   return (
-    <div className="border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[length:var(--fs-small)] text-[color:var(--warn)]">
+    <div className="border border-[color:var(--warning)] bg-[color:var(--warning-bg)] px-3 py-2 text-[length:var(--fs-meta)] text-[color:var(--warning)]">
       {notes.map((note, index) => (
         <p
           key={index}
@@ -44,27 +53,40 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
   const find = (scenario: string, policy: string) =>
     run.aggregates.find((row) => row.scenario === scenario && row.policy === policy);
 
+  // Every policy column is numeric, so the recovered figure, the action count and the rate all
+  // share one right edge down the whole table, whatever their digit lengths.
+  const columns: Column[] = [
+    { key: "scenario", label: "Scenario", align: "text", width: "7rem" },
+    { key: "at_risk", label: "At-risk orders", align: "num", width: "9rem" },
+    ...policies.map((policy) => ({ key: policy, label: policy, align: "num" as const })),
+  ];
+
   return (
-    <Table columns={["scenario", "at-risk orders", ...policies]}>
+    <Table columns={columns}>
       {scenarios.map((scenario) => {
         const atRisk = find(scenario, policies[0])?.at_risk_orders ?? 0;
         return (
-          <tr key={scenario} className="border-b border-[color:var(--line)]">
-            <td className="cell-pad num font-medium">{scenario}</td>
-            <td className="cell-pad num text-right">{count(atRisk, 0)}</td>
+          <tr key={scenario}>
+            <Cell column="scenario">
+              <span className="font-medium text-[color:var(--text-primary)]">{scenario}</span>
+            </Cell>
+            <Cell column="at_risk">{count(atRisk, 0)}</Cell>
             {policies.map((policy) => {
               const row = find(scenario, policy);
-              if (!row) return <td key={policy} className="cell-pad text-[color:var(--fg-3)]">not run</td>;
               return (
-                <td key={policy} className="cell-pad num text-right">
-                  <div className="font-medium">{rupees(row.at_risk_recovered_amount)}</div>
-                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">
-                    {count(row.at_risk_messages, 0)} msg
-                  </div>
-                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
-                    rate {percent(row.at_risk_recovery_rate, 1)}
-                  </div>
-                </td>
+                <Cell key={policy} column={policy}>
+                  {row ? (
+                    <Metric
+                      value={rupees(row.at_risk_recovered_amount)}
+                      secondary={[
+                        `${count(row.at_risk_messages, 0)} actions`,
+                        `rate ${percent(row.at_risk_recovery_rate, 1)}`,
+                      ]}
+                    />
+                  ) : (
+                    <span className="text-[color:var(--text-muted)]">not run</span>
+                  )}
+                </Cell>
               );
             })}
           </tr>
@@ -77,22 +99,33 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
 function WholeRunTable({ run }: { run: ResultsRun }) {
   const find = (scenario: string, policy: string) =>
     run.aggregates.find((row) => row.scenario === scenario && row.policy === policy);
+  const columns: Column[] = [
+    { key: "scenario", label: "Scenario", align: "text", width: "7rem" },
+    ...run.policies.map((policy) => ({ key: policy, label: policy, align: "num" as const })),
+  ];
   return (
-    <Table columns={["scenario", ...run.policies]}>
+    <Table columns={columns}>
       {run.scenarios.map((scenario) => (
-        <tr key={scenario} className="border-b border-[color:var(--line)]">
-          <td className="cell-pad num font-medium">{scenario}</td>
+        <tr key={scenario}>
+          <Cell column="scenario">
+            <span className="font-medium text-[color:var(--text-primary)]">{scenario}</span>
+          </Cell>
           {run.policies.map((policy) => {
             const row = find(scenario, policy);
-            if (!row) return <td key={policy} className="cell-pad text-[color:var(--fg-3)]">not run</td>;
             return (
-              <td key={policy} className="cell-pad num text-right">
-                <div>{rupees(row.recovered_amount)}</div>
-                <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
-                  sd {rupeesShort(row.recovered_std)} / {count(row.messages, 0)} msg /{" "}
-                  {count(row.opt_outs, 0)} opt-out
-                </div>
-              </td>
+              <Cell key={policy} column={policy}>
+                {row ? (
+                  <Metric
+                    value={rupees(row.recovered_amount)}
+                    secondary={[
+                      `sd ${rupeesShort(row.recovered_std)}`,
+                      `${count(row.messages, 0)} actions · ${count(row.opt_outs, 0)} opt-out`,
+                    ]}
+                  />
+                ) : (
+                  <span className="text-[color:var(--text-muted)]">not run</span>
+                )}
+              </Cell>
             );
           })}
         </tr>
@@ -102,36 +135,38 @@ function WholeRunTable({ run }: { run: ResultsRun }) {
 }
 
 function SecondaryTable({ run }: { run: ResultsRun }) {
+  const columns: Column[] = [
+    { key: "scenario", label: "Scenario", align: "text", width: "6rem" },
+    { key: "policy", label: "Policy", align: "text", width: "6rem" },
+    { key: "rate", label: "Recovery rate", align: "num" },
+    { key: "contacts", label: "Actions per 1,000 rupees", align: "num" },
+    { key: "detect", label: "Time to detect", align: "num" },
+    { key: "escalations", label: "Escalations", align: "num" },
+    { key: "violations", label: "Violations", align: "num" },
+  ];
   return (
-    <Table
-      columns={[
-        "scenario",
-        "policy",
-        "recovery rate",
-        "contacts per 1000 rupees",
-        "time to detect",
-        "escalations",
-        "violations",
-      ]}
-      align={["left", "left", "right", "right", "right", "right", "right"]}
-    >
+    <Table columns={columns}>
       {run.aggregates.map((row) => (
-        <tr key={`${row.scenario}-${row.policy}`} className="border-b border-[color:var(--line)]">
-          <td className="cell-pad num">{row.scenario}</td>
-          <td className="cell-pad num">{row.policy}</td>
-          <td className="cell-pad num text-right">{percent(row.recovery_rate)}</td>
-          <td className="cell-pad num text-right">{count(row.contacts_per_1000, 2)}</td>
-          <td className="cell-pad num text-right">
-            {row.time_to_detect === null ? "not detected" : `${count(row.time_to_detect, 1)} min`}
-          </td>
-          <td className="cell-pad num text-right">{count(row.escalations, 1)}</td>
-          <td className="cell-pad num text-right">
-            {row.violations === 0 ? (
-              <span className="text-[color:var(--ok)]">0</span>
+        <tr key={`${row.scenario}-${row.policy}`}>
+          <Cell column="scenario">{row.scenario}</Cell>
+          <Cell column="policy">{row.policy}</Cell>
+          <Cell column="rate">{percent(row.recovery_rate)}</Cell>
+          <Cell column="contacts">{count(row.contacts_per_1000, 2)}</Cell>
+          <Cell column="detect">
+            {row.time_to_detect === null ? (
+              <span className="text-[color:var(--text-muted)]">not detected</span>
             ) : (
-              <span className="text-[color:var(--crit)]">{row.violations}</span>
+              `${count(row.time_to_detect, 1)} min`
             )}
-          </td>
+          </Cell>
+          <Cell column="escalations">{count(row.escalations, 1)}</Cell>
+          <Cell column="violations">
+            {row.violations > 0 ? (
+              <span className="text-[color:var(--danger)]">{count(row.violations, 0)}</span>
+            ) : (
+              count(row.violations, 0)
+            )}
+          </Cell>
         </tr>
       ))}
     </Table>
@@ -141,27 +176,25 @@ function SecondaryTable({ run }: { run: ResultsRun }) {
 /**
  * Where these figures came from, said on the page rather than left to be inferred.
  *
- * In the console this page reads a live API against whatever `data/results` holds right now. In the
- * public demo there is no API, and the same routes are answered from a capture committed to the
- * repository. The numbers are identical either way, but "identical" is a thing a reader has to be
- * told rather than something they can see, and a table of revenue figures with no date on it reads
- * as current by default. So the demo says plainly that it is a snapshot, and names the run it is a
- * snapshot of, which is the same run id the tables below are keyed on.
+ * In the console this page reads a live API. In the public demo there is no API and the same
+ * routes are answered from a capture committed to the repository. The numbers are identical, but
+ * "identical" is something a reader has to be told, and a table of revenue with no date on it
+ * reads as current by default.
  */
 function CaptureNotice({ runId }: { runId: string | null }) {
   if (FULL_CONSOLE) return null;
   return (
-    <p className="mb-3 border-l-2 border-[color:var(--line-2)] pl-3 text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
+    <p className="mb-4 max-w-[var(--measure)] border-l-2 border-[color:var(--border-strong)] pl-3 text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
       These figures are a captured snapshot of a real evaluation run
       {runId ? (
         <>
           {" "}
-          (<span className="num">{runId}</span>)
+          (<span className="dt-mono">{runId}</span>)
         </>
       ) : null}
       , not a live readout. They are the unedited output of the same API route the console reads,
-      recorded once from <span className="num">data/results/</span> and committed to the repository.
-      Nothing on this page is computed in the browser.
+      recorded once from <span className="dt-mono">data/results/</span> and committed to the
+      repository. Nothing on this page is computed in the browser.
     </p>
   );
 }
@@ -191,25 +224,26 @@ export default function ResultsPage() {
       <Region state={runs} rows={2}>
         {(list) =>
           list.runs.length === 0 ? (
-            <Panel title="Results">
+            <Panel>
               <Empty>
                 No evaluation runs yet. Run{" "}
-                <code className="num">
+                <code className="dt-mono">
                   salvage eval run --scenarios S0,S1,S2,S3,S4 --seeds 0..9
                 </code>
                 .
               </Empty>
             </Panel>
           ) : (
-            <Panel
-              title="Results"
-              right={
-                <label className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
-                  run{" "}
+            /* The run selector belongs to the page, not to a panel of its own: a panel whose only
+               body is a dropdown is an empty box with a control in its header. */
+            <>
+              <div className="-mt-2 mb-6 flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-[length:var(--fs-meta)] text-[color:var(--text-muted)]">
+                  Run
                   <select
                     value={runId ?? ""}
                     onChange={(event) => setSelected(event.target.value)}
-                    className="num border border-[color:var(--line-2)] px-2 py-1 text-[length:var(--fs-small)]"
+                    className="field font-[family-name:var(--font-mono)]"
                   >
                     {list.runs.map((item) => (
                       <option key={item.run_id} value={item.run_id}>
@@ -218,11 +252,10 @@ export default function ResultsPage() {
                     ))}
                   </select>
                 </label>
-              }
-            >
+              </div>
               <CaptureNotice runId={runId} />
               <Notes notes={list.notes} />
-            </Panel>
+            </>
           )
         }
       </Region>
@@ -255,19 +288,19 @@ export default function ResultsPage() {
 
             <Panel title="Secondary metrics">
               <SecondaryTable run={data} />
-              <div className="mt-3 flex flex-wrap gap-3 text-[length:var(--fs-small)]">
+              <div className="mt-3 flex flex-wrap gap-3 text-[length:var(--fs-meta)]">
                 <span>
                   worlds{" "}
                   <span className="num">
                     {data.worlds}
                   </span>
                 </span>
-                <Badge tone={data.worlds_identical ? "green" : "red"}>
+                <Badge tone={data.worlds_identical ? "success" : "danger"}>
                   {data.worlds_identical
                     ? "every policy faced an identical world"
                     : "worlds differ between policies"}
                 </Badge>
-                <Badge tone={data.violations === 0 ? "green" : "red"}>
+                <Badge tone={data.violations === 0 ? "success" : "danger"}>
                   {data.violations} policy violations
                 </Badge>
               </div>
@@ -278,24 +311,31 @@ export default function ResultsPage() {
                 title="Diagnosis ablation"
                 subtitle={String(data.diagnosis.provenance ?? "")}
               >
-                <Table columns={["scenario", "incidents", "rules accuracy", "LLM accuracy"]}>
+                <Table
+                  columns={[
+                    { key: "scenario", label: "Scenario", align: "text", width: "8rem" },
+                    { key: "incidents", label: "Incidents", align: "num", width: "8rem" },
+                    { key: "rules", label: "Rules accuracy", align: "num" },
+                    { key: "llm", label: "Model accuracy", align: "num" },
+                  ]}
+                >
                   {(data.diagnosis.rows ?? []).map((row: any) => (
-                    <tr key={row.scenario} className="border-b border-[color:var(--line)]">
-                      <td className="cell-pad num">{row.scenario}</td>
-                      <td className="cell-pad num text-right">{row.incidents}</td>
-                      <td className="cell-pad num text-right">{percent(row.rules_accuracy)}</td>
-                      <td className="cell-pad num text-right text-[color:var(--fg-3)]">
+                    <tr key={row.scenario}>
+                      <Cell column="scenario">{row.scenario}</Cell>
+                      <Cell column="incidents">{row.incidents}</Cell>
+                      <Cell column="rules">{percent(row.rules_accuracy)}</Cell>
+                      <Cell column="llm" className="text-[color:var(--text-muted)]">
                         {typeof row.llm_accuracy === "number"
                           ? percent(row.llm_accuracy)
                           : "unmeasured"}
-                      </td>
+                      </Cell>
                     </tr>
                   ))}
                 </Table>
                 {(data.diagnosis.misses ?? []).length > 0 && (
                   <ul className="mt-2 space-y-0.5">
                     {data.diagnosis.misses.map((miss: string, index: number) => (
-                      <li key={index} className="num text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">
+                      <li key={index} className="num text-[length:var(--fs-micro)] text-[color:var(--text-secondary)]">
                         {miss}
                       </li>
                     ))}
@@ -312,11 +352,11 @@ export default function ResultsPage() {
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={data.sensitivity.rows ?? []}>
-                      <CartesianGrid stroke="#22262c" vertical={false} />
-                      <XAxis dataKey="scale" tick={{ fontSize: 11 }} stroke="#69727d" />
+                      <CartesianGrid stroke="var(--border)" vertical={false} />
+                      <XAxis dataKey="scale" tick={{ fontSize: 12, fill: "var(--text-muted)" }} stroke="var(--text-muted)" />
                       <YAxis
-                        tick={{ fontSize: 11 }}
-                        stroke="#69727d"
+                        tick={{ fontSize: 12, fill: "var(--text-muted)" }}
+                        stroke="var(--text-muted)"
                         width={70}
                         tickFormatter={(value) => rupeesShort(Number(value))}
                       />
@@ -328,7 +368,7 @@ export default function ResultsPage() {
                       <Line
                         type="monotone"
                         dataKey="delta"
-                        stroke="#58a6ff"
+                        stroke="var(--accent)"
                         name="B1 minus B0"
                         dot
                       />
@@ -337,28 +377,32 @@ export default function ResultsPage() {
                 </div>
                 {data.sensitivity.adversarial && (
                   <div className="mt-3">
-                    <h3 className="text-[length:var(--fs-small)] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+                    <h3 className="text-[length:var(--fs-meta)] font-medium uppercase tracking-wide text-[color:var(--text-secondary)]">
                       Adversarial set
                     </h3>
-                    <p className="mt-1 text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
+                    <p className="mt-1 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)] max-w-[var(--measure)]">
                       Organic retry probability raised to 0.60 everywhere and every response
                       multiplier set to 1.0. Customers recover on their own; the agent has no
                       advantage here, by design.
                     </p>
                     <Table
                       columns={[
-                        "scenario",
-                        ...(data.sensitivity.adversarial.policies ?? []),
+                        { key: "scenario", label: "Scenario", align: "text", width: "8rem" },
+                        ...((data.sensitivity.adversarial.policies ?? []) as string[]).map(
+                          (policy) => ({ key: policy, label: policy, align: "num" as const }),
+                        ),
                       ]}
                     >
                       {(data.sensitivity.adversarial.rows ?? []).map((row: any) => (
-                        <tr key={row.scenario} className="border-b border-[color:var(--line)]">
-                          <td className="cell-pad num">{row.scenario}</td>
-                          {(data.sensitivity.adversarial.policies ?? []).map((policy: string) => (
-                            <td key={policy} className="cell-pad num text-right">
-                              {rupees(row.by_policy[policy])}
-                            </td>
-                          ))}
+                        <tr key={row.scenario}>
+                          <Cell column="scenario">{row.scenario}</Cell>
+                          {((data.sensitivity.adversarial.policies ?? []) as string[]).map(
+                            (policy) => (
+                              <Cell key={policy} column={policy}>
+                                {rupees(row.by_policy[policy])}
+                              </Cell>
+                            ),
+                          )}
                         </tr>
                       ))}
                     </Table>
@@ -372,28 +416,28 @@ export default function ResultsPage() {
                 title="Fault injection"
                 subtitle="Every injected fault, and whether the agent refused it and wrote the refusal down."
               >
-                <div className="grid grid-cols-2 gap-3 text-[length:var(--fs-small)] lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 text-[length:var(--fs-meta)] lg:grid-cols-4">
                   <div>
-                    <div className="text-[color:var(--fg-2)]">attempts</div>
-                    <div className="num text-[length:var(--fs-lead)]">{data.fault_injection.attempts}</div>
+                    <div className="text-[color:var(--text-secondary)]">attempts</div>
+                    <div className="num text-[length:var(--fs-section)]">{data.fault_injection.attempts}</div>
                   </div>
                   <div>
-                    <div className="text-[color:var(--fg-2)]">refused</div>
-                    <div className="num text-[length:var(--fs-lead)] text-[color:var(--ok)]">
+                    <div className="text-[color:var(--text-secondary)]">refused</div>
+                    <div className="num text-[length:var(--fs-section)] text-[color:var(--success)]">
                       {data.fault_injection.refused}
                     </div>
                   </div>
                   <div>
-                    <div className="text-[color:var(--fg-2)]">ledgered</div>
-                    <div className="num text-[length:var(--fs-lead)]">{data.fault_injection.ledgered}</div>
+                    <div className="text-[color:var(--text-secondary)]">ledgered</div>
+                    <div className="num text-[length:var(--fs-section)]">{data.fault_injection.ledgered}</div>
                   </div>
                   <div>
-                    <div className="text-[color:var(--fg-2)]">unrefused</div>
+                    <div className="text-[color:var(--text-secondary)]">unrefused</div>
                     <div
-                      className={`num text-[length:var(--fs-lead)] ${
+                      className={`num text-[length:var(--fs-section)] ${
                         (data.fault_injection.unrefused ?? []).length === 0
-                          ? "text-[color:var(--ok)]"
-                          : "text-[color:var(--crit)]"
+                          ? "text-[color:var(--success)]"
+                          : "text-[color:var(--danger)]"
                       }`}
                     >
                       {(data.fault_injection.unrefused ?? []).length}

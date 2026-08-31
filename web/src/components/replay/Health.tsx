@@ -115,10 +115,10 @@ export function Health({
                   <span
                     aria-hidden="true"
                     className="dot"
-                    style={{ background: "var(--crit)", flex: "none" }}
+                    style={{ background: "var(--danger)", flex: "none" }}
                   />
                 )}
-                <span className="mono truncate text-[length:var(--fs-small)]" title={key}>
+                <span className="mono truncate text-[length:var(--fs-meta)]" title={key}>
                   {segmentLabel(key)}
                 </span>
               </div>
@@ -140,7 +140,7 @@ export function Health({
               </div>
               <div className="fig-md text-right">{percent(segment.rate)}</div>
               <div className="text-right">
-                <span className={`mono text-[length:var(--fs-caption)] ${SEVERITY_CLASS[severity]}`}>
+                <span className={`mono text-[length:var(--fs-micro)] ${SEVERITY_CLASS[severity]}`}>
                   {deviationArrow(points)} {formatPoints(points)}
                 </span>
               </div>

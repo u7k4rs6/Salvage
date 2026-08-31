@@ -23,10 +23,10 @@ export function DistributionPair({
 
   return (
     <div>
-      <h4 className="text-[length:var(--fs-small)] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">{title}</h4>
-      <table className="mt-1 w-full text-[length:var(--fs-small)]">
+      <h4 className="text-[length:var(--fs-meta)] font-medium uppercase tracking-wide text-[color:var(--text-secondary)]">{title}</h4>
+      <table className="mt-1 w-full text-[length:var(--fs-meta)]">
         <thead>
-          <tr className="text-left text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
+          <tr className="text-left text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">
             <th scope="col" className="py-0.5 font-normal">
               bucket
             </th>
@@ -44,24 +44,24 @@ export function DistributionPair({
             const before = distribution.baseline[key] ?? 0;
             const moved = now - before;
             return (
-              <tr key={key} className="border-t border-[color:var(--line)]">
-                <td className="num py-0.5 pr-2 text-[length:var(--fs-caption)] text-[color:var(--fg)]">{key}</td>
+              <tr key={key} className="border-t border-[color:var(--border)]">
+                <td className="num py-0.5 pr-2 text-[length:var(--fs-micro)] text-[color:var(--text-primary)]">{key}</td>
                 <td className="w-1/3 py-0.5 pr-2">
                   <div className="flex items-center gap-1">
                     <div
-                      className={`h-2 ${moved > 0.05 ? "bg-[color:var(--crit)]" : "bg-[color:var(--fg-3)]"}`}
+                      className={`h-2 ${moved > 0.05 ? "bg-[color:var(--danger)]" : "bg-[color:var(--text-muted)]"}`}
                       style={{ width: `${Math.round(now * 100)}%` }}
                     />
-                    <span className="num text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">{percent(now, 0)}</span>
+                    <span className="num text-[length:var(--fs-micro)] text-[color:var(--text-secondary)]">{percent(now, 0)}</span>
                   </div>
                 </td>
                 <td className="w-1/3 py-0.5">
                   <div className="flex items-center gap-1">
                     <div
-                      className="h-2 bg-[color:var(--line-2)]"
+                      className="h-2 bg-[color:var(--border-strong)]"
                       style={{ width: `${Math.round(before * 100)}%` }}
                     />
-                    <span className="num text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">{percent(before, 0)}</span>
+                    <span className="num text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">{percent(before, 0)}</span>
                   </div>
                 </td>
               </tr>

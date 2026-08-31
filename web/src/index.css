@@ -9,116 +9,117 @@
  * were written for the Overview and moved unchanged: same values, wider scope. `.ov` in
  * overview.css keeps its layout and component rules and no longer declares a colour of its own.
  */
+/*
+ * The design system. Every colour, size, space and radius in the console resolves here.
+ *
+ * Three rules this file exists to enforce:
+ *
+ *   Colour carries meaning and nothing else. There is one accent, used for interaction and
+ *   product identity. Amber, red and green appear only when something is degraded, broken or
+ *   healthy. A panel does not get a colour because it would look nice with one.
+ *
+ *   Two typefaces, split by what the text is. Sans for anything a person reads, mono for anything
+ *   a machine wrote: ids, hashes, timestamps, seeds, segment keys, amounts.
+ *
+ *   Every measurement is on a scale. Nothing is nudged by a pixel to make one element sit right.
+ */
 :root {
-  /* Ground and surfaces. Not pure black: pure black flattens the dividers. */
-  --bg: #0b0c0e;
-  --panel: #101215;
-  --panel-2: #16191d;
-  --panel-3: #1c2025;
+  /* -- surfaces ---------------------------------------------------------
+   * Four steps, each a small lift from the one below. The whole range is narrow on purpose: on a
+   * dark ground, separation comes from a hairline border, not from stacking lighter and lighter
+   * boxes until everything looks like a floating card. */
+  --bg: #0a0b0d;
+  --surface: #101216;
+  --surface-raised: #15181d;
+  --surface-hover: #1b1f25;
 
-  --line: #22262c;
-  --line-2: #2d333b;
+  --border: #23272e;
+  --border-strong: #31363f;
 
-  --fg: #e6e8eb;
-  --fg-2: #99a1ab;
-  /* Raised from #69727d, which measured 3.6 to 4.0 against the four grounds it is used on and
-     needs 4.5. This is the smallest value that clears AA on the lightest of them (--panel-3, where
-     it measures 4.56) while staying clear of --fg-2 above it. It is the muted tier on every page,
-     so the old value failed on roughly four hundred elements. */
-  --fg-3: #7f8894;
+  /* -- text -------------------------------------------------------------
+   * Three tiers. Primary for the numbers and names that carry the page, secondary for supporting
+   * prose, muted for provenance nobody reads twice. All three clear WCAG AA on every surface. */
+  --text-primary: #e8eaed;
+  --text-secondary: #a2a9b4;
+  /* 4.36 on a danger-tinted ground at #79818d, just under AA. 4.98 here. */
+  --text-muted: #838b97;
 
-  /*
-   * The signal set.
-   *
-   * These were #3fb950, #d29922, #f85149 and #58a6ff, which are GitHub Primer's dark theme values
-   * exactly. Four borrowed hexes is the most legible way a product says nobody chose its colours.
-   *
-   * Chosen instead for one job each, at a common lightness so they read as one instrument rather
-   * than four stickers, and spaced around the wheel so no two are confusable at a glance:
-   *
-   *   crit  is the loudest thing on any screen, because it means an incident or a refusal, and a
-   *         refusal is the beat this whole product exists to show. Slightly hotter and cleaner
-   *         than the borrowed red so it wins against amber in peripheral vision.
-   *   warn  is gold rather than mustard: degraded, or waiting on a person.
-   *   ok    leans teal rather than the yellow-green it was, so it cannot be mistaken for warn.
-   *   info  is a signal cyan, not a blue. It is the identity colour and it is the one that makes
-   *         the surface read as instrumentation rather than as a code host's default theme.
-   */
-  --ok: #35bd83;
-  --warn: #e0a231;
-  /* Lightened from #f0524d, which measured 4.44 where a red element sits on a red-tinted card:
-     the two washes stack and the text lands just under AA. Chasing each nesting case is a game
-     without an end, so the token itself clears AA on a doubled tint, at 5.06. */
-  --crit: #f4655f;
-  --info: #3fbdd4;
+  /* -- accent -----------------------------------------------------------
+   * One accent, for interaction and identity: links, the active nav item, focus rings, the
+   * primary control. A restrained instrument blue rather than an electric cyan, because it has to
+   * sit next to red without competing with it. Red must always be the loudest thing on screen. */
+  --accent: #4c8dd6;
+  --accent-hover: #6ba3e2;
 
-  /* Tinted grounds. The light build wrote bg-red-50, bg-amber-50 and bg-green-50; on this ground
-     the same job is done by the semantic colour at low alpha, named here so no page invents one. */
-  --crit-bg: rgba(240, 82, 77, 0.09);
-  --warn-bg: rgba(224, 162, 49, 0.09);
-  --ok-bg: rgba(53, 189, 131, 0.09);
-  --info-bg: rgba(63, 189, 212, 0.09);
+  /* -- semantic ---------------------------------------------------------
+   * Muted rather than saturated. These are read against a near-black ground where a pure hue
+   * glows, and there is only ever one of them on screen at a time in any given region. */
+  --success: #4a9d72;
+  --warning: #c2903c;
+  /* Lightened from #d1554f, which measured 4.34 on a raised surface where most red text sits,
+     just under AA. This clears it at 5.18 and is still unmistakably the alarm colour. */
+  --danger: #dd6560;
+  --info: var(--accent);
 
-  /*
-   * Three faces, three jobs. Four were being downloaded and two were used.
-   *
-   * display  Archivo, a grotesque with tight, confident caps. It carries the figures that are
-   *          meant to be read across a room and the one headline on each page. It was already in
-   *          the font request and rendering nowhere.
-   * ui       IBM Plex Sans for prose. Humanist and a little idiosyncratic, which is the point:
-   *          it is the one part of the interface addressed to a person rather than to an operator.
-   * mono     IBM Plex Mono for every number, id, hash and segment key.
-   *
-   * Inter was in the request and is now gone. It is the single most defaulted typeface on the
-   * web and it was not being used for anything.
-   */
-  --font-display: Archivo, "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Tints, for the one surface that carries a state. Low alpha so text on them stays legible even
+     where two of them end up nested. */
+  --success-bg: rgba(74, 157, 114, 0.1);
+  --warning-bg: rgba(194, 144, 60, 0.1);
+  --danger-bg: rgba(221, 101, 96, 0.1);
+  --accent-bg: rgba(76, 141, 214, 0.1);
+
+  /* -- type -------------------------------------------------------------
+   * Sans for people, mono for machines. No display face: an oversized headline is the fastest way
+   * for an operations console to start looking like a marketing page. */
+  --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /*
-   * The type scale. Seven steps on a 1.25 ratio from a 16px body, and nothing between them.
-   *
-   * There were fifteen sizes in use before this: 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5,
-   * 16.5, 17, 18, 24, 48. Eleven of them sat within seven pixels of each other, which is not a
-   * hierarchy, it is drift. Most of it came from raising every size by one step by hand rather
-   * than moving anything onto a scale.
-   *
-   * Three steps do the everyday work. `caption` labels and dense table meta, `small` the data
-   * rows, `body` every sentence meant to be read. The rest are accents and each has exactly one
-   * job. A console is a data-dense view, so the caption and small tiers stay below the 16px body
-   * minimum on purpose; prose does not.
-   */
-  --fs-caption: 12px;
-  --fs-small: 14px;
-  --fs-body: 16px;
-  --fs-lead: 20px;
-  --fs-h3: 25px;
-  --fs-h2: 31px;
-  --fs-display: 44px;
+  --fs-page-title: 25px;
+  --fs-section: 16px;
+  --fs-body: 15px;
+  --fs-meta: 13px;
+  --fs-table: 14px;
+  --fs-table-head: 12px;
+  --fs-micro: 12px;
+  --fs-metric: 30px;
+  --fs-metric-sm: 19px;
 
-  /* Three line heights, not the ten that were in use. Tight for figures, normal for interface
-     text, relaxed for anything somebody reads a paragraph of. */
-  --lh-tight: 1.2;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --lh-tight: 1.25;
   --lh-normal: 1.5;
-  --lh-relaxed: 1.65;
+  --lh-relaxed: 1.6;
 
-  /* Letter spacing. Uppercase labels need it, body never does, large figures want it negative. */
-  --ls-tight: -0.02em;
-  --ls-wide: 0.08em;
+  --ls-caps: 0.06em;
+  --ls-tight: -0.01em;
 
-  /* Prose measure. Sentences were running to 146 characters, roughly double what anyone reads
-     comfortably, because they inherited the width of a full-bleed console panel. */
-  --measure: 54ch;
+  /* Prose measure. Sentences in a full-bleed console panel will run to 150 characters if nothing
+     stops them. */
+  --measure: 62ch;
 
-  /* 8px grid. */
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 16px;
-  --s4: 24px;
-  --s5: 32px;
-  --gutter: 24px;
+  /* -- space ------------------------------------------------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+
+  /* -- geometry --------------------------------------------------------- */
+  --radius-sm: 3px;
+  --radius-md: 5px;
+
+  --sidebar-w: 200px;
+  --page-pad-x: var(--space-7);
+  --page-pad-y: var(--space-6);
+  --control-h: 32px;
 }
+
 
 @layer base {
   html {
@@ -132,7 +133,7 @@
   html,
   body {
     background: var(--bg);
-    color: var(--fg);
+    color: var(--text-primary);
     font-size: var(--fs-body);
     line-height: var(--lh-normal);
     /* Native controls: a select, a scrollbar and a date picker are drawn by the browser, not by
@@ -164,7 +165,7 @@
   }
   @keyframes flash {
     from {
-      background-color: var(--info-bg);
+      background-color: var(--accent-bg);
     }
     to {
       background-color: transparent;
@@ -172,84 +173,470 @@
   }
 }
 
-/* -- the page introduction -------------------------------------------------
+/* -- the page header's glossary --------------------------------------------
  *
- * Every page opens with one of these. It is deliberately plainer than the telemetry under it:
- * ordinary sentences at a comfortable reading size, because it is the one part of the page aimed
- * at somebody who does not already know what they are looking at.
+ * Quiet by default. Open, it is a two column list at a readable measure, not a decorated card.
  */
 @layer components {
-  .intro {
-    border: 1px solid var(--line);
-    border-left: 2px solid var(--info);
-    border-radius: 3px;
-    background: var(--panel);
-    padding: 16px 20px;
-    margin-bottom: 20px;
-    max-width: 92rem;
+  .intro-details {
+    margin-top: var(--space-4);
   }
-  .intro-title {
-    font-family: var(--font-display);
-    font-size: var(--fs-caption);
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--info);
+  .intro-summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    cursor: pointer;
+    list-style: none;
+    font-size: var(--fs-meta);
+    color: var(--text-muted);
+    border-bottom: 1px solid transparent;
   }
-  .intro-what {
-    margin-top: 8px;
-    font-size: var(--fs-lead);
-    line-height: var(--lh-relaxed);
-    color: var(--fg);
-    max-width: var(--measure);
+  .intro-summary::-webkit-details-marker {
+    display: none;
   }
-  .intro-use {
-    margin-top: 8px;
-    font-size: var(--fs-body);
-    line-height: var(--lh-relaxed);
-    color: var(--fg-2);
-    max-width: var(--measure);
+  .intro-summary::before {
+    content: "+";
+    font-family: var(--font-mono);
   }
-  /*
-   * Two columns where there is room. One column made the block six hundred pixels tall with the
-   * right half of it empty, which is a lot of page to spend before any data. Each column is wide
-   * enough that the definition still sits inside a readable measure.
-   */
+  details[open] > .intro-summary::before {
+    content: "-";
+  }
+  .intro-summary:hover {
+    color: var(--text-secondary);
+  }
+  .intro-detail-body {
+    margin-top: var(--space-4);
+    padding-left: var(--space-4);
+    border-left: 1px solid var(--border);
+  }
   .intro-shows {
-    margin-top: 16px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(27rem, 1fr));
-    gap: 10px 32px;
+    grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr));
+    gap: var(--space-3) var(--space-8);
+    max-width: 84rem;
   }
   .intro-row {
     display: grid;
-    grid-template-columns: 10.5rem minmax(0, 1fr);
-    gap: 16px;
+    grid-template-columns: 10rem minmax(0, 1fr);
+    gap: var(--space-4);
     align-items: baseline;
   }
   .intro-term {
     font-family: var(--font-mono);
-    font-size: var(--fs-caption);
-    color: var(--fg);
+    font-size: var(--fs-meta);
+    color: var(--text-secondary);
   }
   .intro-def {
-    font-size: var(--fs-body);
+    font-size: var(--fs-meta);
     line-height: var(--lh-normal);
-    color: var(--fg-2);
+    color: var(--text-muted);
   }
   .intro-caveat {
-    margin-top: 12px;
-    border-top: 1px solid var(--line);
-    padding-top: 10px;
-    font-size: var(--fs-small);
+    margin-top: var(--space-4);
+    max-width: var(--measure);
+    font-size: var(--fs-meta);
     line-height: var(--lh-normal);
-    color: var(--fg-3);
-    max-width: 62rem;
+    color: var(--text-muted);
   }
   @media (max-width: 860px) {
     .intro-row {
       grid-template-columns: minmax(0, 1fr);
       gap: 2px;
     }
+  }
+}
+
+/* -- application shell ------------------------------------------------------
+ *
+ * One frame every route sits inside: a fixed sidebar, a status bar, and a content column with the
+ * same horizontal padding on every page. Pages set their own information architecture and none of
+ * them set their own margins.
+ */
+@layer components {
+  .app-shell {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+    background: var(--bg);
+  }
+  .app-body {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .app-main {
+    font-family: var(--font-ui);
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: var(--page-pad-y) var(--page-pad-x) var(--space-9);
+  }
+  /* Wide enough for a twelve column table to breathe, narrow enough that a line of prose never
+     runs the width of a monitor. Pages that are genuinely full-bleed opt out. */
+  .app-measure {
+    max-width: 1440px;
+  }
+
+  /* -- sidebar ------------------------------------------------------------ */
+  .side {
+    font-family: var(--font-ui);
+    width: var(--sidebar-w);
+    flex: none;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    padding: var(--space-5) 0 var(--space-6);
+  }
+  .side-group + .side-group {
+    margin-top: var(--space-6);
+  }
+  .side-label {
+    padding: 0 var(--space-5) var(--space-2);
+    font-size: var(--fs-table-head);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-caps);
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .side-link {
+    display: block;
+    padding: 7px var(--space-5);
+    border-left: 2px solid transparent;
+    font-size: var(--fs-body);
+    line-height: var(--lh-normal);
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 120ms linear, background-color 120ms linear;
+  }
+  .side-link:hover {
+    color: var(--text-primary);
+    background: var(--surface);
+  }
+  .side-link[aria-current="page"] {
+    color: var(--text-primary);
+    font-weight: var(--fw-medium);
+    background: var(--surface);
+    border-left-color: var(--accent);
+  }
+
+  /* -- status bar --------------------------------------------------------- */
+  .statusbar {
+    font-family: var(--font-ui);
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+    height: 44px;
+    flex: none;
+    padding: 0 var(--page-pad-x);
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .statusbar-sep {
+    width: 1px;
+    height: 16px;
+    flex: none;
+    background: var(--border);
+  }
+  .readout {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    white-space: nowrap;
+  }
+  .readout-label {
+    font-size: var(--fs-micro);
+    color: var(--text-muted);
+  }
+  .readout-value {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--fs-meta);
+    color: var(--text-primary);
+  }
+
+  /* -- page furniture ----------------------------------------------------- */
+  .page-head {
+    margin-bottom: var(--space-6);
+  }
+  .page-title {
+    font-size: var(--fs-page-title);
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-tight);
+    letter-spacing: var(--ls-tight);
+    color: var(--text-primary);
+  }
+  .page-sub {
+    margin-top: var(--space-2);
+    max-width: var(--measure);
+    font-size: var(--fs-body);
+    line-height: var(--lh-normal);
+    color: var(--text-secondary);
+  }
+  .section {
+    margin-top: var(--space-8);
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+  .section-title {
+    font-size: var(--fs-section);
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-tight);
+    color: var(--text-primary);
+  }
+  .section-note {
+    font-size: var(--fs-meta);
+    color: var(--text-muted);
+  }
+
+  /* -- surfaces ----------------------------------------------------------- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-body {
+    padding: var(--space-5);
+  }
+  .panel-flush {
+    padding: 0;
+  }
+
+  /* -- controls ------------------------------------------------------------
+   * One height, one radius, one font. The variants differ in weight, not in shape. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    height: var(--control-h);
+    padding: 0 var(--space-4);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    font-family: var(--font-ui);
+    font-size: var(--fs-meta);
+    font-weight: var(--fw-medium);
+    line-height: 1;
+    white-space: nowrap;
+    transition: background-color 120ms linear, color 120ms linear, border-color 120ms linear;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #06090d;
+    font-weight: var(--fw-semibold);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: #06090d;
+  }
+  .btn-danger {
+    color: var(--danger);
+    border-color: var(--border-strong);
+  }
+  .btn-danger:hover:not(:disabled) {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--surface-raised);
+  }
+  .btn-sm {
+    height: 26px;
+    padding: 0 var(--space-3);
+    font-size: var(--fs-micro);
+  }
+
+  /* A segmented control: one choice, not several buttons. */
+  .segment {
+    display: inline-flex;
+    height: var(--control-h);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .segment > button {
+    height: 100%;
+    padding: 0 var(--space-4);
+    background: var(--surface-raised);
+    border-left: 1px solid var(--border-strong);
+    color: var(--text-muted);
+    font-size: var(--fs-meta);
+    font-weight: var(--fw-medium);
+    transition: background-color 120ms linear, color 120ms linear;
+  }
+  .segment > button:first-child {
+    border-left: 0;
+  }
+  .segment > button:hover {
+    color: var(--text-secondary);
+  }
+  .segment > button[aria-pressed="true"] {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+  }
+
+  .field {
+    height: var(--control-h);
+    padding: 0 var(--space-3);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: var(--fs-meta);
+  }
+
+  /* -- status badge --------------------------------------------------------
+   * One shape. The colour is the only thing that varies, and it varies only with meaning. */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 20px;
+    padding: 0 var(--space-2);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    font-size: var(--fs-micro);
+    font-weight: var(--fw-medium);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .badge-dot {
+    width: 5px;
+    height: 5px;
+    flex: none;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .badge-success { color: var(--success); border-color: color-mix(in srgb, var(--success) 40%, var(--border-strong)); }
+  .badge-warning { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 40%, var(--border-strong)); }
+  .badge-danger  { color: var(--danger);  border-color: color-mix(in srgb, var(--danger) 40%, var(--border-strong)); }
+  .badge-accent  { color: var(--accent);  border-color: color-mix(in srgb, var(--accent) 40%, var(--border-strong)); }
+}
+
+/* -- data tables ------------------------------------------------------------
+ *
+ * One table treatment for the whole console. The rules that matter:
+ *
+ *   Alignment is a property of the column, not of the cell. A column is declared numeric, text or
+ *   status once, and the header and every value under it inherit the same edge. A right-aligned
+ *   header above left-aligned values is the commonest way a data table looks wrong, and it cannot
+ *   happen if the cell never chooses for itself.
+ *
+ *   Numbers are tabular and right-aligned, so digits line up column-wise and a four-digit value
+ *   does not shift against a six-digit one. Text is left-aligned. Compact statuses are centred.
+ *
+ *   Separation is one hairline between rows. No cell borders, no zebra fill, no per-row card. A
+ *   table is a grid the eye reads down; boxing every row stops it doing that.
+ *
+ *   A metric cell can stack a primary value over secondary figures. They share the column's edge,
+ *   so the stack reads as one right-aligned block rather than three separately placed values.
+ */
+@layer components {
+  .dt-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .dt {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-table);
+    line-height: var(--lh-normal);
+  }
+  .dt th,
+  .dt td {
+    padding: 10px var(--space-4);
+    vertical-align: baseline;
+  }
+  .dt th:first-child,
+  .dt td:first-child {
+    padding-left: var(--space-5);
+  }
+  .dt th:last-child,
+  .dt td:last-child {
+    padding-right: var(--space-5);
+  }
+  .dt thead th {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-strong);
+    font-size: var(--fs-table-head);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-caps);
+    text-transform: uppercase;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .dt tbody tr + tr td {
+    border-top: 1px solid var(--border);
+  }
+  .dt tbody tr:hover td {
+    background: var(--surface-raised);
+  }
+
+  /* The three column kinds. Applied to the th and to every td in that column, from one source. */
+  .dt .col-text { text-align: left; }
+  .dt .col-num {
+    text-align: right;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .dt .col-status { text-align: center; }
+
+  /* A stacked metric. Alignment comes from the column, so the block cannot drift. */
+  .dt-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .col-num .dt-metric { align-items: flex-end; }
+  .col-text .dt-metric { align-items: flex-start; }
+  .dt-metric-primary {
+    font-size: var(--fs-table);
+    font-weight: var(--fw-medium);
+    color: var(--text-primary);
+  }
+  .dt-metric-secondary {
+    font-size: var(--fs-micro);
+    color: var(--text-muted);
+  }
+
+  .dt-mono {
+    font-family: var(--font-mono);
+    font-size: var(--fs-meta);
+    color: var(--text-secondary);
+  }
+  .dt-empty {
+    padding: var(--space-8) var(--space-5);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--fs-body);
   }
 }

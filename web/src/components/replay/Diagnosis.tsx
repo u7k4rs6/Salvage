@@ -79,7 +79,7 @@ export function Diagnosis({
               className="conf-fill"
               style={{
                 width: `${Math.max(0, Math.min(1, diagnosis.confidence)) * 100}%`,
-                background: clears ? "var(--ok)" : "var(--warn)",
+                background: clears ? "var(--success)" : "var(--warning)",
                 opacity: 0.55,
               }}
             />
@@ -130,7 +130,7 @@ function Verdict({
       <div className="mt-3 flex items-baseline gap-3">
         <span className="lbl">Confidence</span>
         {/* Not recorded. Shown as absent, which is what it is. */}
-        <span className="mono dim text-[length:var(--fs-small)]">not recorded</span>
+        <span className="mono dim text-[length:var(--fs-meta)]">not recorded</span>
       </div>
       {prose && <p className="txt mt-3">{prose}</p>}
       <p className="note mt-3">{note}</p>
@@ -152,39 +152,39 @@ function Evidence({ evidence }: { evidence: DiagnosisRecord["evidence"] }) {
 
   return (
     <details className="mt-4 group">
-      <summary className="lbl focus-ring cursor-pointer list-none hover:text-[color:var(--fg-2)]">
+      <summary className="lbl focus-ring cursor-pointer list-none hover:text-[color:var(--text-secondary)]">
         Evidence packet, as the model received it
       </summary>
       <div className="panel mt-2 p-4">
         <div className="kv">
           <span className="lbl">Segment</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{evidence.segment_key}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{evidence.segment_key}</span>
           <span className="lbl">Scope</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{evidence.affected_scope.join(", ") || "-"}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{evidence.affected_scope.join(", ") || "-"}</span>
           <span className="lbl">Window</span>
-          <span className="mono mid text-[length:var(--fs-small)]">
+          <span className="mono mid text-[length:var(--fs-meta)]">
             {timeOnly(evidence.window_start)} to {timeOnly(evidence.window_end)}
           </span>
           <span className="lbl">Attempts</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{count(evidence.attempts)}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{count(evidence.attempts)}</span>
           <span className="lbl">Failure rate</span>
-          <span className="mono mid text-[length:var(--fs-small)]">
+          <span className="mono mid text-[length:var(--fs-meta)]">
             {percent(evidence.rate)} against a {percent(evidence.baseline_rate)} baseline
           </span>
           <span className="lbl">Excess failures</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{evidence.excess_failures.toFixed(1)}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{evidence.excess_failures.toFixed(1)}</span>
           <span className="lbl">Share of volume</span>
-          <span className="mono mid text-[length:var(--fs-small)]">
+          <span className="mono mid text-[length:var(--fs-meta)]">
             {percent(evidence.share_of_merchant_volume)}
           </span>
           <span className="lbl">Trend</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{evidence.trend}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{evidence.trend}</span>
           <span className="lbl">Config changed</span>
-          <span className="mono mid text-[length:var(--fs-small)]">
+          <span className="mono mid text-[length:var(--fs-meta)]">
             {evidence.merchant_config_changed_recently ? "yes, recently" : "no"}
           </span>
           <span className="lbl">Minutes since onset</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{evidence.minutes_since_onset}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{evidence.minutes_since_onset}</span>
         </div>
 
         <div className="col2 mt-4">
@@ -217,7 +217,7 @@ function Dist({ label, rows }: { label: string; rows: [string, number][] }) {
         {rows.length === 0 && <div className="note py-1.5">nothing recorded</div>}
         {rows.map(([name, share]) => (
           <div key={name} className="flex items-baseline justify-between gap-3 py-1.5">
-            <span className="mono mid truncate text-[length:var(--fs-small)]">{name}</span>
+            <span className="mono mid truncate text-[length:var(--fs-meta)]">{name}</span>
             <span className="mono note">{percent(share)}</span>
           </div>
         ))}

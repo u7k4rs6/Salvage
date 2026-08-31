@@ -201,7 +201,7 @@ export function Scrubber({
       {chrome && (
         <div className="note mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">
           <Key colour="rgba(248,81,73,0.45)">fault window</Key>
-          <Key colour="var(--crit)">incident open</Key>
+          <Key colour="var(--danger)">incident open</Key>
           <Key colour="var(--info)">beat</Key>
         </div>
       )}

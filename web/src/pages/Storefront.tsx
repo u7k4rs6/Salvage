@@ -112,7 +112,7 @@ export default function StorefrontPage() {
         caveat="Test mode only. Startup refuses to run if the Razorpay key does not begin with rzp_test_, so no live key can be used here."
       />
       {hint.data?.hint && (
-        <div className="border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[length:var(--fs-small)] text-[color:var(--warn)]">
+        <div className="border border-[color:var(--warning)] bg-[color:var(--warning-bg)] px-3 py-2 text-[length:var(--fs-meta)] text-[color:var(--warning)]">
           <span className="font-medium">
             {hint.data.hint.hidden.join(", ").toUpperCase()} is de-prioritised at checkout
           </span>{" "}
@@ -124,7 +124,7 @@ export default function StorefrontPage() {
               {" "}
               <Link
                 to={`/incidents/${hint.data.hint.incident_id}`}
-                className="text-[color:var(--info)] underline hover:text-[color:var(--fg)]"
+                className="text-[color:var(--info)] underline hover:text-[color:var(--text-primary)]"
               >
                 See the incident
               </Link>
@@ -143,15 +143,15 @@ export default function StorefrontPage() {
               {/* This state reads as a broken page unless it says, at the size of a warning rather
                   than a footnote, that nothing is broken and exactly what is missing. */}
               {!data.available && (
-                <div className="mb-4 border border-[color:var(--warn)] border-l-2 bg-[color:var(--warn-bg)] px-4 py-3">
-                  <div className="text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.08em] text-[color:var(--warn)]">
+                <div className="mb-4 border border-[color:var(--warning)] border-l-2 bg-[color:var(--warning-bg)] px-4 py-3">
+                  <div className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-[0.08em] text-[color:var(--warning)]">
                     Checkout is switched off, not broken
                   </div>
-                  <p className="mt-1.5 text-[length:var(--fs-small)] leading-relaxed text-[color:var(--fg)] max-w-[var(--measure)]">
+                  <p className="mt-1.5 text-[length:var(--fs-meta)] leading-relaxed text-[color:var(--text-primary)] max-w-[var(--measure)]">
                     {data.reason} Checkout is disabled rather than opened against a key that is not
                     there, so the Buy buttons below do nothing on purpose.
                   </p>
-                  <p className="mt-2 text-[length:var(--fs-small)] leading-relaxed text-[color:var(--fg-2)] max-w-[var(--measure)]">
+                  <p className="mt-2 text-[length:var(--fs-meta)] leading-relaxed text-[color:var(--text-secondary)] max-w-[var(--measure)]">
                     To turn it on, put a Razorpay <span className="num">test</span> key pair in{" "}
                     <span className="num">.env</span> as{" "}
                     <span className="num">RAZORPAY_KEY_ID</span> and{" "}
@@ -164,14 +164,14 @@ export default function StorefrontPage() {
               )}
               <div className="grid gap-3 sm:grid-cols-3">
                 {data.skus.map((item) => (
-                  <div key={item.sku} className="border border-[color:var(--line-2)] p-3">
-                    <div className="text-[length:var(--fs-small)] font-medium">{item.name}</div>
-                    <div className="num mt-1 text-[length:var(--fs-lead)]">{rupees(item.amount)}</div>
+                  <div key={item.sku} className="border border-[color:var(--border-strong)] p-3">
+                    <div className="text-[length:var(--fs-meta)] font-medium">{item.name}</div>
+                    <div className="num mt-1 text-[length:var(--fs-section)]">{rupees(item.amount)}</div>
                     <button
                       type="button"
                       disabled={!data.available || busy || !ready}
                       onClick={() => buy(item.sku)}
-                      className="mt-2 border border-[color:var(--info)] bg-[color:var(--info-bg)] px-3 py-1 text-[length:var(--fs-small)] text-[color:var(--info)] hover:bg-[color:var(--info-bg)] disabled:opacity-50"
+                      className="btn focus-ring mt-3"
                     >
                       {busy ? "Working" : "Buy"}
                     </button>
@@ -190,7 +190,7 @@ export default function StorefrontPage() {
 
         {hint.data?.config && (
           <details className="mt-3">
-            <summary className="cursor-pointer text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]">
+            <summary className="cursor-pointer text-[length:var(--fs-meta)] text-[color:var(--info)] hover:text-[color:var(--text-primary)]">
               checkout config sent to Razorpay
             </summary>
             <Code>{JSON.stringify(hint.data.config, null, 2)}</Code>
@@ -203,13 +203,13 @@ export default function StorefrontPage() {
         subtitle="The browser learns the payment result immediately. Salvage learns it when the webhook arrives, and that is what lands in the ledger."
       >
         {paymentId && (
-          <div className="mb-3 text-[length:var(--fs-small)]">
-            <Badge tone="green">payment</Badge>{" "}
+          <div className="mb-3 text-[length:var(--fs-meta)]">
+            <Badge tone="success">payment</Badge>{" "}
             <span className="num">{paymentId}</span>
           </div>
         )}
         {orderId && (
-          <div className="mb-3 text-[length:var(--fs-small)]">
+          <div className="mb-3 text-[length:var(--fs-meta)]">
             <Badge>order</Badge> <span className="num">{orderId}</span>
           </div>
         )}
@@ -222,10 +222,10 @@ export default function StorefrontPage() {
         ) : (
           <ul className="space-y-1">
             {entries.map((entry) => (
-              <li key={entry.seq} className="num text-[length:var(--fs-small)]">
-                <span className="text-[color:var(--fg-3)]">{entry.seq}</span>{" "}
+              <li key={entry.seq} className="num text-[length:var(--fs-meta)]">
+                <span className="text-[color:var(--text-muted)]">{entry.seq}</span>{" "}
                 <Badge>{entry.kind}</Badge>{" "}
-                <span className="text-[color:var(--fg-2)]">{timestamp(entry.ts)}</span>
+                <span className="text-[color:var(--text-secondary)]">{timestamp(entry.ts)}</span>
               </li>
             ))}
           </ul>
@@ -248,12 +248,12 @@ export default function StorefrontPage() {
               setError(cause);
             }
           }}
-          className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-3 py-1 text-[length:var(--fs-small)] text-[color:var(--crit)] hover:bg-[color:var(--crit-bg)] disabled:opacity-50"
+          className="btn btn-danger focus-ring"
         >
 
           Simulate my payment failing
         </button>
-        <p className="mt-2 text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
+        <p className="mt-2 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)] max-w-[var(--measure)]">
           This writes one failed attempt. It does not fabricate a webhook, so nothing appears in
           the webhook ledger for it.
         </p>

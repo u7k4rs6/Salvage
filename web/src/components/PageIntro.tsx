@@ -1,16 +1,15 @@
 import { type ReactNode } from "react";
 
 /**
- * What this page is, how to use it, and what each thing on it means.
+ * The page header: where you are, what this page is, and what to do with it.
  *
- * The console was built for somebody who already knows the system, so every page opened straight
- * into dense telemetry with no statement of what it was. That is fine for the person who wrote it
- * and useless for everybody else, including a judge with five minutes and no context.
+ * It is a header, not a card. It used to be a bordered panel with a two column definition list,
+ * which put a large decorated block between the reader and the data on every route and repeated
+ * the page title twice on pages that also had a panel heading.
  *
- * One block at the top of every page, in the same shape each time, so the answer is always in the
- * same place: a sentence saying what the page is, a sentence saying what to do with it, and a list
- * naming each panel and what its numbers mean. Prose in full sentences, not labels, because the
- * labels are the thing being explained.
+ * The per-section glossary is still here, because a console that cannot explain itself is only
+ * useful to the person who wrote it, but it sits behind a disclosure. Someone who needs it opens
+ * it once; someone who does not never has it in the way.
  */
 export function PageIntro({
   title,
@@ -18,33 +17,49 @@ export function PageIntro({
   use,
   shows,
   caveat,
+  right,
 }: {
   title: string;
   /** One sentence: what this page is. */
   what: ReactNode;
-  /** One sentence: what a reader does with it. Omitted where a page is read-only. */
+  /** One sentence: what a reader does with it. */
   use?: ReactNode;
-  /** Each panel on the page, and what its figures mean. */
+  /** Each section on the page, and what its figures mean. */
   shows?: [string, ReactNode][];
   /** Anything a reader would otherwise misread. */
   caveat?: ReactNode;
+  /** Page-level controls, such as a run selector. */
+  right?: ReactNode;
 }) {
   return (
-    <section className="intro" aria-label={`About the ${title} page`}>
-      <h1 className="intro-title">{title}</h1>
-      <p className="intro-what">{what}</p>
-      {use && <p className="intro-use">{use}</p>}
-      {shows && shows.length > 0 && (
-        <dl className="intro-shows">
-          {shows.map(([term, meaning]) => (
-            <div key={term} className="intro-row">
-              <dt className="intro-term">{term}</dt>
-              <dd className="intro-def">{meaning}</dd>
-            </div>
-          ))}
-        </dl>
+    <header className="page-head">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="page-title">{title}</h1>
+          <p className="page-sub">{what}</p>
+          {use && <p className="page-sub mt-1 text-[color:var(--text-muted)]">{use}</p>}
+        </div>
+        {right && <div className="shrink-0">{right}</div>}
+      </div>
+
+      {(shows || caveat) && (
+        <details className="intro-details">
+          <summary className="intro-summary focus-ring">What each section shows</summary>
+          <div className="intro-detail-body">
+            {shows && (
+              <dl className="intro-shows">
+                {shows.map(([term, meaning]) => (
+                  <div key={term} className="intro-row">
+                    <dt className="intro-term">{term}</dt>
+                    <dd className="intro-def">{meaning}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {caveat && <p className="intro-caveat">{caveat}</p>}
+          </div>
+        </details>
       )}
-      {caveat && <p className="intro-caveat">{caveat}</p>}
-    </section>
+    </header>
   );
 }

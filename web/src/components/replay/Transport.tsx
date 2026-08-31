@@ -84,7 +84,7 @@ export function Transport({
         )}
 
         <span className={`flex flex-wrap items-center gap-2${presenting ? "" : " ml-auto"}`}>
-          <div className="seg" role="group" aria-label="Speed">
+          <div className="segment" role="group" aria-label="Speed">
             {SPEEDS.map((speed) => (
               <button
                 key={speed.value}
@@ -156,14 +156,14 @@ export function Transport({
         </span>
         {frame && (
           <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="mono mid text-[length:var(--fs-small)]">{frame.kind}</span>
-            <span className="mono dim truncate text-[length:var(--fs-small)]">{frame.refId}</span>
+            <span className="mono mid text-[length:var(--fs-meta)]">{frame.kind}</span>
+            <span className="mono dim truncate text-[length:var(--fs-meta)]">{frame.refId}</span>
           </span>
         )}
         {replay.faults.length > 0 && (
           <span className="flex items-baseline gap-2">
             <span className="lbl">Since fault</span>
-            <span className="mono mid text-[length:var(--fs-small)]">
+            <span className="mono mid text-[length:var(--fs-meta)]">
               {transport.ts >= replay.faults[0].start
                 ? elapsed(replay.faults[0].start, Math.round(transport.ts))
                 : "not started"}

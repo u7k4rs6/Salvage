@@ -13,6 +13,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import {
   Badge,
+  Cell as TableCell,
   Code,
   ConfirmButton,
   Disclosure,
@@ -24,6 +25,7 @@ import {
   Stat,
   StatusBadge,
   Table,
+  type Column,
 } from "../components/primitives";
 import { Cell, CollapsedGroup } from "../components/board/Tile";
 import { FLOOR_ATTEMPTS, type BoardGroup, type BoardNode, type RosterNode } from "../board/roster";
@@ -52,7 +54,7 @@ function useDisplayFace() {
 function Section({ title, note, children }: { title: string; note?: ReactNode; children: ReactNode }) {
   return (
     <section className="mt-8">
-      <h2 className="display text-[length:var(--fs-small)] uppercase tracking-[0.08em]">{title}</h2>
+      <h2 className="display text-[length:var(--fs-meta)] uppercase tracking-[0.08em]">{title}</h2>
       {note && <p className="caption mt-1 max-w-[var(--measure)]">{note}</p>}
       <div className="mt-3 flex flex-wrap items-start gap-5">{children}</div>
     </section>
@@ -74,7 +76,7 @@ function Specimen({
     <figure className="m-0" style={width ? { width } : undefined}>
       <div>{children}</div>
       <figcaption className="mt-1.5 max-w-[15rem]">
-        <div className="num text-[length:var(--fs-caption)] font-medium" style={{ color: "var(--ink-soft)" }}>
+        <div className="num text-[length:var(--fs-micro)] font-medium" style={{ color: "var(--ink-soft)" }}>
           {state}
         </div>
         {note && <div className="caption-faint">{note}</div>}
@@ -151,6 +153,13 @@ const SCALE: { state: string; note: string; node: BoardNode }[] = [
   { state: "excess < 0.03", note: "inside baseline", node: measured(segment("paytm", 0.11, 0.1)) },
 ];
 
+const SPECIMEN_COLUMNS: Column[] = [
+  { key: "opened", label: "Opened", align: "text" },
+  { key: "segment", label: "Segment", align: "text" },
+  { key: "cause", label: "Root cause", align: "text" },
+  { key: "risk", label: "At risk", align: "num" },
+];
+
 const TABLE_ROWS = [
   { opened: "20:03", segment: "upi / okhdfcbank", cause: "issuer outage", risk: "25,631.93" },
   { opened: "19:48", segment: "card / 411111", cause: "auth failure bin", risk: "8,204.10" },
@@ -167,8 +176,8 @@ export default function SpecimensPage() {
   return (
     <div className="specimen-sheet">
       <header>
-        <h1 className="text-[length:var(--fs-h3)]">Specimen sheet</h1>
-        <p className="caption mt-1.5 max-w-[var(--measure)] text-[length:var(--fs-small)]">
+        <h1 className="text-[length:var(--fs-page-title)]">Specimen sheet</h1>
+        <p className="caption mt-1.5 max-w-[var(--measure)] text-[length:var(--fs-meta)]">
           Every primitive at every state, on synthetic data. Nothing here is measured and nothing
           here fetches. Numbers sit on the boundaries of the scales they belong to, so several are
           deliberately implausible as traffic. The board tile and the collapsed group row are the
@@ -183,27 +192,27 @@ export default function SpecimensPage() {
       >
         <Specimen state="level 1, flat" note="information. Tone difference only, no shadow.">
           <div className="lvl lvl-1">
-            <div className="display text-[length:var(--fs-small)]">nb_bank</div>
+            <div className="display text-[length:var(--fs-meta)]">nb_bank</div>
             <div className="caption-faint mt-1">below detection floor</div>
           </div>
         </Specimen>
         <Specimen state="level 2, default" note="border, inset highlight, 0 2px 3px at 12 percent.">
           <div className="lvl lvl-2">
-            <div className="display text-[length:var(--fs-small)]">okicici</div>
+            <div className="display text-[length:var(--fs-meta)]">okicici</div>
             <div className="num mt-0.5 text-[length:var(--fs-body)] font-semibold">83.3%</div>
             <div className="num caption-faint">n 30</div>
           </div>
         </Specimen>
         <Specimen state="level 3, active" note="0 4px 8px at 16 percent, lifted 1px, stronger highlight.">
           <div className="lvl lvl-3">
-            <div className="display text-[length:var(--fs-small)]">okhdfcbank</div>
+            <div className="display text-[length:var(--fs-meta)]">okhdfcbank</div>
             <div className="num mt-0.5 text-[length:var(--fs-body)] font-semibold">5.6%</div>
             <div className="num caption-faint">n 54</div>
           </div>
         </Specimen>
         <Specimen state="level 0, banned" note="border only. Here so the miss is visible, and nowhere else.">
           <div className="lvl lvl-0" style={{ opacity: 0.85 }}>
-            <div className="text-[length:var(--fs-small)] font-medium">okhdfcbank</div>
+            <div className="text-[length:var(--fs-meta)] font-medium">okhdfcbank</div>
             <div className="num mt-0.5 text-[length:var(--fs-body)] font-semibold">5.6%</div>
             <div className="num caption-faint">n 54</div>
           </div>
@@ -228,7 +237,7 @@ export default function SpecimensPage() {
         </Specimen>
         <Specimen state="all four, assembled" width="100%" note="the same three tones doing their job">
           <div className="board">
-            <div className="display mb-2 text-[length:var(--fs-small)]">upi</div>
+            <div className="display mb-2 text-[length:var(--fs-meta)]">upi</div>
             <div className="region flex flex-wrap gap-2">
               {SCALE.slice(0, 3).map((entry) => (
                 <div key={entry.state} className="tile-host">
@@ -340,7 +349,7 @@ export default function SpecimensPage() {
         <Specimen state="in a tile" width="100%" note="the status indicator sitting on the tile face">
           <div className="lvl lvl-2" style={{ width: "180px" }}>
             <div className="flex items-center justify-between">
-              <span className="display text-[length:var(--fs-small)]">okhdfcbank</span>
+              <span className="display text-[length:var(--fs-meta)]">okhdfcbank</span>
               <span className="token token-10 token-incident" />
             </div>
             <div className="num mt-0.5 text-[length:var(--fs-body)] font-semibold">5.6%</div>
@@ -355,7 +364,7 @@ export default function SpecimensPage() {
       >
         <Specimen state="top bar" width="100%">
           <div className="chrome flex items-center justify-between px-3 py-1.5">
-            <span className="display text-[length:var(--fs-small)]">Salvage</span>
+            <span className="display text-[length:var(--fs-meta)]">Salvage</span>
             <span className="num caption">sim 20:45 &middot; dev</span>
           </div>
         </Specimen>
@@ -387,13 +396,13 @@ export default function SpecimensPage() {
         note="Display face for headings and node names. UI sans for prose. Monospace strictly for numbers, ids, hashes and timestamps, which is what the `.num` class already marks."
       >
         <Specimen state="display" width="16rem">
-          <div className="display text-[length:var(--fs-lead)]">okhdfcbank</div>
+          <div className="display text-[length:var(--fs-section)]">okhdfcbank</div>
         </Specimen>
         <Specimen state="UI sans" width="16rem">
-          <div className="text-[length:var(--fs-small)]">Two consecutive windows above threshold.</div>
+          <div className="text-[length:var(--fs-meta)]">Two consecutive windows above threshold.</div>
         </Specimen>
         <Specimen state="mono, numbers" width="16rem">
-          <div className="num text-[length:var(--fs-small)]">25,631.93 &middot; 20:45:00 &middot; inc_upi_okhdfcbank</div>
+          <div className="num text-[length:var(--fs-meta)]">25,631.93 &middot; 20:45:00 &middot; inc_upi_okhdfcbank</div>
         </Specimen>
       </Section>
 
@@ -405,17 +414,17 @@ export default function SpecimensPage() {
           <Stat label="Attempts, last hour" value="1,227" />
         </Specimen>
         <Specimen state="red">
-          <Stat label="Success rate, last hour" value="78.2%" tone="red" />
+          <Stat label="Success rate, last hour" value="78.2%" tone="danger" />
         </Specimen>
         <Specimen state="amber">
-          <Stat label="At-risk revenue" value="25,631.93" hint="open incidents" tone="amber" />
+          <Stat label="At-risk revenue" value="25,631.93" hint="open incidents" tone="warning" />
         </Specimen>
         <Specimen state="green">
           <Stat
             label="Recovered, all time"
             value="0.00"
             hint="link and steer routes only, excludes organic recovery"
-            tone="green"
+            tone="success"
           />
         </Specimen>
         <Specimen state="accent">
@@ -430,7 +439,7 @@ export default function SpecimensPage() {
       </Section>
 
       <Section title="Badge">
-        {(["neutral", "red", "amber", "green", "accent"] as const).map((tone) => (
+        {(["neutral", "danger", "warning", "success", "accent"] as const).map((tone) => (
           <Specimen key={tone} state={tone}>
             <Badge tone={tone}>{tone}</Badge>
           </Specimen>
@@ -448,7 +457,7 @@ export default function SpecimensPage() {
       <Section title="Panel">
         <Specimen state="title only" width="20rem">
           <Panel title="Active incidents">
-            <p className="text-[length:var(--fs-small)] max-w-[var(--measure)]">Body.</p>
+            <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="title and subtitle" width="24rem">
@@ -456,39 +465,40 @@ export default function SpecimensPage() {
             title="Success rate by segment"
             subtitle="Current 15-minute window. 19 of 33 segments cleared the 20-attempt floor."
           >
-            <p className="text-[length:var(--fs-small)] max-w-[var(--measure)]">Body.</p>
+            <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="title and right slot" width="22rem">
           <Panel title="Incident" right={<StatusBadge status="escalated" />}>
-            <p className="text-[length:var(--fs-small)] max-w-[var(--measure)]">Body.</p>
+            <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">Body.</p>
           </Panel>
         </Specimen>
         <Specimen state="no header" width="16rem">
           <Panel>
-            <p className="text-[length:var(--fs-small)] max-w-[var(--measure)]">Body with no header.</p>
+            <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">Body with no header.</p>
           </Panel>
         </Specimen>
       </Section>
 
       <Section title="Table">
         <Specimen state="rows, mixed alignment" width="100%">
-          <Table
-            columns={["opened", "segment", "root cause", "at risk"]}
-            align={["left", "left", "left", "right"]}
-          >
+          <Table columns={SPECIMEN_COLUMNS}>
             {TABLE_ROWS.map((row) => (
-              <tr key={row.opened} className="border-b border-neutral-200">
-                <td className="cell-pad num">{row.opened}</td>
-                <td className="cell-pad num">{row.segment}</td>
-                <td className="cell-pad">{row.cause}</td>
-                <td className="cell-pad num text-right">{row.risk}</td>
+              <tr key={row.opened}>
+                <TableCell column="opened">
+                  <span className="dt-mono">{row.opened}</span>
+                </TableCell>
+                <TableCell column="segment">
+                  <span className="dt-mono">{row.segment}</span>
+                </TableCell>
+                <TableCell column="cause">{row.cause}</TableCell>
+                <TableCell column="risk">{row.risk}</TableCell>
               </tr>
             ))}
           </Table>
         </Specimen>
         <Specimen state="no rows" width="100%" note="the header still has to hold">
-          <Table columns={["opened", "segment", "root cause", "at risk"]}>{null}</Table>
+          <Table columns={SPECIMEN_COLUMNS}>{null}</Table>
         </Specimen>
       </Section>
 
@@ -500,7 +510,7 @@ export default function SpecimensPage() {
           <Empty>Nothing open. Every segment is inside its baseline.</Empty>
         </Specimen>
         <Specimen state="Empty with action" width="18rem">
-          <Empty action={<span className="text-[length:var(--fs-small)] text-accent">Go to Scenario Runner</span>}>
+          <Empty action={<span className="text-[length:var(--fs-meta)] text-accent">Go to Scenario Runner</span>}>
             No attempts yet. Run a scenario.
           </Empty>
         </Specimen>
@@ -543,7 +553,7 @@ export default function SpecimensPage() {
         </Specimen>
         <Specimen state="data" width="18rem" note={`reload fired ${retried} time(s)`}>
           <Region state={{ data: "loaded", error: null, loading: false, reload: noop }}>
-            {(data) => <p className="text-[length:var(--fs-small)] max-w-[var(--measure)]">{data}</p>}
+            {(data) => <p className="text-[length:var(--fs-meta)] max-w-[var(--measure)]">{data}</p>}
           </Region>
         </Specimen>
       </Section>
@@ -576,7 +586,7 @@ export default function SpecimensPage() {
         <Specimen state="red, enabled">
           <ConfirmButton
             label="Kill switch"
-            tone="red"
+            tone="danger"
             prompt="Suspend all outbound actions?"
             onConfirm={async () => {}}
           />
@@ -584,7 +594,7 @@ export default function SpecimensPage() {
         <Specimen state="green, requires a note">
           <ConfirmButton
             label="Approve"
-            tone="green"
+            tone="success"
             requireNote
             notePlaceholder="Reason"
             prompt="Approve this escalation?"
@@ -603,7 +613,7 @@ export default function SpecimensPage() {
         <Specimen state="failure inside the panel" note="open it and confirm; the note is kept">
           <ConfirmButton
             label="Reject"
-            tone="red"
+            tone="danger"
             requireNote
             prompt="Reject this escalation?"
             onConfirm={async () => {

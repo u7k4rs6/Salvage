@@ -56,7 +56,7 @@ function stagesFor(data: IncidentDetail) {
       key: "gate",
       // A gate that refused is a refusal, and refusals are red. A gate that passed is not.
       status: gated.length > 0 ? "done" : "idle",
-      colour: refused.length > 0 ? "var(--crit)" : "var(--warn)",
+      colour: refused.length > 0 ? "var(--danger)" : "var(--warning)",
       detail:
         gated.length > 0
           ? `${gated.reduce((sum, action) => sum + action.gate.length, 0)} rules`
@@ -75,13 +75,13 @@ function stagesFor(data: IncidentDetail) {
     escalate: {
       key: "escalate",
       status: escalated ? "active" : "idle",
-      colour: "var(--warn)",
+      colour: "var(--warning)",
       detail: escalated ? "awaiting a human" : "not taken",
     } as Stage,
     recover: {
       key: "recover",
       status: recovered > 0 ? "done" : "idle",
-      colour: "var(--ok)",
+      colour: "var(--success)",
       detail: `${recovered} case${recovered === 1 ? "" : "s"}`,
     } as Stage,
   };
@@ -100,12 +100,12 @@ function Box({ stage }: { stage: Stage }) {
         <span
           aria-hidden="true"
           className="dot"
-          style={{ background: stage.status === "idle" ? "var(--fg-3)" : stage.colour }}
+          style={{ background: stage.status === "idle" ? "var(--text-muted)" : stage.colour }}
         />
         <span className={`lbl ${stage.status === "idle" ? "" : "lbl-2"}`}>{stage.key}</span>
       </div>
       <div
-        className={`mono mt-1.5 max-w-[9rem] truncate text-[length:var(--fs-caption)] ${
+        className={`mono mt-1.5 max-w-[9rem] truncate text-[length:var(--fs-micro)] ${
           stage.status === "idle" ? "dim" : "mid"
         }`}
         title={stage.detail}

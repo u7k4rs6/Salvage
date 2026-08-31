@@ -39,7 +39,7 @@ export function StatusStrip({ data }: { data: Overview }) {
           value={percent(data.stats.success_rate)}
           delta={
             merchant && points !== null ? (
-              <span className={`mono text-[length:var(--fs-small)] ${SEVERITY_CLASS[severity]}`}>
+              <span className={`mono text-[length:var(--fs-meta)] ${SEVERITY_CLASS[severity]}`}>
                 {deviationArrow(points)} {formatPoints(points)} vs{" "}
                 {percent(baselineSuccess(merchant))} baseline
               </span>

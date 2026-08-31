@@ -2,7 +2,16 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useApi } from "../lib/useApi";
 import { useStream } from "../lib/useStream";
-import { Badge, Empty, Panel, Region, StatusBadge, Table } from "../components/primitives";
+import {
+  Badge,
+  Cell,
+  Empty,
+  Panel,
+  Region,
+  StatusBadge,
+  Table,
+  type Column,
+} from "../components/primitives";
 import {
   causeLabel,
   count,
@@ -15,6 +24,25 @@ import type { IncidentList } from "../lib/types";
 import { PageIntro } from "../components/PageIntro";
 
 const STATUSES = ["all", "open", "escalated", "paused", "recovering", "closed"];
+
+/**
+ * The column model for the incident list.
+ *
+ * Money and counts are numeric, so they share a right edge and tabular figures; the status and the
+ * escalation flag are compact states, so they centre; everything else is text. Declared here and
+ * read back by every cell, so a header can never sit over values aligned the other way.
+ */
+const INCIDENT_COLUMNS: Column[] = [
+  { key: "opened", label: "Opened", align: "text", width: "13rem" },
+  { key: "segment", label: "Segment", align: "text" },
+  { key: "cause", label: "Root cause", align: "text" },
+  { key: "confidence", label: "Confidence", align: "num", width: "7rem" },
+  { key: "status", label: "Status", align: "status", width: "7rem" },
+  { key: "at_risk", label: "At risk", align: "num", width: "9rem" },
+  { key: "recovered", label: "Recovered", align: "num", width: "9rem" },
+  { key: "actions", label: "Actions", align: "num", width: "6rem" },
+  { key: "escalation", label: "Escalation", align: "status", width: "8rem" },
+];
 
 export default function IncidentsPage() {
   const [status, setStatus] = useState("all");
@@ -43,7 +71,7 @@ export default function IncidentsPage() {
       title="Incidents"
       subtitle="Every incident the detector opened, newest first."
       right={
-        <label className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
+        <label className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
           status{" "}
           <select
             value={status}
@@ -51,7 +79,7 @@ export default function IncidentsPage() {
               setStatus(event.target.value);
               setOffset(0);
             }}
-            className="border border-[color:var(--line-2)] px-2 py-1 text-[length:var(--fs-small)]"
+            className="btn focus-ring"
           >
             {STATUSES.map((value) => (
               <option key={value} value={value}>
@@ -71,75 +99,56 @@ export default function IncidentsPage() {
             </Empty>
           ) : (
             <>
-              <Table
-                columns={[
-                  "opened",
-                  "segment",
-                  "root cause",
-                  "confidence",
-                  "status",
-                  "at risk",
-                  "recovered",
-                  "actions",
-                  "escalation",
-                ]}
-                align={[
-                  "left",
-                  "left",
-                  "left",
-                  "right",
-                  "left",
-                  "right",
-                  "right",
-                  "right",
-                  "left",
-                ]}
-              >
+              <Table columns={INCIDENT_COLUMNS}>
                 {data.incidents.map((incident) => (
-                  <tr key={incident.id} className="border-b border-[color:var(--line)] hover:bg-[color:var(--panel-2)]">
-                    <td className="cell-pad num whitespace-nowrap text-[length:var(--fs-small)]">
+                  <tr key={incident.id}>
+                    <Cell column="opened">
                       <Link
                         to={`/incidents/${incident.id}`}
-                        className="text-[color:var(--info)] hover:text-[color:var(--fg)]"
+                        className="dt-mono whitespace-nowrap text-[color:var(--accent)] hover:text-[color:var(--text-primary)]"
                       >
                         {timestamp(incident.opened_at)}
                       </Link>
-                    </td>
-                    <td className="cell-pad num">{segmentLabel(incident.segment_key)}</td>
-                    <td className="cell-pad">
+                    </Cell>
+                    <Cell column="segment">
+                      <span className="dt-mono">{segmentLabel(incident.segment_key)}</span>
+                    </Cell>
+                    <Cell column="cause">
                       {isSyntheticIncident(incident.id) ? (
-                        <span className="text-[color:var(--fg-3)]">synthetic (baseline policy)</span>
+                        <span className="text-[color:var(--text-muted)]">
+                          synthetic (baseline policy)
+                        </span>
                       ) : (
                         causeLabel(incident.root_cause)
                       )}
-                    </td>
-                    <td className="cell-pad num text-right">
+                    </Cell>
+                    <Cell column="confidence">
                       {incident.confidence === null ? "-" : incident.confidence.toFixed(2)}
-                    </td>
-                    <td className="cell-pad">
+                    </Cell>
+                    <Cell column="status">
                       <StatusBadge status={incident.status} />
-                    </td>
-                    <td className="cell-pad num text-right">{rupees(incident.at_risk_amount)}</td>
-                    {/* Green says money came back. Zero says none did, so it is not green: a
-                        recovered figure of 0.00 in the success colour reads as good news about a
-                        number that is not good news. */}
-                    <td
-                      className={`cell-pad num text-right ${
+                    </Cell>
+                    <Cell column="at_risk">{rupees(incident.at_risk_amount)}</Cell>
+                    {/* Green says money came back. Zero says none did, so a recovered figure of
+                        0.00 in the success colour reads as good news about a number that is not. */}
+                    <Cell
+                      column="recovered"
+                      className={
                         incident.recovered_amount > 0
-                          ? "text-[color:var(--ok)]"
-                          : "text-[color:var(--fg-3)]"
-                      }`}
+                          ? "text-[color:var(--success)]"
+                          : "text-[color:var(--text-muted)]"
+                      }
                     >
                       {rupees(incident.recovered_amount)}
-                    </td>
-                    <td className="cell-pad num text-right">{count(incident.actions)}</td>
-                    <td className="cell-pad">
-                      {incident.escalated ? <Badge tone="amber">escalated</Badge> : ""}
-                    </td>
+                    </Cell>
+                    <Cell column="actions">{count(incident.actions)}</Cell>
+                    <Cell column="escalation">
+                      {incident.escalated ? <Badge tone="warning">escalated</Badge> : null}
+                    </Cell>
                   </tr>
                 ))}
               </Table>
-              <div className="mt-3 flex items-center gap-3 text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
+              <div className="mt-3 flex items-center gap-3 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
                 <span className="num">
                   {offset + 1} to {Math.min(offset + data.limit, data.total)} of {data.total}
                 </span>
@@ -147,7 +156,7 @@ export default function IncidentsPage() {
                   type="button"
                   disabled={offset === 0}
                   onClick={() => setOffset(Math.max(0, offset - data.limit))}
-                  className="border border-[color:var(--line-2)] px-2 py-1 disabled:opacity-40"
+                  className="btn btn-sm focus-ring"
                 >
                   Previous
                 </button>
@@ -155,7 +164,7 @@ export default function IncidentsPage() {
                   type="button"
                   disabled={offset + data.limit >= data.total}
                   onClick={() => setOffset(offset + data.limit)}
-                  className="border border-[color:var(--line-2)] px-2 py-1 disabled:opacity-40"
+                  className="btn btn-sm focus-ring"
                 >
                   Next
                 </button>

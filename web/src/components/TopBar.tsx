@@ -3,7 +3,7 @@ import { post, describe } from "../lib/api";
 import { useApi } from "../lib/useApi";
 import { useSession } from "../lib/session";
 import { useStream, useStreamState } from "../lib/useStream";
-import { ConfirmButton } from "./primitives";
+import { Badge, ConfirmButton } from "./primitives";
 import { FULL_CONSOLE } from "../lib/build";
 import type { Health, Overview } from "../lib/types";
 
@@ -20,37 +20,15 @@ import type { Health, Overview } from "../lib/types";
  */
 
 /** One label-and-value pair. The class names are hooks the Overview's dark chrome overrides. */
-function Readout({
-  label,
-  tone = "ink",
-  children,
-}: {
-  label: string;
-  tone?: "ink" | "crit" | "warn" | "ok";
-  children: ReactNode;
-}) {
-  const light =
-    tone === "crit"
-      ? "text-[color:var(--crit)]"
-      : tone === "warn"
-        ? "text-[color:var(--warn)]"
-        : tone === "ok"
-          ? "text-[color:var(--ok)]"
-          : "text-[color:var(--fg)]";
-  const dark = tone === "crit" ? "bar-crit" : tone === "warn" ? "bar-warn" : tone === "ok" ? "bar-ok" : "";
+function Readout({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <span className="flex items-baseline gap-1.5">
-      <span className="bar-label text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
-        {label}
-      </span>
-      <span className={`num bar-value text-[length:var(--fs-caption)] font-medium ${light} ${dark}`}>{children}</span>
+    <span className="readout">
+      <span className="readout-label">{label}</span>
+      <span className="readout-value">{children}</span>
     </span>
   );
 }
 
-function Separator() {
-  return <span aria-hidden="true" className="bar-sep h-3.5 w-px shrink-0 bg-[color:var(--line)]" />;
-}
 
 /**
  * The bar picks which of the two below to render, and it has to be a fork between components
@@ -69,14 +47,22 @@ export function TopBar() {
  * "..." next to a red "disconnected" is a worse first impression than no row at all. The kill
  * switch in particular is a control over a running agent; there is no agent running here.
  */
+/**
+ * The public demo's bar. No clock, no incident count, no stream, no token and no kill switch:
+ * every one of those reads a backend that a static deployment does not have, and a row of
+ * readouts showing "..." beside a red "disconnected" is a worse first impression than no row.
+ */
 function DemoBar() {
   return (
-    <header className="chrome-ui flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-[color:var(--line)] px-4 py-[7px]">
-      <span className="text-[length:var(--fs-small)] font-semibold tracking-[0.02em]">SALVAGE</span>
-      <span className="text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">
+    <header className="statusbar">
+      <span className="text-[length:var(--fs-body)] font-semibold tracking-[var(--ls-tight)] text-[color:var(--text-primary)]">
+        Salvage
+      </span>
+      <span className="statusbar-sep" aria-hidden="true" />
+      <span className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
         Payment failure recovery for Indian merchants on Razorpay
       </span>
-      <span className="ml-auto text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
+      <span className="ml-auto text-[length:var(--fs-meta)] text-[color:var(--text-muted)]">
         A recorded run, replayed. Nothing here is live.
       </span>
     </header>
@@ -98,67 +84,65 @@ function LiveBar() {
   const clockLabel = overview.data?.clock === "sim" ? "sim clock" : "wall clock";
 
   return (
-    <header
-      className={`chrome-ui flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-[7px] ${
-        killed ? "border-[color:var(--crit)] bg-[color:var(--crit-bg)]" : "border-[color:var(--line)] bg-[color:var(--bg)]"
-      }`}
-    >
-      {/* Identity. The product name is a label in the corner, not a headline. */}
+    <header className="statusbar">
+      {/* Identity */}
       <span className="flex items-baseline gap-2">
-        <span className="text-[length:var(--fs-small)] font-semibold tracking-[0.02em]">SALVAGE</span>
-        <span className="num bar-label text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
-          {env} &middot; sim
+        <span className="text-[length:var(--fs-body)] font-semibold tracking-[var(--ls-tight)] text-[color:var(--text-primary)]">
+          Salvage
         </span>
+        <span className="text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">{env}</span>
       </span>
 
-      <Separator />
+      <span className="statusbar-sep" aria-hidden="true" />
 
-      {/* The world this console is looking at. */}
+      {/* The world this console is looking at */}
       <Readout label={clockLabel}>
         {overview.data
           ? new Date(overview.data.now * 1000).toLocaleString("en-IN", {
               timeZone: "Asia/Kolkata",
               hour12: false,
             })
-          : "..."}
+          : "not loaded"}
       </Readout>
-      <Readout label="stream" tone={stream === "disconnected" ? "crit" : "ink"}>
-        {stream}
-      </Readout>
+      <span className="readout">
+        <span className="readout-label">stream</span>
+        <Badge tone={stream === "disconnected" ? "danger" : "success"}>{stream}</Badge>
+      </span>
 
-      <Separator />
+      <span className="statusbar-sep" aria-hidden="true" />
 
-      {/* That world's current state. */}
-      <Readout label="incidents" tone={open > 0 ? "crit" : "ok"}>
-        {String(open).padStart(2, "0")}
-      </Readout>
-      <Readout label="model">{health.data?.llm_provider ?? "..."}</Readout>
+      {/* That world's current state */}
+      <span className="readout">
+        <span className="readout-label">incidents</span>
+        <Badge tone={open > 0 ? "danger" : "neutral"} dot={open > 0}>
+          {String(open).padStart(2, "0")}
+        </Badge>
+      </span>
+      <Readout label="model">{health.data?.llm_provider ?? "not loaded"}</Readout>
 
       {killed && (
         <>
-          <Separator />
-          <span className="bar-crit text-[length:var(--fs-caption)] font-semibold text-[color:var(--crit)]">
-            Outbound actions suspended
-          </span>
+          <span className="statusbar-sep" aria-hidden="true" />
+          <Badge tone="danger">Outbound actions suspended</Badge>
         </>
       )}
 
       <div className="ml-auto flex items-center gap-3">
-        <label className="bar-label flex items-center gap-2 text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
-          token
+        <label className="readout">
+          <span className="readout-label">token</span>
           <input
             type="password"
             value={token ?? ""}
             onChange={(event) => setToken(event.target.value || null)}
-            placeholder="SALVAGE_DASHBOARD_TOKEN"
-            className="num w-44 border border-[color:var(--line-2)] px-2 py-[3px] text-[length:var(--fs-caption)]"
+            placeholder="dashboard token"
+            className="field w-44 font-[family-name:var(--font-mono)]"
           />
         </label>
 
         <ConfirmButton
           label={killed ? "Resume outbound actions" : "Suspend outbound actions"}
           confirmLabel={killed ? "Resume" : "Suspend"}
-          tone={killed ? "green" : "red"}
+          tone={killed ? "success" : "danger"}
           prompt={
             killed
               ? "Resume outbound actions. Detection and diagnosis have been running the whole time."
@@ -180,7 +164,7 @@ function LiveBar() {
       </div>
 
       {error !== null && (
-        <div className="bar-crit w-full text-[length:var(--fs-small)] text-[color:var(--crit)]" role="alert">
+        <div className="bar-crit w-full text-[length:var(--fs-meta)] text-[color:var(--danger)]" role="alert">
           {describe(error)}
         </div>
       )}

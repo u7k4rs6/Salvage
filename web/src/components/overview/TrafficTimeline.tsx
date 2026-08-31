@@ -112,7 +112,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
           <span
             aria-hidden="true"
             className="inline-block h-[2px] w-3"
-            style={{ background: "var(--fg-2)" }}
+            style={{ background: "var(--text-secondary)" }}
           />
           success rate
         </span>
@@ -120,7 +120,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
           <span
             aria-hidden="true"
             className="inline-block h-2 w-2"
-            style={{ background: "var(--line-2)" }}
+            style={{ background: "var(--border-strong)" }}
           />
           attempts
         </span>
@@ -128,7 +128,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
           <span
             aria-hidden="true"
             className="inline-block h-2 w-2"
-            style={{ background: "var(--warn)" }}
+            style={{ background: "var(--warning)" }}
           />
           failures
         </span>
@@ -137,7 +137,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
             <span
               aria-hidden="true"
               className="inline-block h-2 w-2"
-              style={{ background: "rgba(210, 153, 34, 0.16)", border: "1px solid var(--warn)" }}
+              style={{ background: "rgba(210, 153, 34, 0.16)", border: "1px solid var(--warning)" }}
             />
             {run.scenario} fault window
           </span>
@@ -151,26 +151,26 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
         {/* The axis gutter sits outside the plot, so a band positioned as a percentage of the
             plot is not shifted by the width of a label. */}
         <div className="relative w-10 shrink-0" aria-hidden="true">
-          <span className="mono absolute right-2 text-[length:var(--fs-caption)] dim" style={{ top: -4 }}>
+          <span className="mono absolute right-2 text-[length:var(--fs-micro)] dim" style={{ top: -4 }}>
             {percent(1, 0)}
           </span>
           <span
-            className="mono absolute right-2 text-[length:var(--fs-caption)] dim"
+            className="mono absolute right-2 text-[length:var(--fs-micro)] dim"
             style={{ top: RATE_H / 2 - 5 }}
           >
             {percent(rateFloor + rateSpan / 2, 0)}
           </span>
-          <span className="mono absolute right-2 text-[length:var(--fs-caption)] dim" style={{ top: RATE_H - 10 }}>
+          <span className="mono absolute right-2 text-[length:var(--fs-micro)] dim" style={{ top: RATE_H - 10 }}>
             {percent(rateFloor, 0)}
           </span>
           <span
-            className="mono absolute right-2 text-[length:var(--fs-caption)] dim"
+            className="mono absolute right-2 text-[length:var(--fs-micro)] dim"
             style={{ top: RATE_H + 10 }}
           >
             {count(maxAttempts)}
           </span>
           <span
-            className="mono absolute right-2 text-[length:var(--fs-caption)] dim"
+            className="mono absolute right-2 text-[length:var(--fs-micro)] dim"
             style={{ top: RATE_H + VOL_H + 2 }}
           >
             0
@@ -196,7 +196,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
                   left: `${left}%`,
                   width: `${Math.max(right - left, 0.3)}%`,
                   background: "rgba(210, 153, 34, 0.10)",
-                  borderLeft: "1px solid var(--warn)",
+                  borderLeft: "1px solid var(--warning)",
                   borderRight: "1px dashed rgba(210, 153, 34, 0.5)",
                 }}
               />
@@ -209,14 +209,14 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
               style={{
                 left: `${xOf(incident.opened_at, first, last) * 100}%`,
                 width: 1,
-                background: "var(--crit)",
+                background: "var(--danger)",
               }}
             />
           ))}
           {hover !== null && (
             <div
               className="absolute top-0 bottom-[18px]"
-              style={{ left: `${hoverRatio * 100}%`, width: 1, background: "var(--fg-3)" }}
+              style={{ left: `${hoverRatio * 100}%`, width: 1, background: "var(--text-muted)" }}
             />
           )}
         </div>
@@ -237,7 +237,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
               x2={W}
               y1={rateY(line)}
               y2={rateY(line)}
-              stroke="var(--line)"
+              stroke="var(--border)"
               strokeWidth={1}
               vectorEffect="non-scaling-stroke"
             />
@@ -245,7 +245,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
           <path
             d={ratePath}
             fill="none"
-            stroke="var(--fg-2)"
+            stroke="var(--text-secondary)"
             strokeWidth={1.25}
             vectorEffect="non-scaling-stroke"
           />
@@ -267,8 +267,8 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
             const w = Math.max(step - 0.6, 0.4);
             return (
               <g key={bucket.t}>
-                <rect x={x} y={VOL_H - h} width={w} height={h} fill="var(--line-2)" />
-                <rect x={x} y={VOL_H - fh} width={w} height={fh} fill="var(--warn)" opacity={0.9} />
+                <rect x={x} y={VOL_H - h} width={w} height={h} fill="var(--border-strong)" />
+                <rect x={x} y={VOL_H - fh} width={w} height={fh} fill="var(--warning)" opacity={0.9} />
               </g>
             );
           })}
@@ -282,10 +282,10 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
             .map(({ bucket, index }) => (
               <span
                 key={bucket.t}
-                className="mono absolute top-0 text-[length:var(--fs-caption)]"
+                className="mono absolute top-0 text-[length:var(--fs-micro)]"
                 style={{
                   left: `${((index * step + step / 2) / W) * 100}%`,
-                  color: "var(--fg-3)",
+                  color: "var(--text-muted)",
                   transform: index === 0 ? undefined : "translateX(-50%)",
                 }}
               >
@@ -302,23 +302,23 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
               top: 0,
             }}
           >
-            <div className="mono text-[length:var(--fs-caption)]" style={{ color: "var(--fg)" }}>
+            <div className="mono text-[length:var(--fs-micro)]" style={{ color: "var(--text-primary)" }}>
               {timeOnly(active.t)}
             </div>
             <dl className="mt-1.5 space-y-0.5">
               <div className="flex justify-between gap-4">
                 <dt className="note">success</dt>
-                <dd className="mono text-[length:var(--fs-caption)]">
+                <dd className="mono text-[length:var(--fs-micro)]">
                   {active.rate === null ? "-" : percent(active.rate)}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="note">attempts</dt>
-                <dd className="mono text-[length:var(--fs-caption)]">{count(active.attempts)}</dd>
+                <dd className="mono text-[length:var(--fs-micro)]">{count(active.attempts)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="note">failures</dt>
-                <dd className="mono warn text-[length:var(--fs-caption)]">{count(active.failures)}</dd>
+                <dd className="mono warn text-[length:var(--fs-micro)]">{count(active.failures)}</dd>
               </div>
             </dl>
           </div>
@@ -347,7 +347,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
               <span
                 aria-hidden="true"
                 className="inline-block h-3 w-[2px]"
-                style={{ background: "var(--crit)" }}
+                style={{ background: "var(--danger)" }}
               />
               detected {timeOnly(incident.opened_at)}
             </span>

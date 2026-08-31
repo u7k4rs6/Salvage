@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { describe } from "../lib/api";
 
 // The whole component vocabulary of the console. No component library (spec section 1); these
@@ -10,21 +10,24 @@ export function Panel({
   right,
   children,
   className = "",
+  flush = false,
 }: {
   title?: ReactNode;
   subtitle?: ReactNode;
   right?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** For a panel whose body is a table, which brings its own padding. */
+  flush?: boolean;
 }) {
   return (
-    <section className={`border border-[color:var(--line-2)] bg-[color:var(--panel)] ${className}`}>
+    <section className={`panel ${className}`}>
       {(title || right) && (
-        <header className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] px-4 py-2">
-          <div>
-            {title && <h2 className="text-[length:var(--fs-small)] font-semibold text-[color:var(--fg)]">{title}</h2>}
+        <header className="panel-head">
+          <div className="min-w-0">
+            {title && <h2 className="section-title">{title}</h2>}
             {subtitle && (
-              <p className="mt-1 max-w-[var(--measure)] text-[length:var(--fs-small)] leading-[var(--lh-normal)] text-[color:var(--fg-2)]">
+              <p className="mt-1 max-w-[var(--measure)] text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
                 {subtitle}
               </p>
             )}
@@ -32,40 +35,53 @@ export function Panel({
           {right && <div className="shrink-0">{right}</div>}
         </header>
       )}
-      <div className="p-4">{children}</div>
+      <div className={flush ? "panel-flush" : "panel-body"}>{children}</div>
     </section>
   );
 }
 
-type Tone = "neutral" | "red" | "amber" | "green" | "accent";
+type Tone = "neutral" | "danger" | "warning" | "success" | "accent";
 
-const TONES: Record<Tone, string> = {
-  neutral: "bg-[color:var(--panel-2)] text-[color:var(--fg-2)] border-[color:var(--line-2)]",
-  red: "bg-[color:var(--crit-bg)] text-[color:var(--crit)] border-[color:var(--crit)]",
-  amber: "bg-[color:var(--warn-bg)] text-[color:var(--warn)] border-[color:var(--warn)]",
-  green: "bg-[color:var(--ok-bg)] text-[color:var(--ok)] border-[color:var(--ok)]",
-  accent: "bg-[color:var(--info-bg)] text-[color:var(--info)] border-[color:var(--info)]",
+const BADGE_CLASS: Record<Tone, string> = {
+  neutral: "",
+  danger: "badge-danger",
+  warning: "badge-warning",
+  success: "badge-success",
+  accent: "badge-accent",
 };
 
-export function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
+/**
+ * One badge shape for the whole console. Only the colour varies, and only with meaning.
+ *
+ * Colour is never the only signal: the badge always carries its own word, so a reader who cannot
+ * separate the hues still reads the state.
+ */
+export function Badge({
+  tone = "neutral",
+  dot = true,
+  children,
+}: {
+  tone?: Tone;
+  dot?: boolean;
+  children: ReactNode;
+}) {
   return (
-    <span
-      className={`inline-block whitespace-nowrap rounded border px-1.5 py-0.5 text-[length:var(--fs-caption)] font-medium ${TONES[tone]}`}
-    >
+    <span className={`badge ${BADGE_CLASS[tone]}`}>
+      {dot && tone !== "neutral" && <span className="badge-dot" aria-hidden="true" />}
       {children}
     </span>
   );
 }
 
-/** Colour is never the only signal (spec section 7), so every state badge carries its own word. */
+/** Incident and case states, mapped to the one badge. */
 export function StatusBadge({ status }: { status: string }) {
   const tone: Tone =
     status === "open" || status === "recovering"
-      ? "red"
+      ? "danger"
       : status === "escalated" || status === "paused"
-        ? "amber"
+        ? "warning"
         : status === "closed"
-          ? "neutral"
+          ? "success"
           : "neutral";
   return <Badge tone={tone}>{status}</Badge>;
 }
@@ -82,52 +98,123 @@ export function Stat({
   tone?: Tone;
 }) {
   const colour =
-    tone === "red"
-      ? "text-[color:var(--crit)]"
-      : tone === "green"
-        ? "text-[color:var(--ok)]"
-        : tone === "amber"
-          ? "text-[color:var(--warn)]"
-          : "text-[color:var(--fg)]";
+    tone === "danger"
+      ? "text-[color:var(--danger)]"
+      : tone === "success"
+        ? "text-[color:var(--success)]"
+        : tone === "warning"
+          ? "text-[color:var(--warning)]"
+          : "text-[color:var(--text-primary)]";
   return (
-    <div className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-4 py-3">
-      <div className="text-[length:var(--fs-small)] uppercase tracking-wide text-[color:var(--fg-2)]">{label}</div>
-      <div className={`num mt-1 text-[length:var(--fs-h3)] font-semibold ${colour}`}>{value}</div>
-      {hint && <div className="mt-0.5 text-[length:var(--fs-small)] text-[color:var(--fg-2)]">{hint}</div>}
+    <div className="border border-[color:var(--border-strong)] bg-[color:var(--surface)] px-4 py-3">
+      <div className="text-[length:var(--fs-meta)] uppercase tracking-wide text-[color:var(--text-secondary)]">{label}</div>
+      <div className={`num mt-1 text-[length:var(--fs-page-title)] font-semibold ${colour}`}>{value}</div>
+      {hint && <div className="mt-0.5 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">{hint}</div>}
     </div>
   );
 }
 
+/** How a column behaves. Declared once per column and inherited by the header and every cell. */
+export type ColumnAlign = "text" | "num" | "status";
+
+export interface Column {
+  key: string;
+  label: ReactNode;
+  align?: ColumnAlign;
+  /** A fixed width where the column should not breathe, such as a timestamp or a sequence. */
+  width?: string;
+}
+
+const ALIGN_CLASS: Record<ColumnAlign, string> = {
+  text: "col-text",
+  num: "col-num",
+  status: "col-status",
+};
+
+/**
+ * The console's one data table.
+ *
+ * Alignment is a property of the column, not of the cell: `columns` declares it once and `Cell`
+ * reads it back out, so a header and the values under it cannot disagree. That mismatch, a
+ * right-aligned header over left-aligned numbers, is the commonest way a table looks wrong, and
+ * this shape makes it unrepresentable rather than merely discouraged.
+ */
 export function Table({
   columns,
   children,
-  align = [],
 }: {
-  columns: string[];
+  columns: Column[];
   children: ReactNode;
-  align?: ("left" | "right")[];
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-[length:var(--fs-small)]">
-        <thead>
-          <tr className="border-b border-[color:var(--line-2)] text-left text-[color:var(--fg-2)]">
-            {columns.map((column, index) => (
-              <th
-                key={column}
-                scope="col"
-                className={`cell-pad text-[length:var(--fs-small)] font-medium uppercase tracking-wide ${
-                  align[index] === "right" ? "text-right" : ""
-                }`}
-              >
-                {column}
-              </th>
+    <TableColumns.Provider value={columns}>
+      <div className="dt-wrap">
+        <table className="dt">
+          <colgroup>
+            {columns.map((column) => (
+              <col key={column.key} style={column.width ? { width: column.width } : undefined} />
             ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+          </colgroup>
+          <thead>
+            <tr>
+              {columns.map((column) => (
+                <th key={column.key} scope="col" className={ALIGN_CLASS[column.align ?? "text"]}>
+                  {column.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    </TableColumns.Provider>
+  );
+}
+
+const TableColumns = createContext<Column[]>([]);
+
+/**
+ * One cell, aligned by the column it sits in rather than by what its author felt like.
+ *
+ * `column` is the key from the table's column list. Passing an index would work until somebody
+ * reorders the columns and every cell silently takes the wrong alignment.
+ */
+export function Cell({
+  column,
+  children,
+  className = "",
+  ...rest
+}: {
+  column: string;
+  children?: ReactNode;
+  className?: string;
+} & React.TdHTMLAttributes<HTMLTableCellElement>) {
+  const columns = useContext(TableColumns);
+  const found = columns.find((entry) => entry.key === column);
+  return (
+    <td className={`${ALIGN_CLASS[found?.align ?? "text"]} ${className}`} {...rest}>
+      {children}
+    </td>
+  );
+}
+
+/** A primary figure with quieter figures under it, sharing the column's edge. */
+export function Metric({
+  value,
+  secondary,
+}: {
+  value: ReactNode;
+  secondary?: ReactNode[];
+}) {
+  return (
+    <span className="dt-metric">
+      <span className="dt-metric-primary">{value}</span>
+      {secondary?.filter(Boolean).map((line, index) => (
+        <span key={index} className="dt-metric-secondary">
+          {line}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -136,7 +223,7 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
     <div aria-live="polite" aria-busy="true">
       <span className="sr-only">{label}</span>
       {Array.from({ length: rows }).map((_, index) => (
-        <div key={index} className="mb-2 h-6 w-full animate-pulse rounded bg-[color:var(--panel-2)]" />
+        <div key={index} className="mb-2 h-6 w-full animate-pulse rounded bg-[color:var(--surface-raised)]" />
       ))}
     </div>
   );
@@ -145,7 +232,7 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="py-8 text-center">
-      <p className="text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">{children}</p>
+      <p className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)] max-w-[var(--measure)]">{children}</p>
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
@@ -153,14 +240,14 @@ export function Empty({ children, action }: { children: ReactNode; action?: Reac
 
 export function ErrorPanel({ error, retry }: { error: unknown; retry?: () => void }) {
   return (
-    <div role="alert" className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-4 py-3 text-[length:var(--fs-small)] text-[color:var(--crit)]">
+    <div role="alert" className="border border-[color:var(--danger)] bg-[color:var(--danger-bg)] px-4 py-3 text-[length:var(--fs-meta)] text-[color:var(--danger)]">
       <div className="font-medium">Request failed</div>
-      <div className="num mt-1 break-words text-[length:var(--fs-small)]">{describe(error)}</div>
+      <div className="num mt-1 break-words text-[length:var(--fs-meta)]">{describe(error)}</div>
       {retry && (
         <button
           type="button"
           onClick={retry}
-          className="mt-2 border border-[color:var(--crit)] bg-[color:var(--panel)] px-2 py-1 text-[length:var(--fs-small)] hover:bg-[color:var(--crit-bg)]"
+          className="btn btn-danger focus-ring mt-3"
         >
           Try again
         </button>
@@ -201,7 +288,7 @@ export function Disclosure({
 }) {
   return (
     <details className={`group ${className}`}>
-      <summary className="cursor-pointer select-none text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]">
+      <summary className="cursor-pointer select-none text-[length:var(--fs-meta)] text-[color:var(--info)] hover:text-[color:var(--text-primary)]">
         {summary}
       </summary>
       <div className="mt-2">{children}</div>
@@ -211,7 +298,7 @@ export function Disclosure({
 
 export function Code({ children }: { children: ReactNode }) {
   return (
-    <pre className="num max-h-96 overflow-auto whitespace-pre-wrap break-words border border-[color:var(--line)] bg-[color:var(--panel-2)] p-3 text-[length:var(--fs-small)] text-[color:var(--fg)]">
+    <pre className="num max-h-96 overflow-auto whitespace-pre-wrap break-words border border-[color:var(--border)] bg-[color:var(--surface-raised)] p-3 text-[length:var(--fs-meta)] text-[color:var(--text-primary)]">
       {children}
     </pre>
   );
@@ -221,9 +308,16 @@ export function Code({ children }: { children: ReactNode }) {
  * A button that asks once before doing something, and requires a note when the caller says so.
  * The two confirmations the spec allows as modals are built from this.
  */
+/**
+ * A control that asks before it acts, and where the product requires it, asks for a written note.
+ *
+ * The note is not decoration: an escalation decision is a person taking responsibility for what
+ * the agent would not do alone, and the note is what makes that decision auditable afterwards.
+ * The confirm stays disabled until one is written.
+ */
 export function ConfirmButton({
   label,
-  confirmLabel,
+  confirmLabel = "Confirm",
   prompt,
   requireNote = false,
   notePlaceholder = "Reason",
@@ -237,7 +331,7 @@ export function ConfirmButton({
   prompt: string;
   requireNote?: boolean;
   notePlaceholder?: string;
-  tone?: "accent" | "red" | "green";
+  tone?: "accent" | "danger" | "success";
   disabled?: boolean;
   disabledReason?: string;
   onConfirm: (note: string) => Promise<void>;
@@ -247,16 +341,9 @@ export function ConfirmButton({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
-  const colour =
-    tone === "red"
-      ? "border-[color:var(--crit)] bg-[color:var(--crit-bg)] text-[color:var(--crit)] hover:bg-[color:var(--crit-bg)]"
-      : tone === "green"
-        ? "border-[color:var(--ok)] bg-[color:var(--ok-bg)] text-[color:var(--ok)] hover:bg-[color:var(--ok-bg)]"
-        : "border-[color:var(--info)] bg-[color:var(--info-bg)] text-[color:var(--info)] hover:bg-[color:var(--info-bg)]";
-
   if (!open) {
     return (
-      <span>
+      <span className="inline-flex items-center gap-2">
         <button
           type="button"
           disabled={disabled}
@@ -265,36 +352,42 @@ export function ConfirmButton({
             setError(null);
             setOpen(true);
           }}
-          className={`border px-2 py-1 text-[length:var(--fs-small)] disabled:cursor-not-allowed disabled:opacity-50 ${colour}`}
+          className={`btn focus-ring ${tone === "danger" ? "btn-danger" : ""}`}
         >
-
           {label}
         </button>
         {disabled && disabledReason && (
-          <span className="ml-2 text-[length:var(--fs-small)] text-[color:var(--fg-2)]">{disabledReason}</span>
+          <span className="text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">
+            {disabledReason}
+          </span>
         )}
       </span>
     );
   }
 
   return (
-    <div className="border border-[color:var(--line-2)] bg-[color:var(--panel-2)] p-3">
-      <p className="text-[length:var(--fs-small)] text-[color:var(--fg)] max-w-[var(--measure)]">{prompt}</p>
+    <div className="rounded-[var(--radius-sm)] border border-[color:var(--border-strong)] bg-[color:var(--surface-raised)] p-4">
+      <p className="max-w-[var(--measure)] text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-primary)]">
+        {prompt}
+      </p>
       {requireNote && (
         <input
           autoFocus
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder={notePlaceholder}
-          className="mt-2 w-full border border-[color:var(--line-2)] px-2 py-1 text-[length:var(--fs-small)]"
+          className="field mt-3 w-full"
         />
       )}
       {error !== null && (
-        <div className="mt-2 text-[length:var(--fs-small)] text-[color:var(--crit)]" role="alert">
+        <div
+          className="mt-3 text-[length:var(--fs-meta)] text-[color:var(--danger)]"
+          role="alert"
+        >
           {describe(error)}
         </div>
       )}
-      <div className="mt-2 flex gap-2">
+      <div className="mt-3 flex gap-2">
         <button
           type="button"
           disabled={busy || (requireNote && note.trim().length === 0)}
@@ -306,20 +399,24 @@ export function ConfirmButton({
               setOpen(false);
               setNote("");
             } catch (cause) {
-              // The note is deliberately kept so a failed decision can be retried (spec 4.3).
               setError(cause);
             } finally {
               setBusy(false);
             }
           }}
-          className={`border px-2 py-1 text-[length:var(--fs-small)] disabled:opacity-50 ${colour}`}
+          className={`btn focus-ring ${tone === "danger" ? "btn-danger" : "btn-primary"}`}
         >
-          {busy ? "Working" : (confirmLabel ?? "Confirm")}
+          {busy ? "Working" : confirmLabel}
         </button>
         <button
           type="button"
-          onClick={() => setOpen(false)}
-          className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[length:var(--fs-small)] hover:bg-[color:var(--panel-3)]"
+          disabled={busy}
+          onClick={() => {
+            setOpen(false);
+            setNote("");
+            setError(null);
+          }}
+          className="btn btn-ghost focus-ring"
         >
           Cancel
         </button>

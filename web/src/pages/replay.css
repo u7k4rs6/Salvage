@@ -15,86 +15,20 @@
   --rail: 46px;
 }
 
-/* -- transport ------------------------------------------------------------ */
+/* -- transport ---------------------------------------------------------------
+ *
+ * The controls here are the shared ones. This block used to define a second button, segment and
+ * select, at a different height and radius from the rest of the console, which is why the runner's
+ * toolbar never quite looked like it belonged to the same product.
+ */
 
 .rp .transport {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--bg);
-  border-bottom: 1px solid var(--line);
-  padding: var(--s3) var(--gutter) var(--s2);
-}
-
-.rp .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-caption);
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fg-2);
-  background: var(--panel-2);
-  border: 1px solid var(--line-2);
-  border-radius: 2px;
-  padding: 5px 10px;
-  line-height: var(--lh-normal);
-  white-space: nowrap;
-  transition: background-color 120ms linear, color 120ms linear;
-}
-.rp .btn:hover:not(:disabled) {
-  background: var(--panel-3);
-  color: var(--fg);
-}
-.rp .btn:disabled {
-  opacity: 0.4;
-}
-.rp .btn-primary {
-  color: var(--fg);
-  border-color: var(--fg-3);
-}
-
-/* A segmented control, because the four speeds are one choice and not four buttons. */
-.rp .seg {
-  display: inline-flex;
-  border: 1px solid var(--line-2);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.rp .seg > button {
-  font-family: var(--font-mono);
-  font-size: var(--fs-caption);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--fg-3);
-  background: var(--panel-2);
-  padding: 5px 10px;
-  border-left: 1px solid var(--line-2);
-  line-height: var(--lh-normal);
-  transition: background-color 120ms linear, color 120ms linear;
-}
-.rp .seg > button:first-child {
-  border-left: 0;
-}
-.rp .seg > button:hover {
-  color: var(--fg-2);
-}
-.rp .seg > button[aria-pressed="true"] {
-  background: var(--panel-3);
-  color: var(--fg);
-}
-
-.rp select.field {
-  font-family: var(--font-mono);
-  font-size: var(--fs-caption);
-  color: var(--fg);
-  background: var(--panel-2);
-  border: 1px solid var(--line-2);
-  border-radius: 2px;
-  padding: 5px 8px;
-  max-width: 26rem;
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-4) 0 var(--space-3);
 }
 
 /* -- scrub bar ------------------------------------------------------------ */
@@ -102,8 +36,8 @@
 .rp .scrub {
   position: relative;
   height: var(--rail);
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 2px;
   cursor: pointer;
   touch-action: none;
@@ -115,7 +49,7 @@
   position: absolute;
   bottom: 0;
   width: 2px;
-  background: var(--fg-3);
+  background: var(--text-muted);
   opacity: 0.55;
   border-radius: 1px;
 }
@@ -133,7 +67,7 @@
   position: absolute;
   top: 0;
   height: 4px;
-  background: var(--crit);
+  background: var(--danger);
 }
 /*
  * A recorded stretch with no ledger entry in it. Same neutral grey as the density columns, because
@@ -158,7 +92,7 @@
   opacity: 0.85;
 }
 .rp .beat-refusal {
-  background: var(--crit);
+  background: var(--danger);
   height: 13px;
   opacity: 1;
 }
@@ -167,7 +101,7 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--fg);
+  background: var(--text-primary);
   pointer-events: none;
 }
 .rp .head::after {
@@ -177,7 +111,7 @@
   left: -3px;
   width: 7px;
   height: 4px;
-  background: var(--fg);
+  background: var(--text-primary);
 }
 .rp .scrub:focus-visible {
   outline: 1px solid var(--info);
@@ -206,9 +140,9 @@
  * refusal they will not believe happened.
  */
 .rp .ladder {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 2px;
-  background: var(--panel);
+  background: var(--surface);
 }
 .rp .gate {
   display: grid;
@@ -216,36 +150,36 @@
      name at this one. Sized to the word, and the rule gets room to sit on one line. */
   grid-template-columns: 3rem minmax(0, 17rem) minmax(0, 1fr);
   align-items: baseline;
-  gap: var(--s3);
-  padding: 9px var(--s3);
-  border-top: 1px solid var(--line);
+  gap: var(--space-4);
+  padding: 9px var(--space-4);
+  border-top: 1px solid var(--border);
 }
 .rp .gate:first-child {
   border-top: 0;
 }
 .rp .gate-failed {
   background: rgba(248, 81, 73, 0.07);
-  box-shadow: inset 2px 0 0 var(--crit);
+  box-shadow: inset 2px 0 0 var(--danger);
 }
 .rp .gate-mark {
   font-family: var(--font-mono);
-  font-size: var(--fs-small);
+  font-size: var(--fs-meta);
   line-height: var(--lh-normal);
 }
 .rp .gate-rule {
   font-family: var(--font-mono);
-  font-size: var(--fs-small);
-  color: var(--fg-2);
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
   word-break: break-word;
 }
 .rp .gate-detail {
-  font-size: var(--fs-small);
+  font-size: var(--fs-meta);
   line-height: var(--lh-normal);
-  color: var(--fg-2);
+  color: var(--text-secondary);
 }
 .rp .gate-failed .gate-rule,
 .rp .gate-failed .gate-detail {
-  color: var(--fg);
+  color: var(--text-primary);
 }
 
 /*
@@ -263,34 +197,32 @@
  */
 .rp .verdict {
   position: relative;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--line-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-strong);
   border-radius: 2px;
-  background: var(--panel);
-  padding: var(--s4) var(--s4) var(--s3);
+  background: var(--surface);
+  padding: var(--space-6) var(--space-6) var(--space-4);
   overflow: hidden;
 }
 .rp .verdict-refused {
-  border-left-color: var(--crit);
-  background:
-    linear-gradient(100deg, var(--crit-bg) 0%, transparent 62%),
-    var(--panel);
+  border-left-color: var(--danger);
+  background: var(--surface);
 }
 .rp .verdict-executed {
-  border-left-color: var(--ok);
+  border-left-color: var(--success);
 }
 .rp .verdict-deferred,
 .rp .verdict-queued {
-  border-left-color: var(--warn);
+  border-left-color: var(--warning);
 }
 
 /* The outcome word, at the one size nothing else uses. */
 .rp .verdict-outcome {
-  font-family: var(--font-display);
-  font-size: var(--fs-h2);
-  font-weight: 700;
+  font-family: var(--font-ui);
+  font-size: var(--fs-section);
+  font-weight: var(--fw-semibold);
   line-height: var(--lh-tight);
-  letter-spacing: 0.02em;
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
 }
 
@@ -298,19 +230,19 @@
 .rp .verdict-rule {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-lead);
-  font-weight: 500;
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
   line-height: var(--lh-tight);
   word-break: break-word;
-  margin-top: var(--s1);
+  margin-top: var(--space-2);
 }
 
 /* The sentence the policy engine wrote when it made the call. */
 .rp .verdict-detail {
-  margin-top: var(--s2);
+  margin-top: var(--space-2);
   font-size: var(--fs-body);
   line-height: var(--lh-normal);
-  color: var(--fg-2);
+  color: var(--text-secondary);
   max-width: var(--measure);
 }
 
@@ -319,7 +251,7 @@
 .rp .conf {
   position: relative;
   height: 22px;
-  background: var(--panel-2);
+  background: var(--surface-raised);
   border-radius: 1px;
 }
 .rp .conf-fill {
@@ -335,7 +267,7 @@
   top: -4px;
   bottom: -4px;
   width: 1px;
-  background: var(--fg);
+  background: var(--text-primary);
 }
 
 /* -- case board ----------------------------------------------------------- */
@@ -344,13 +276,13 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
   gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
+  background: var(--border);
+  border: 1px solid var(--border);
   border-radius: 2px;
 }
 .rp .cell {
-  background: var(--panel);
-  padding: 10px var(--s3);
+  background: var(--surface);
+  padding: 10px var(--space-4);
   min-width: 0;
 }
 
@@ -363,9 +295,9 @@
 .rp .tert {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-caption);
+  font-size: var(--fs-micro);
   line-height: var(--lh-normal);
-  color: var(--fg-3);
+  color: var(--text-muted);
 }
 
 /* A frame the transport is holding on. A border, never a pulse: the page is filmed paused. */
@@ -375,11 +307,11 @@
 .rp .kv {
   display: grid;
   grid-template-columns: 10.5rem minmax(0, 1fr);
-  gap: 4px var(--s3);
+  gap: 4px var(--space-4);
   align-items: baseline;
 }
 .rp .wait {
-  border: 1px solid var(--warn);
+  border: 1px solid var(--warning);
   border-left-width: 2px;
   background: rgba(210, 153, 34, 0.07);
   border-radius: 2px;
@@ -388,7 +320,7 @@
 .rp .col2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--gutter);
+  gap: var(--page-pad-x);
 }
 @media (max-width: 1180px) {
   .rp .col2 {
@@ -415,48 +347,37 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--s5) var(--gutter);
+  padding: var(--space-7) var(--page-pad-x);
 }
 .rp .entry-inner {
   max-width: 46rem;
 }
 .rp .entry-title {
-  font-size: var(--fs-h2);
+  font-size: var(--fs-page-title);
   line-height: var(--lh-tight);
   font-weight: 500;
   letter-spacing: -0.015em;
-  color: var(--fg);
+  color: var(--text-primary);
   max-width: 22ch;
 }
 .rp .entry-body {
   font-size: var(--fs-body);
   line-height: var(--lh-relaxed);
-  color: var(--fg-2);
+  color: var(--text-secondary);
   max-width: var(--measure);
 }
 .rp .entry-strong {
-  color: var(--fg);
+  color: var(--text-primary);
   font-weight: 500;
 }
+/* The one control on a full-page state, so it is larger than a toolbar button. Same shape, same
+   radius, same family: a size variant of the primary button, not a different button. */
 .rp .entry-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-mono);
-  font-size: var(--fs-small);
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--bg);
-  background: var(--fg);
-  border: 1px solid var(--fg);
-  border-radius: 2px;
-  padding: 10px 20px;
-  transition: background-color 120ms linear;
+  height: 40px;
+  padding: 0 var(--space-6);
+  font-size: var(--fs-body);
 }
-.rp .entry-button:hover {
-  background: #ffffff;
-}
+
 
 /* -- the narration line ----------------------------------------------------
  *
@@ -464,8 +385,8 @@
  * the run is playing, because for a visitor who reads nothing else it is the whole explanation.
  */
 .rp .narration {
-  font-size: var(--fs-lead);
+  font-size: var(--fs-section);
   line-height: var(--lh-relaxed);
-  color: var(--fg);
+  color: var(--text-primary);
   max-width: var(--measure);
 }

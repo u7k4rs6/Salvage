@@ -58,99 +58,129 @@ function Card({
   }
 
   return (
+    /*
+     * A neutral operational record, not a red card.
+     *
+     * The whole panel used to be tinted and outlined in red, which is the generic alert-card look
+     * and which spends the loudest colour in the palette on the container rather than on the
+     * problem. Red now marks the fault and the fault only: the severity badge and the planner
+     * error line. Everything around it is the same surface as the rest of the console, which is
+     * exactly what makes the red mean something when you reach it.
+     */
     <div
-      className={`border p-3 ${
-        decided
-          ? "border-[color:var(--line-2)]"
-          : plannerFailed
-            ? "border-[color:var(--crit)] bg-[color:var(--crit-bg)]"
-            : "border-[color:var(--warn)] bg-[color:var(--warn-bg)]"
-      } ${
-        fresh ? "flash" : ""
-      }`}
+      className={`rounded-[var(--radius-sm)] border p-5 ${
+        decided ? "border-[color:var(--border)]" : "border-[color:var(--border-strong)]"
+      } bg-[color:var(--surface-raised)] ${fresh ? "flash" : ""}`}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={decided ? "neutral" : plannerFailed ? "red" : "amber"}>
-          {plannerFailed ? "planner error" : escalation.reason}
+      {/* 1. Severity, 2. incident identity, 3. timestamp */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Badge tone={plannerFailed ? "danger" : decided ? "neutral" : "warning"}>
+          {plannerFailed ? "planner error" : decided ? escalation.decision : "waiting"}
         </Badge>
         <Link
           to={`/incidents/${escalation.incident_id}`}
-          className="num text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]"
+          className="dt-mono text-[length:var(--fs-body)] text-[color:var(--accent)] hover:text-[color:var(--text-primary)]"
         >
           {escalation.incident
             ? segmentLabel(escalation.incident.segment_key)
             : escalation.incident_id}
         </Link>
-        <span className="num text-[length:var(--fs-small)] text-[color:var(--fg-2)]">{timestamp(escalation.created_at)}</span>
+        <span className="ml-auto dt-mono text-[color:var(--text-muted)]">
+          {timestamp(escalation.created_at)}
+        </span>
       </div>
 
-      {/* The inner block carries no tint of its own: the card around it is already tinted, and two
-          layers of the same wash at nine percent put the red text below AA on its own background. */}
+      {/* 4. Why it stopped. Red only on the label, because the reason is the fault. */}
       {plannerFailed ? (
-        <div className="mt-2 border border-[color:var(--crit)] border-l-2 bg-[color:var(--panel)] px-3 py-2">
-          <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.08em] text-[color:var(--crit)]">
-              Planner error
-            </span>
-            <span className="num text-[length:var(--fs-small)] text-[color:var(--fg)]">{escalation.reason}</span>
+        <div className="mt-4 border-l-2 border-[color:var(--danger)] pl-4">
+          <div className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-[var(--ls-caps)] text-[color:var(--danger)]">
+            Planner error
           </div>
-          <p className="mt-1.5 max-w-[var(--measure)] text-[length:var(--fs-small)] leading-[var(--lh-normal)] text-[color:var(--fg-2)]">
+          <div className="dt-mono mt-1 text-[color:var(--text-primary)]">{escalation.reason}</div>
+          <p className="mt-2 max-w-[var(--measure)] text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
             No action was chosen. The executor escalated because planning failed, which is not an
             agent deciding a human should take this one.
           </p>
         </div>
       ) : (
-        <p className="mt-1 text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
-          {REASONS[escalation.reason] ?? "Escalated for a reason the console does not have text for."}
+        <p className="mt-3 max-w-[var(--measure)] text-[length:var(--fs-body)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
+          {REASONS[escalation.reason] ?? escalation.reason}
         </p>
       )}
 
+      {/* 5. Confidence, 6. financial risk. One row, one grid, labels above values. */}
       {escalation.incident && (
-        <div className="mt-2 grid gap-2 text-[length:var(--fs-small)] sm:grid-cols-3">
+        <dl className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-3">
           <div>
-            <span className="text-[color:var(--fg-2)]">cause </span>
-            <span className="num">{causeLabel(escalation.incident.root_cause)}</span>
+            <dt className="text-[length:var(--fs-micro)] uppercase tracking-[var(--ls-caps)] text-[color:var(--text-muted)]">
+              Cause
+            </dt>
+            <dd className="mt-1 text-[color:var(--text-primary)]">
+              {causeLabel(escalation.incident.root_cause)}
+            </dd>
           </div>
           <div>
-            <span className="text-[color:var(--fg-2)]">confidence </span>
-            <span className="num">
+            <dt className="text-[length:var(--fs-micro)] uppercase tracking-[var(--ls-caps)] text-[color:var(--text-muted)]">
+              Confidence
+            </dt>
+            <dd className="dt-mono mt-1 text-[color:var(--text-primary)]">
               {escalation.incident.confidence === null
                 ? "-"
                 : escalation.incident.confidence.toFixed(2)}
-            </span>
+            </dd>
           </div>
           <div>
-            <span className="text-[color:var(--fg-2)]">at risk </span>
-            <span className="num">{rupees(escalation.incident.at_risk_amount)}</span>
+            <dt className="text-[length:var(--fs-micro)] uppercase tracking-[var(--ls-caps)] text-[color:var(--text-muted)]">
+              At risk
+            </dt>
+            <dd className="dt-mono mt-1 text-[color:var(--text-primary)]">
+              {rupees(escalation.incident.at_risk_amount)}
+            </dd>
           </div>
-        </div>
+        </dl>
       )}
 
       {Object.keys(escalation.proposed_action ?? {}).length > 0 && (
-        <div className="num mt-2 text-[length:var(--fs-small)] text-[color:var(--fg)]">
-          proposed {String(escalation.proposed_action.type ?? "action")}{" "}
-          <span className="text-[color:var(--fg-3)]">{JSON.stringify(escalation.proposed_action)}</span>
+        <div className="mt-5">
+          <div className="text-[length:var(--fs-micro)] uppercase tracking-[var(--ls-caps)] text-[color:var(--text-muted)]">
+            Proposed action
+          </div>
+          <div className="dt-mono mt-1 text-[color:var(--text-primary)]">
+            {String(escalation.proposed_action.type ?? "action")}
+            {escalation.proposed_action.scope ? (
+              <span className="text-[color:var(--text-muted)]">
+                {" "}
+                for {String(escalation.proposed_action.scope)}
+              </span>
+            ) : null}
+          </div>
+          {typeof (escalation.proposed_action.params as Record<string, unknown> | undefined)
+            ?.reason === "string" ? (
+            <p className="mt-1 max-w-[var(--measure)] text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
+              {String((escalation.proposed_action.params as Record<string, unknown>).reason)}
+            </p>
+          ) : null}
         </div>
       )}
 
-      <Disclosure summary="evidence summary" className="mt-2">
+      <Disclosure summary="evidence summary" className="mt-5">
         <Code>{JSON.stringify(escalation.evidence, null, 2)}</Code>
       </Disclosure>
 
       {decided ? (
-        <div className="mt-2 text-[length:var(--fs-small)]">
-          <Badge tone={escalation.decision === "approve" ? "green" : "neutral"}>
+        <div className="mt-2 text-[length:var(--fs-meta)]">
+          <Badge tone={escalation.decision === "approve" ? "success" : "neutral"}>
             {escalation.decision}
           </Badge>{" "}
-          <span className="num text-[color:var(--fg-2)]">{timestamp(escalation.decided_at)}</span>
-          <div className="mt-1 text-[color:var(--fg)]">{escalation.note}</div>
+          <span className="num text-[color:var(--text-secondary)]">{timestamp(escalation.decided_at)}</span>
+          <div className="mt-1 text-[color:var(--text-primary)]">{escalation.note}</div>
         </div>
       ) : (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap items-start gap-3">
           <ConfirmButton
             label="Approve"
             confirmLabel="Approve"
-            tone="green"
+            tone="success"
             prompt="Approve this action. The note is recorded in the ledger with your decision."
             requireNote
             notePlaceholder="Why this is the right call"
@@ -161,7 +191,7 @@ function Card({
           <ConfirmButton
             label="Reject"
             confirmLabel="Reject"
-            tone="red"
+            tone="danger"
             prompt="Reject this action. The note is recorded in the ledger with your decision."
             requireNote
             notePlaceholder="Why not"
@@ -240,7 +270,7 @@ export default function EscalationsPage() {
               <Empty>No decisions yet.</Empty>
             ) : (
               <details>
-                <summary className="cursor-pointer text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]">
+                <summary className="cursor-pointer text-[length:var(--fs-meta)] text-[color:var(--info)] hover:text-[color:var(--text-primary)]">
                   {data.escalations.length} decided
                 </summary>
                 <div className="mt-2 space-y-2">

@@ -204,7 +204,7 @@ function Runner({
       {/* Hidden in presentation mode with the rest of the driving furniture: by the time this is
           being filmed the explanation is in the voiceover, and the panels need the height. */}
       {!presenting && (
-      <div className="px-[var(--gutter)] pt-[var(--s3)]">
+      <div className="px-[var(--page-pad-x)] pt-[var(--space-4)]">
         <PageIntro
           title="Scenario Runner"
           what="A run that already happened, replayed from the record it left behind. Every frame on this page is recorded data."
@@ -256,27 +256,27 @@ function Runner({
             {state.incident ? (
               <div className="kv">
                 <span className="lbl">Segment</span>
-                <span className="mono mid text-[length:var(--fs-small)]">{state.incident.segmentKey}</span>
+                <span className="mono mid text-[length:var(--fs-meta)]">{state.incident.segmentKey}</span>
                 <span className="lbl">Affected scope</span>
-                <span className="mono mid text-[length:var(--fs-small)]">
+                <span className="mono mid text-[length:var(--fs-meta)]">
                   {state.incident.scope.join(", ") || "-"}
                 </span>
                 <span className="lbl">Opened</span>
-                <span className="mono mid text-[length:var(--fs-small)]">
+                <span className="mono mid text-[length:var(--fs-meta)]">
                   {timestamp(state.incident.openedAt)}
                 </span>
                 <span className="lbl">Detection latency</span>
-                <span className="mono mid text-[length:var(--fs-small)]">
+                <span className="mono mid text-[length:var(--fs-meta)]">
                   {detectSeconds === null
                     ? "no recorded fault to measure from"
                     : `${Math.round(detectSeconds / 60)} sim minutes after the fault started`}
                 </span>
                 <span className="lbl">At risk when opened</span>
-                <span className="mono mid text-[length:var(--fs-small)]">
+                <span className="mono mid text-[length:var(--fs-meta)]">
                   {rupeesShort(state.incident.atRisk)}
                 </span>
                 <span className="lbl">Closed</span>
-                <span className="mono mid text-[length:var(--fs-small)]">
+                <span className="mono mid text-[length:var(--fs-meta)]">
                   {state.incident.closedAt === null
                     ? "still open"
                     : timestamp(state.incident.closedAt)}
@@ -352,18 +352,18 @@ function Runner({
       <Section title="Provenance" tight>
         <div className="kv">
           <span className="lbl">Run</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{meta.run_id}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{meta.run_id}</span>
           <span className="lbl">Captured from</span>
-          <span className="mono mid text-[length:var(--fs-small)]">
+          <span className="mono mid text-[length:var(--fs-meta)]">
             salvage agent run --scenario {meta.scenario} --seed {meta.seed} --policy {meta.policy}{" "}
             --provider {meta.provider}
           </span>
           <span className="lbl">Params hash</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{meta.params_hash.slice(0, 16)}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{meta.params_hash.slice(0, 16)}</span>
           <span className="lbl">Source revision</span>
-          <span className="mono mid text-[length:var(--fs-small)]">{meta.git_rev || "not recorded"}</span>
+          <span className="mono mid text-[length:var(--fs-meta)]">{meta.git_rev || "not recorded"}</span>
           <span className="lbl">Observed window</span>
-          <span className="mono mid text-[length:var(--fs-small)]">
+          <span className="mono mid text-[length:var(--fs-meta)]">
             {timestamp(replay.start)} to {timestamp(replay.end)}, {elapsed(replay.start, replay.end)}{" "}
             of sim time
           </span>

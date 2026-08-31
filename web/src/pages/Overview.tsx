@@ -132,7 +132,7 @@ function OverviewBody({
 
   return (
     <div className="ov">
-      <div className="px-[var(--gutter)] pt-[var(--s4)]">
+      <div className="px-[var(--page-pad-x)] pt-[var(--space-6)]">
         <PageIntro
           title="Overview"
           what="The state of payments right now: what is succeeding, what is failing, and what the agent has done about it."

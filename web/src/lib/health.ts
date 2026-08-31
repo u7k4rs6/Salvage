@@ -75,11 +75,11 @@ export function deviationSeverity(points: number): Severity {
 
 /** The bar and the delta take the same colour, so the row never contradicts itself. */
 export const SEVERITY_COLOUR: Record<Severity, string> = {
-  ok: "var(--ok)",
-  warn: "var(--warn)",
-  crit: "var(--crit)",
-  info: "var(--info)",
-  idle: "var(--fg-3)",
+  ok: "var(--success)",
+  warn: "var(--warning)",
+  crit: "var(--danger)",
+  info: "var(--accent)",
+  idle: "var(--text-muted)",
 };
 
 /** `-14.7` to `"14.7 pt"`, with the direction carried by a caller-supplied arrow. */

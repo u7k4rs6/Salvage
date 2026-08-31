@@ -72,38 +72,22 @@ export default function App() {
           used to carry min-h-[calc(100vh-36px)], which hardcoded the bar's height; raising the type
           made the bar taller and every page grew a spurious scrollbar. Nothing measures the bar
           now. */}
-      <div className="chrome-ui flex min-h-screen flex-col">
+      <div className="app-shell">
         <TopBar />
-        <div className="flex min-h-0 flex-1">
-          <nav className="w-44 shrink-0 border-r border-[color:var(--line)] bg-[color:var(--bg)] py-2">
+        <div className="app-body">
+          <nav className="side" aria-label="Sections">
             {NAV.map((section) => (
-              <div key={section.group} className="mb-1 last:mb-0">
-                {/* The heading and the items under it were both --fg-3, so the heading read as
-                    another item rather than as the label for a group. It is brighter than what it
-                    labels now, with a hairline above it, which is the whole job. */}
-                <div className="nav-group mx-4 mb-1.5 mt-3 border-t border-[color:var(--line)] pt-3 text-[length:var(--fs-caption)] font-semibold uppercase tracking-[0.14em] text-[color:var(--fg-2)] first:mt-1 first:border-t-0 first:pt-0">
-                  {section.group}
-                </div>
+              <div key={section.group} className="side-group">
+                <div className="side-label">{section.group}</div>
                 {section.items.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      // A 2px marker and weight, nothing else. No pill, no card.
-                      `block border-l-2 px-4 py-[5px] text-[length:var(--fs-small)] tracking-[0.01em] ${
-                        isActive
-                          ? "border-[color:var(--info)] font-semibold text-[color:var(--fg)]"
-                          : "border-transparent text-[color:var(--fg-3)] hover:border-[color:var(--line-2)] hover:text-[color:var(--fg)]"
-                      }`
-                    }
-                  >
+                  <NavLink key={item.to} to={item.to} className="side-link focus-ring">
                     {item.label}
                   </NavLink>
                 ))}
               </div>
             ))}
           </nav>
-          <main className="min-w-0 flex-1 p-4">
+          <main className="app-main min-w-0">
             <ErrorBoundary name="This page">
               <Routes>
                 <Route
@@ -114,7 +98,7 @@ export default function App() {
                 <Route
                   path="/results"
                   element={
-                    <Suspense fallback={<div className="p-4 text-[color:var(--fg-3)]">Loading</div>}>
+                    <Suspense fallback={<div className="p-4 text-[color:var(--text-muted)]">Loading</div>}>
                       <Results />
                     </Suspense>
                   }

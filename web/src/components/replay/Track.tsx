@@ -73,7 +73,7 @@ export function Track({ state, stage }: { state: ReplayState; stage: Stage }) {
     {
       key: "gate",
       status: gated.length > 0 ? "done" : "idle",
-      colour: refused > 0 ? "var(--crit)" : "var(--warn)",
+      colour: refused > 0 ? "var(--danger)" : "var(--warning)",
       // What the ladder is about is what was refused and by which rule, not how many rules were
       // looked at on the way. The evaluation total is real and it is the least interesting number
       // on the page, so it sits underneath at the smallest size.
@@ -96,13 +96,13 @@ export function Track({ state, stage }: { state: ReplayState; stage: Stage }) {
   const recover: Node = {
     key: "recover",
     status: recovered > 0 ? (stage === "recover" ? "active" : "done") : "idle",
-    colour: "var(--ok)",
+    colour: "var(--success)",
     detail: `${count(recovered)} recovered`,
   };
   const escalate: Node = {
     key: "escalate",
     status: state.escalation ? "active" : "idle",
-    colour: "var(--warn)",
+    colour: "var(--warning)",
     detail: state.escalation ? "awaiting a human" : "not taken",
   };
 
@@ -162,12 +162,12 @@ function Box({ node }: { node: Node }) {
         <span
           aria-hidden="true"
           className="dot"
-          style={{ background: node.status === "idle" ? "var(--fg-3)" : node.colour }}
+          style={{ background: node.status === "idle" ? "var(--text-muted)" : node.colour }}
         />
         <span className={`lbl ${node.status === "idle" ? "" : "lbl-2"}`}>{node.key}</span>
       </div>
       <div
-        className={`mono mt-1.5 max-w-[12rem] truncate text-[length:var(--fs-caption)] ${
+        className={`mono mt-1.5 max-w-[12rem] truncate text-[length:var(--fs-micro)] ${
           node.status === "idle" ? "dim" : "mid"
         }`}
         title={node.detail}
@@ -176,7 +176,7 @@ function Box({ node }: { node: Node }) {
       </div>
       {node.sub && (
         <div
-          className={`mono mt-0.5 max-w-[12rem] truncate text-[length:var(--fs-caption)] ${
+          className={`mono mt-0.5 max-w-[12rem] truncate text-[length:var(--fs-micro)] ${
             node.status === "idle" ? "dim" : "crit"
           }`}
           title={node.sub}

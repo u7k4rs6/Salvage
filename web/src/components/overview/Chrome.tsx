@@ -97,10 +97,10 @@ export function Metric({
 export function Methodology({ label, children }: { label: string; children: ReactNode }) {
   return (
     <details className="mt-4 group">
-      <summary className="lbl focus-ring cursor-pointer list-none hover:text-[color:var(--fg-2)]">
+      <summary className="lbl focus-ring cursor-pointer list-none hover:text-[color:var(--text-secondary)]">
         {label}
       </summary>
-      <div className="note mt-2 max-w-[var(--measure)] border-l border-[color:var(--line)] pl-3">{children}</div>
+      <div className="note mt-2 max-w-[var(--measure)] border-l border-[color:var(--border)] pl-3">{children}</div>
     </details>
   );
 }

@@ -30,9 +30,9 @@
   /* Fills the row the app shell gives it, rather than guessing the top bar's height. */
   min-height: 100%;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: var(--fs-small);
+  font-size: var(--fs-meta);
   line-height: var(--lh-relaxed);
   -webkit-font-smoothing: antialiased;
 }
@@ -50,44 +50,44 @@
    signal that something is a label rather than a sentence. */
 .ov .lbl {
   font-family: var(--font-mono);
-  font-size: var(--fs-caption);
+  font-size: var(--fs-micro);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--fg-3);
+  color: var(--text-muted);
   line-height: var(--lh-normal);
 }
 .ov .lbl-2 {
-  color: var(--fg-2);
+  color: var(--text-secondary);
 }
 
 .ov .note {
-  font-size: var(--fs-caption);
+  font-size: var(--fs-micro);
   line-height: var(--lh-normal);
-  color: var(--fg-3);
+  color: var(--text-muted);
   max-width: var(--measure);
 }
 .ov .txt {
   font-size: var(--fs-body);
   line-height: var(--lh-relaxed);
-  color: var(--fg-2);
+  color: var(--text-secondary);
   max-width: var(--measure);
 }
 
 /* Figures. Restrained: telemetry, not a marketing statistic. */
 .ov .fig-xl {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  font-size: var(--fs-display);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-metric);
   line-height: var(--lh-tight);
   letter-spacing: -0.02em;
 }
 .ov .fig-lg {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-weight: 500;
-  font-size: var(--fs-h3);
+  font-weight: var(--fw-medium);
+  font-size: var(--fs-metric-sm);
   line-height: var(--lh-tight);
   letter-spacing: -0.01em;
 }
@@ -99,48 +99,48 @@
   line-height: var(--lh-tight);
 }
 
-.ov .ok { color: var(--ok); }
-.ov .warn { color: var(--warn); }
-.ov .crit { color: var(--crit); }
+.ov .ok { color: var(--success); }
+.ov .warn { color: var(--warning); }
+.ov .crit { color: var(--danger); }
 .ov .info { color: var(--info); }
-.ov .dim { color: var(--fg-3); }
-.ov .mid { color: var(--fg-2); }
+.ov .dim { color: var(--text-muted); }
+.ov .mid { color: var(--text-secondary); }
 
 /* -- structure ------------------------------------------------------------ */
 
 /* Sections are divided by a rule, not boxed. The page is one control plane. */
 .ov .section {
-  border-top: 1px solid var(--line);
-  padding: var(--s4) var(--gutter);
+  border-top: 1px solid var(--border);
+  padding: var(--space-6) var(--page-pad-x);
 }
 .ov .section:first-child {
   border-top: 0;
 }
 .ov .section-tight {
-  padding-top: var(--s3);
-  padding-bottom: var(--s3);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-4);
 }
 
 .ov .section-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: var(--s3);
-  margin-bottom: var(--s3);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 .ov .section-title {
-  font-family: var(--font-display);
-  font-size: var(--fs-caption);
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  font-family: var(--font-ui);
+  font-size: var(--fs-table-head);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--ls-caps);
   text-transform: uppercase;
-  color: var(--fg-2);
+  color: var(--text-secondary);
 }
 
 /* A panel is used where grouping is genuinely load-bearing, and nowhere else. */
 .ov .panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 3px;
 }
 
@@ -152,7 +152,7 @@
   align-items: center;
   gap: 5px;
   font-family: var(--font-mono);
-  font-size: var(--fs-caption);
+  font-size: var(--fs-micro);
   font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -163,8 +163,8 @@
   white-space: nowrap;
 }
 .ov .chip-flat {
-  border-color: var(--line-2);
-  color: var(--fg-2);
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
 }
 .ov .dot {
   width: 5px;
@@ -183,8 +183,8 @@
   align-items: stretch;
 }
 .ov .metric {
-  padding: 0 var(--s4);
-  border-left: 1px solid var(--line);
+  padding: 0 var(--space-6);
+  border-left: 1px solid var(--border);
   min-width: 0;
 }
 .ov .metric:first-child {
@@ -208,7 +208,7 @@
 .ov .track {
   position: relative;
   height: 16px;
-  background: var(--panel-2);
+  background: var(--surface-raised);
   border-radius: 1px;
 }
 .ov .track-sm {
@@ -227,7 +227,7 @@
   top: -2px;
   bottom: -2px;
   width: 1px;
-  background: var(--fg-2);
+  background: var(--text-secondary);
   opacity: 0.75;
 }
 .ov .track-empty {
@@ -235,15 +235,15 @@
   left: 0;
   right: 0;
   top: 50%;
-  border-top: 1px dashed var(--line-2);
+  border-top: 1px dashed var(--border-strong);
 }
 
 .ov .lane {
   display: grid;
   grid-template-columns: 9.5rem minmax(0, 1fr) 4.5rem 4rem 5rem;
   align-items: center;
-  gap: var(--s3);
-  padding: 3px var(--s2);
+  gap: var(--space-4);
+  padding: 3px var(--space-2);
   border-radius: 2px;
 }
 
@@ -253,22 +253,22 @@
   transition: background-color 120ms linear;
 }
 .ov .row-hover:hover {
-  background: var(--panel-2);
+  background: var(--surface-raised);
 }
 
 .ov .divide > * + * {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--border);
 }
 
 /* -- controls ------------------------------------------------------------- */
 
 .ov a.link {
-  color: var(--fg-2);
+  color: var(--text-secondary);
   text-decoration: none;
   transition: color 120ms linear;
 }
 .ov a.link:hover {
-  color: var(--fg);
+  color: var(--text-primary);
 }
 .ov .focus-ring:focus-visible {
   outline: 1px solid var(--info);
@@ -286,8 +286,8 @@
   position: absolute;
   z-index: 2;
   pointer-events: none;
-  background: var(--panel-3);
-  border: 1px solid var(--line-2);
+  background: var(--surface-hover);
+  border: 1px solid var(--border-strong);
   border-radius: 3px;
   padding: 8px 10px;
   min-width: 168px;
@@ -297,16 +297,16 @@
 /* -- lifecycle ------------------------------------------------------------ */
 
 .ov .stage {
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 2px;
   padding: 8px 10px;
   min-width: 104px;
   min-height: 48px;
 }
 .ov .stage-done {
-  border-color: var(--line-2);
-  background: var(--panel-2);
+  border-color: var(--border-strong);
+  background: var(--surface-raised);
 }
 .ov .stage-active {
   border-color: currentColor;
@@ -317,24 +317,24 @@
 }
 .ov .connector {
   height: 1px;
-  background: var(--line);
+  background: var(--border);
   flex: 1 1 12px;
   min-width: 12px;
 }
 .ov .connector-done {
-  background: var(--line-2);
+  background: var(--border-strong);
 }
 /* Escalate is terminal. The stop bar is why nothing is ever drawn from it onward to recover. */
 .ov .terminal-stop {
   width: 2px;
   height: 20px;
-  background: var(--warn);
+  background: var(--warning);
 }
 
 /* -- states --------------------------------------------------------------- */
 
 .ov .skeleton {
-  background: var(--panel-2);
+  background: var(--surface-raised);
   height: 16px;
   border-radius: 2px;
   animation: ov-pulse 1.6s ease-in-out infinite;
@@ -345,7 +345,7 @@
 }
 
 .ov .alert {
-  border: 1px solid var(--crit);
+  border: 1px solid var(--danger);
   border-left-width: 2px;
   background: rgba(248, 81, 73, 0.06);
   border-radius: 2px;
@@ -390,7 +390,7 @@
 @media (max-width: 1180px) {
   .ov .metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--s4) 0;
+    gap: var(--space-6) 0;
   }
   .ov .metric:nth-child(3) {
     padding-left: 0;

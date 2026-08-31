@@ -61,7 +61,7 @@ export function Entry({ replay, onStart }: { replay: Replay; onStart: () => void
           </p>
         </div>
 
-        <button type="button" className="entry-button focus-ring mt-8" onClick={onStart}>
+        <button type="button" className="btn btn-primary entry-button focus-ring mt-8" onClick={onStart}>
           Watch the run
         </button>
         <p className="note mt-4">

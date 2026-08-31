@@ -64,7 +64,7 @@ function Delta({ segment }: { segment: Segment }) {
   const points = deviationPoints(segment);
   const severity = deviationSeverity(points);
   return (
-    <span className={`mono text-[length:var(--fs-caption)] ${SEVERITY_CLASS[severity]}`}>
+    <span className={`mono text-[length:var(--fs-micro)] ${SEVERITY_CLASS[severity]}`}>
       {deviationArrow(points)} {formatPoints(points)}
     </span>
   );
@@ -82,7 +82,7 @@ function MethodSummary({ board }: { board: ReturnType<typeof buildBoard> }) {
             key={entry.method}
             className="row-hover grid grid-cols-[6rem_minmax(0,1fr)_4.5rem_5rem_4rem] items-center gap-4 px-2 py-2.5"
           >
-            <div className="text-[length:var(--fs-small)] font-medium uppercase tracking-[0.04em]">
+            <div className="text-[length:var(--fs-meta)] font-medium uppercase tracking-[0.04em]">
               {entry.method}
             </div>
             {measured ? (
@@ -140,15 +140,15 @@ function Lane({ node }: { node: BoardNode }) {
           <span
             aria-hidden="true"
             className="inline-block h-2.5 w-[2px] flex-none"
-            style={{ background: "var(--crit)" }}
+            style={{ background: "var(--danger)" }}
           />
         )}
-        <span className={`mono truncate text-[length:var(--fs-small)] ${inIncident ? "crit" : "mid"}`}>
+        <span className={`mono truncate text-[length:var(--fs-meta)] ${inIncident ? "crit" : "mid"}`}>
           {node.instrument}
         </span>
       </div>
       <DeviationBar segment={segment} />
-      <div className="fig-md text-right text-[length:var(--fs-small)]">{percent(segment.rate)}</div>
+      <div className="fig-md text-right text-[length:var(--fs-meta)]">{percent(segment.rate)}</div>
       <div className="text-right">
         <Delta segment={segment} />
       </div>
@@ -187,7 +187,7 @@ export function PaymentHealth({ segments }: { segments: Segment[] }) {
       <MethodSummary board={board} />
 
       <div className="mt-6">
-        <div className="lane border-b border-[color:var(--line)] pb-1.5">
+        <div className="lane border-b border-[color:var(--border)] pb-1.5">
           <div className="lbl">Segment</div>
           <div className="relative h-3">
             {AXIS.map((tick) => (

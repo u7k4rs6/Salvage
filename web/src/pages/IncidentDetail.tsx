@@ -5,6 +5,7 @@ import { useStream } from "../lib/useStream";
 import { post } from "../lib/api";
 import {
   Badge,
+  Cell,
   Code,
   ConfirmButton,
   Disclosure,
@@ -13,6 +14,7 @@ import {
   Region,
   StatusBadge,
   Table,
+  type Column,
 } from "../components/primitives";
 import { DistributionPair } from "../components/Distributions";
 import { Timeline } from "../components/Timeline";
@@ -34,20 +36,20 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
     >
       <div className="grid gap-3 sm:grid-cols-4">
         <div>
-          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">attempts</div>
-          <div className="num text-[length:var(--fs-lead)] font-semibold">{count(evidence.attempts)}</div>
+          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">attempts</div>
+          <div className="num text-[length:var(--fs-section)] font-semibold">{count(evidence.attempts)}</div>
         </div>
         <div>
-          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">failure rate</div>
-          <div className="num text-[length:var(--fs-lead)] font-semibold text-[color:var(--crit)]">{percent(evidence.rate)}</div>
+          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">failure rate</div>
+          <div className="num text-[length:var(--fs-section)] font-semibold text-[color:var(--danger)]">{percent(evidence.rate)}</div>
         </div>
         <div>
-          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">baseline</div>
-          <div className="num text-[length:var(--fs-lead)] font-semibold">{percent(evidence.baseline_rate)}</div>
+          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">baseline</div>
+          <div className="num text-[length:var(--fs-section)] font-semibold">{percent(evidence.baseline_rate)}</div>
         </div>
         <div>
-          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">excess failures</div>
-          <div className="num text-[length:var(--fs-lead)] font-semibold">{count(evidence.excess_failures)}</div>
+          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">excess failures</div>
+          <div className="num text-[length:var(--fs-section)] font-semibold">{count(evidence.excess_failures)}</div>
         </div>
       </div>
 
@@ -58,18 +60,18 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
       </div>
 
       <div className="mt-4">
-        <h4 className="text-[length:var(--fs-small)] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+        <h4 className="text-[length:var(--fs-meta)] font-medium uppercase tracking-wide text-[color:var(--text-secondary)]">
           sibling segments
         </h4>
         <div className="mt-1 flex flex-wrap gap-1">
           {Object.keys(evidence.sibling_segments ?? {}).length === 0 ? (
-            <span className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
+            <span className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
               No siblings. This segment has no peer to compare against, which is itself part of
               the evidence.
             </span>
           ) : (
             Object.entries(evidence.sibling_segments).map(([key, health]) => (
-              <Badge key={key} tone={health === "healthy" ? "green" : "red"}>
+              <Badge key={key} tone={health === "healthy" ? "success" : "danger"}>
                 <span className="num">
                   {key} {health}
                 </span>
@@ -79,30 +81,30 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 text-[length:var(--fs-small)] sm:grid-cols-4">
+      <div className="mt-4 grid gap-3 text-[length:var(--fs-meta)] sm:grid-cols-4">
         <div>
-          <span className="text-[color:var(--fg-2)]">share of merchant volume </span>
+          <span className="text-[color:var(--text-secondary)]">share of merchant volume </span>
           <span className="num">{percent(evidence.share_of_merchant_volume)}</span>
         </div>
         <div>
-          <span className="text-[color:var(--fg-2)]">minutes since onset </span>
+          <span className="text-[color:var(--text-secondary)]">minutes since onset </span>
           <span className="num">{count(evidence.minutes_since_onset)}</span>
         </div>
         <div>
-          <span className="text-[color:var(--fg-2)]">trend </span>
+          <span className="text-[color:var(--text-secondary)]">trend </span>
           <span className="num">{evidence.trend}</span>
         </div>
         <div>
-          <span className="text-[color:var(--fg-2)]">merchant config changed recently </span>
+          <span className="text-[color:var(--text-secondary)]">merchant config changed recently </span>
           <span className="num">{String(evidence.merchant_config_changed_recently)}</span>
         </div>
       </div>
 
       <div className="mt-4">
-        <h4 className="text-[length:var(--fs-small)] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+        <h4 className="text-[length:var(--fs-meta)] font-medium uppercase tracking-wide text-[color:var(--text-secondary)]">
           sample descriptions
         </h4>
-        <p className="mb-1 text-[length:var(--fs-caption)] text-[color:var(--warn)]">
+        <p className="mb-1 text-[length:var(--fs-micro)] text-[color:var(--warning)]">
           Untrusted text, shown as data. These strings come from the gateway and are never treated
           as instructions.
         </p>
@@ -114,13 +116,13 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
 
 function ConfidenceBar({ confidence }: { confidence: number }) {
   return (
-    <div className="relative mt-1 h-3 w-full max-w-md border border-[color:var(--line-2)] bg-[color:var(--panel-2)]">
+    <div className="relative mt-1 h-3 w-full max-w-md border border-[color:var(--border-strong)] bg-[color:var(--surface-raised)]">
       <div
-        className={`h-full ${confidence >= CONFIDENCE_THRESHOLD ? "bg-[color:var(--ok)]" : "bg-[color:var(--warn)]"}`}
+        className={`h-full ${confidence >= CONFIDENCE_THRESHOLD ? "bg-[color:var(--success)]" : "bg-[color:var(--warning)]"}`}
         style={{ width: `${Math.round(confidence * 100)}%` }}
       />
       <div
-        className="absolute top-0 h-full border-l-2 border-[color:var(--fg)]"
+        className="absolute top-0 h-full border-l-2 border-[color:var(--text-primary)]"
         style={{ left: `${CONFIDENCE_THRESHOLD * 100}%` }}
         title={`threshold ${CONFIDENCE_THRESHOLD}`}
       />
@@ -136,20 +138,20 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
     >
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
-          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">rules</div>
-          <div className="num text-[length:var(--fs-small)]">{causeLabel(diagnosis.rules)}</div>
+          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">rules</div>
+          <div className="num text-[length:var(--fs-meta)]">{causeLabel(diagnosis.rules)}</div>
           {diagnosis.rules_detail && (
-            <div className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">{diagnosis.rules_detail}</div>
+            <div className="mt-1 text-[length:var(--fs-micro)] text-[color:var(--text-secondary)]">{diagnosis.rules_detail}</div>
           )}
         </div>
         <div>
-          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">model</div>
-          <div className="num text-[length:var(--fs-small)]">{causeLabel(diagnosis.llm)}</div>
+          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">model</div>
+          <div className="num text-[length:var(--fs-meta)]">{causeLabel(diagnosis.llm)}</div>
         </div>
         <div>
-          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">reconciled</div>
-          <div className="num text-[length:var(--fs-small)] font-semibold">{causeLabel(diagnosis.reconciled)}</div>
-          <Badge tone={diagnosis.agreed ? "green" : "amber"}>
+          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">reconciled</div>
+          <div className="num text-[length:var(--fs-meta)] font-semibold">{causeLabel(diagnosis.reconciled)}</div>
+          <Badge tone={diagnosis.agreed ? "success" : "warning"}>
             {diagnosis.agreed ? "agreed" : "disagreed"}
           </Badge>
         </div>
@@ -157,7 +159,7 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
 
       {diagnosis.confidence !== null && (
         <div className="mt-3">
-          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
+          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
             confidence <span className="num">{diagnosis.confidence.toFixed(2)}</span>, threshold{" "}
             <span className="num">{CONFIDENCE_THRESHOLD}</span>
           </div>
@@ -166,29 +168,29 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
       )}
 
       {diagnosis.escalate && (
-        <div className="mt-3 border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[length:var(--fs-small)] text-[color:var(--warn)]">
+        <div className="mt-3 border border-[color:var(--warning)] bg-[color:var(--warning-bg)] px-3 py-2 text-[length:var(--fs-meta)] text-[color:var(--warning)]">
           Escalated: {diagnosis.escalation_reason ?? "reason not recorded"}
         </div>
       )}
 
       {diagnosis.rationale && (
-        <p className="mt-3 whitespace-pre-wrap text-[length:var(--fs-small)] text-[color:var(--fg)] max-w-[var(--measure)]">{diagnosis.rationale}</p>
+        <p className="mt-3 whitespace-pre-wrap text-[length:var(--fs-meta)] text-[color:var(--text-primary)] max-w-[var(--measure)]">{diagnosis.rationale}</p>
       )}
 
       <Disclosure summary="Show prompt and raw response" className="mt-3">
         {diagnosis.prompt || diagnosis.raw_response ? (
           <div className="space-y-2">
             <div>
-              <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">prompt</div>
+              <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">prompt</div>
               <Code>{diagnosis.prompt ?? "not recorded"}</Code>
             </div>
             <div>
-              <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">raw response</div>
+              <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">raw response</div>
               <Code>{diagnosis.raw_response ?? "not recorded"}</Code>
             </div>
           </div>
         ) : (
-          <p className="text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
+          <p className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)] max-w-[var(--measure)]">
             No prompt was recorded for this incident. Either no model ran, or the diagnosis came
             from cache.
           </p>
@@ -205,15 +207,15 @@ function PlanPanel({ plan }: { plan: Plan }) {
       subtitle="What the planner proposed and what the policy engine did with it. A refused action names the rule that refused it."
     >
       {plan.rationale && (
-        <p className="mb-3 whitespace-pre-wrap text-[length:var(--fs-small)] text-[color:var(--fg)] max-w-[var(--measure)]">{plan.rationale}</p>
+        <p className="mb-3 whitespace-pre-wrap text-[length:var(--fs-meta)] text-[color:var(--text-primary)] max-w-[var(--measure)]">{plan.rationale}</p>
       )}
 
       {plan.proposed.length > 0 && (
         <div className="mb-3 space-y-1">
           {plan.proposed.map((action, index) => (
-            <div key={index} className="num text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
+            <div key={index} className="num text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
               proposed {action.type} over {action.scope}{" "}
-              <span className="text-[color:var(--fg-3)]">{JSON.stringify(action.params)}</span>
+              <span className="text-[color:var(--text-muted)]">{JSON.stringify(action.params)}</span>
             </div>
           ))}
         </div>
@@ -227,28 +229,28 @@ function PlanPanel({ plan }: { plan: Plan }) {
             const refused = action.status === "refused";
             const deferred = action.status === "deferred";
             return (
-              <li key={action.id} className="border border-[color:var(--line)] p-2">
+              <li key={action.id} className="border border-[color:var(--border)] p-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`num text-[length:var(--fs-small)] font-medium ${refused ? "text-[color:var(--fg-3)] line-through" : ""}`}
+                    className={`num text-[length:var(--fs-meta)] font-medium ${refused ? "text-[color:var(--text-muted)] line-through" : ""}`}
                   >
                     {action.type}
                   </span>
-                  <Badge tone={refused ? "red" : deferred ? "amber" : "green"}>
+                  <Badge tone={refused ? "danger" : deferred ? "warning" : "success"}>
                     {action.status}
                   </Badge>
                   {action.case_id && (
-                    <span className="num text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">{action.case_id}</span>
+                    <span className="num text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">{action.case_id}</span>
                   )}
                 </div>
                 <ul className="mt-1 space-y-0.5">
                   {action.gate.map((check) => (
-                    <li key={check.rule} className="num text-[length:var(--fs-caption)]">
-                      <span className={check.passed ? "text-[color:var(--ok)]" : "text-[color:var(--crit)]"}>
+                    <li key={check.rule} className="num text-[length:var(--fs-micro)]">
+                      <span className={check.passed ? "text-[color:var(--success)]" : "text-[color:var(--danger)]"}>
                         {check.passed ? "pass" : "fail"}
                       </span>{" "}
-                      <span className="text-[color:var(--fg)]">{check.rule}</span>{" "}
-                      <span className="text-[color:var(--fg-3)]">{check.detail}</span>
+                      <span className="text-[color:var(--text-primary)]">{check.rule}</span>{" "}
+                      <span className="text-[color:var(--text-muted)]">{check.detail}</span>
                     </li>
                   ))}
                 </ul>
@@ -274,33 +276,38 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
         <Empty>No recovery cases were opened for this incident.</Empty>
       ) : (
         <div className="max-h-[32rem] overflow-y-auto">
-          <Table
-            columns={["customer", "order", "amount", "state", "nudges", "link", "next action"]}
-            align={["left", "left", "right", "left", "right", "left", "left"]}
-          >
+          <Table columns={CASE_COLUMNS}>
             {cases.map((item) => (
-              <tr key={item.id} className="border-b border-[color:var(--line)]">
-                <td className="cell-pad num text-[length:var(--fs-small)]">{item.ref_hash}</td>
-                <td className="cell-pad num text-[length:var(--fs-small)]">{item.order_id}</td>
-                <td className="cell-pad num text-right">{rupees(item.amount)}</td>
-                <td className="cell-pad">
+              <tr key={item.id}>
+                <Cell column="customer">
+                  <span className="dt-mono">{item.ref_hash}</span>
+                </Cell>
+                <Cell column="order">
+                  <span className="dt-mono">{item.order_id}</span>
+                </Cell>
+                <Cell column="amount">{rupees(item.amount)}</Cell>
+                <Cell column="state">
                   <Badge
                     tone={
                       item.state === "RECOVERED"
-                        ? "green"
+                        ? "success"
                         : item.state === "ABANDONED" || item.state.startsWith("CLOSED")
                           ? "neutral"
-                          : "amber"
+                          : "warning"
                     }
                   >
                     {item.state}
                   </Badge>
-                </td>
-                <td className="cell-pad num text-right">{item.nudges}</td>
-                <td className="cell-pad num text-[length:var(--fs-small)]">{item.link_id ?? "-"}</td>
-                <td className="cell-pad num text-[length:var(--fs-small)]">
-                  {item.next_action_at ? timestamp(item.next_action_at) : "-"}
-                </td>
+                </Cell>
+                <Cell column="nudges">{item.nudges}</Cell>
+                <Cell column="link">
+                  <span className="dt-mono">{item.link_id ?? "-"}</span>
+                </Cell>
+                <Cell column="next">
+                  <span className="dt-mono whitespace-nowrap">
+                    {item.next_action_at ? timestamp(item.next_action_at) : "-"}
+                  </span>
+                </Cell>
               </tr>
             ))}
           </Table>
@@ -309,6 +316,16 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
     </Panel>
   );
 }
+
+const CASE_COLUMNS: Column[] = [
+  { key: "customer", label: "Customer", align: "text", width: "11rem" },
+  { key: "order", label: "Order", align: "text", width: "13rem" },
+  { key: "amount", label: "Amount", align: "num", width: "8rem" },
+  { key: "state", label: "State", align: "status", width: "9rem" },
+  { key: "nudges", label: "Actions", align: "num", width: "6rem" },
+  { key: "link", label: "Link", align: "text", width: "11rem" },
+  { key: "next", label: "Next action", align: "text" },
+];
 
 export default function IncidentDetailPage() {
   const { incidentId } = useParams();
@@ -336,7 +353,7 @@ export default function IncidentDetailPage() {
           ["Ledger slice", "the chain entries for this incident alone"],
         ]}
       />
-      <Link to="/incidents" className="text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]">
+      <Link to="/incidents" className="text-[length:var(--fs-meta)] text-[color:var(--info)] hover:text-[color:var(--text-primary)]">
         Back to incidents
       </Link>
 
@@ -358,14 +375,14 @@ export default function IncidentDetailPage() {
                 <div className="flex items-center gap-2">
                   <a
                     href={`/api/ledger/export?ref_id=${encodeURIComponent(data.incident.id)}`}
-                    className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[length:var(--fs-small)] hover:bg-[color:var(--panel-3)]"
+                    className="btn focus-ring"
                   >
                     Export ledger slice
                   </a>
                   <ConfirmButton
                     label="Close incident"
                     confirmLabel="Close"
-                    tone="red"
+                    tone="danger"
                     prompt="Close this incident. Open cases stop receiving actions."
                     disabled={!token || data.incident.closed_at !== null}
                     disabledReason={
@@ -391,45 +408,45 @@ export default function IncidentDetailPage() {
                   nothing, so each carries its scope instead. */}
               <div className="grid gap-3 sm:grid-cols-6">
                 <div>
-                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">status</div>
+                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">status</div>
                   <StatusBadge status={data.incident.status} />
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">opened</div>
-                  <div className="num text-[length:var(--fs-small)]">{timestamp(data.incident.opened_at)}</div>
+                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">opened</div>
+                  <div className="num text-[length:var(--fs-meta)]">{timestamp(data.incident.opened_at)}</div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">closed</div>
-                  <div className="num text-[length:var(--fs-small)]">
+                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">closed</div>
+                  <div className="num text-[length:var(--fs-meta)]">
                     {data.incident.closed_at ? timestamp(data.incident.closed_at) : "still open"}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">at risk</div>
-                  <div className="num text-[length:var(--fs-small)] font-semibold">
+                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">at risk</div>
+                  <div className="num text-[length:var(--fs-meta)] font-semibold">
                     {rupees(data.incident.at_risk_amount)}
                   </div>
-                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
+                  <div className="text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">
                     detection window, unpaid at open
                   </div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">recovered</div>
+                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">recovered</div>
                   <div
-                    className={`num text-[length:var(--fs-small)] font-semibold ${
+                    className={`num text-[length:var(--fs-meta)] font-semibold ${
                       data.incident.recovered_amount > 0
-                        ? "text-[color:var(--ok)]"
-                        : "text-[color:var(--fg-3)]"
+                        ? "text-[color:var(--success)]"
+                        : "text-[color:var(--text-muted)]"
                     }`}
                   >
                     {rupees(data.incident.recovered_amount)}
                   </div>
-                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">whole incident, all cases</div>
+                  <div className="text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">whole incident, all cases</div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">actions</div>
-                  <div className="num text-[length:var(--fs-small)] font-semibold">{count(data.incident.actions)}</div>
-                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
+                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">actions</div>
+                  <div className="num text-[length:var(--fs-meta)] font-semibold">{count(data.incident.actions)}</div>
+                  <div className="text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">
                     on {count(data.incident.cases)} cases, not messages
                   </div>
                 </div>

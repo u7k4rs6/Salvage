@@ -15,15 +15,15 @@ import type { LedgerPage } from "../../lib/types";
  */
 
 const STAGE: Record<string, { colour: string; stage: string }> = {
-  "detect.incident.opened": { colour: "var(--crit)", stage: "detect" },
-  "detect.incident.closed": { colour: "var(--ok)", stage: "detect" },
+  "detect.incident.opened": { colour: "var(--danger)", stage: "detect" },
+  "detect.incident.closed": { colour: "var(--success)", stage: "detect" },
   "diagnose.reconciled": { colour: "var(--info)", stage: "diagnose" },
   "decide.plan": { colour: "var(--info)", stage: "plan" },
-  "execute.action.executed": { colour: "var(--fg-2)", stage: "execute" },
-  "execute.action.refused": { colour: "var(--crit)", stage: "gate" },
-  "escalation.opened": { colour: "var(--warn)", stage: "escalate" },
-  "escalation.decided": { colour: "var(--warn)", stage: "escalate" },
-  "recovery.case.recovered": { colour: "var(--ok)", stage: "recover" },
+  "execute.action.executed": { colour: "var(--text-secondary)", stage: "execute" },
+  "execute.action.refused": { colour: "var(--danger)", stage: "gate" },
+  "escalation.opened": { colour: "var(--warning)", stage: "escalate" },
+  "escalation.decided": { colour: "var(--warning)", stage: "escalate" },
+  "recovery.case.recovered": { colour: "var(--success)", stage: "recover" },
 };
 
 export function Activity({ page, clock }: { page: LedgerPage; clock: string }) {
@@ -48,9 +48,9 @@ export function Activity({ page, clock }: { page: LedgerPage; clock: string }) {
                 <span
                   aria-hidden="true"
                   className="dot self-center"
-                  style={{ background: stage?.colour ?? "var(--fg-3)" }}
+                  style={{ background: stage?.colour ?? "var(--text-muted)" }}
                 />
-                <span className="mono text-[length:var(--fs-small)]">{entry.kind}</span>
+                <span className="mono text-[length:var(--fs-meta)]">{entry.kind}</span>
                 {stage && <span className="lbl">{stage.stage}</span>}
                 <span className="mono note truncate">{entry.ref_id}</span>
               </div>
