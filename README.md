@@ -102,6 +102,23 @@ npx vercel --cwd web            # preview deployment, prints the URL
 npx vercel --prod --cwd web     # production
 ```
 
+Deploying to Vercel from the dashboard instead, by connecting the repository. One setting matters
+and it is not the default: **Root Directory must be `web`**, because that is where `package.json`
+and `vercel.json` live. Point Vercel at the repository root and the build fails with no
+`package.json` found. Everything else Vercel infers correctly from `web/vercel.json`:
+
+| Setting | Value | Where it comes from |
+| --- | --- | --- |
+| Root Directory | `web` | set this by hand |
+| Framework preset | Vite | detected |
+| Build command | `npm run build` | `web/vercel.json` |
+| Output directory | `dist` | `web/vercel.json` |
+| Install command | `npm ci` | the committed lockfile |
+| Environment variables | none | a production build reads none |
+
+Leave the environment variables empty. Setting `VITE_SALVAGE_FULL=1` there would ship the five
+pages that need a backend, and on Vercel there is no backend for them to reach.
+
 Deploying to GitHub Pages. Pages has no rewrite rule, so the build copies `index.html` to
 `404.html` and Pages serves that for any unknown path, which does the same job. A project site
 lives under a repository subpath, so the build needs to know it:
