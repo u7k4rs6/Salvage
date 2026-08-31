@@ -1,260 +1,214 @@
 import { Link } from "react-router-dom";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { useApi } from "../lib/useApi";
+import { useApi, type ApiState } from "../lib/useApi";
 import { useStream } from "../lib/useStream";
-import { Badge, Empty, Panel, Region, Stat, StatusBadge } from "../components/primitives";
-import {
-  causeLabel,
-  count,
-  isSyntheticIncident,
-  percent,
-  rupees,
-  segmentLabel,
-  timeOnly,
-} from "../lib/format";
-import type { Overview as OverviewData, Segment } from "../lib/types";
+import { useRunHeader } from "../lib/useRunHeader";
+import { plannerErrorOf, realIncidents } from "../lib/health";
+import { Chip, Section } from "../components/overview/Chrome";
+import { Empty, ErrorPanel, Loading } from "../components/overview/States";
+import { StatusStrip } from "../components/overview/StatusStrip";
+import { ActiveIncidents } from "../components/overview/ActiveIncidents";
+import { PaymentHealth } from "../components/overview/PaymentHealth";
+import { TrafficTimeline } from "../components/overview/TrafficTimeline";
+import { Lifecycle } from "../components/overview/Lifecycle";
+import { Activity } from "../components/overview/Activity";
+import { causeLabel, timeOnly } from "../lib/format";
+import type { IncidentDetail, LedgerPage, Overview as OverviewData } from "../lib/types";
+import "./overview.css";
 
 /**
- * Neutral to red on the failure rate. Five steps, because a continuous gradient reads as noise on
- * a dense grid and an ops console is scanned, not admired.
+ * The Overview: an operational control plane, read top to bottom in severity order.
+ *
+ * Current state, then what is broken, then where, then when it started, then what the agent did
+ * about it. Sections are separated by a rule rather than boxed into cards, because the page is one
+ * surface and a reader scanning it during an incident should not have to re-orient at every panel
+ * edge.
+ *
+ * Three rules the layout keeps.
+ *
+ * Colour is scarce and means one thing. Red is an active failure or a refusal, amber is degraded
+ * or waiting on a human, blue is informational, green is healthy. The large figures are plain: a
+ * number being important is not a severity, so the colour sits on deltas and status chips where it
+ * carries information.
+ *
+ * Numbers name their window. The headline success rate is the last 60 minutes; the deviation
+ * beside it is the merchant-wide key in the detector's own 15 minute window against its seven-day
+ * baseline. They are shown as two labelled facts rather than subtracted into one, because that
+ * subtraction spans two populations. Exposure and recovered are never divided by each other, and
+ * the reason is behind the methodology disclosure rather than set as prose in the middle of the
+ * metrics.
+ *
+ * A planner failure is read out of the ledger's `decide.plan` payload and marked as an error, not
+ * as a handover somebody chose. Both land at ESCALATE_HUMAN and they mean opposite things.
  */
-function cellColour(segment: Segment): string {
-  const excess = segment.failure_rate - segment.baseline;
-  if (segment.attempts === 0) return "bg-neutral-50 text-neutral-400";
-  if (excess >= 0.3) return "bg-red-600 text-white";
-  if (excess >= 0.15) return "bg-red-400 text-white";
-  if (excess >= 0.07) return "bg-red-200 text-red-900";
-  if (excess >= 0.03) return "bg-amber-100 text-amber-900";
-  return "bg-neutral-100 text-neutral-700";
-}
-
-function Cell({ segment }: { segment: Segment }) {
-  const inner = (
-    <div
-      // baseline arrives as a failure rate; every number on this cell is a success rate, so it
-      // is converted here rather than leaving two conventions on one tile.
-      aria-label={`${segmentLabel(segment.key)}, success rate ${percent(segment.rate)}, baseline success rate ${percent(1 - segment.baseline)}, ${segment.attempts} attempts${segment.incident_id ? ", inside an open incident" : ""}`}
-      className={`h-full border ${
-        segment.incident_id ? "border-2 border-red-600" : "border-neutral-200"
-      } ${cellColour(segment)} px-2 py-1.5`}
-    >
-      <div className="truncate text-[11px] font-medium">{segment.instrument}</div>
-      <div className="num text-sm font-semibold">{percent(segment.rate)}</div>
-      <div className="num text-[10px] opacity-80">
-        base {percent(1 - segment.baseline)} / n {segment.attempts}
-      </div>
-      {segment.incident_id && <div className="mt-0.5 text-[10px] font-semibold">incident</div>}
-    </div>
-  );
-  return segment.incident_id ? (
-    <Link to={`/incidents/${segment.incident_id}`} className="block h-full">
-      {inner}
-    </Link>
-  ) : (
-    inner
-  );
-}
-
-function Heatmap({ segments }: { segments: Segment[] }) {
-  const merchant = segments.find((segment) => segment.key === "all");
-  const methods = ["upi", "card", "netbanking", "wallet"];
-  const rest = segments.filter((segment) => segment.key !== "all");
-
-  return (
-    <div className="space-y-2">
-      {merchant && (
-        <div>
-          {/* Pinned merchant-wide row. A fault that spans every method is attributed to the
-              `all` key by the detector, so without this row it would have nowhere to appear. */}
-          <Cell segment={merchant} />
-        </div>
-      )}
-      {methods.map((method) => {
-        const row = rest.filter((segment) => segment.method === method);
-        if (row.length === 0) return null;
-        return (
-          <div key={method}>
-            <div className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-600">
-              {method}
-            </div>
-            <div className="grid grid-cols-2 gap-1 sm:grid-cols-4 lg:grid-cols-6">
-              {row.map((segment) => (
-                <Cell key={segment.key} segment={segment} />
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function OverviewPage() {
   const state = useApi<OverviewData>("/api/overview");
+  const ledger = useApi<LedgerPage>("/api/ledger?limit=10");
+
   useStream(
-    ["attempt", "incident.opened", "incident.updated", "incident.closed", "sim.finished"],
-    () => state.reload(),
+    [
+      "attempt",
+      "incident.opened",
+      "incident.updated",
+      "incident.closed",
+      "action.executed",
+      "escalation.opened",
+      "ledger.appended",
+      "sim.finished",
+    ],
+    () => {
+      state.reload();
+      ledger.reload();
+    },
   );
 
+  if (state.error) {
+    return (
+      <div className="ov">
+        <Section title="Status">
+          <ErrorPanel error={state.error} retry={state.reload} />
+        </Section>
+      </div>
+    );
+  }
+
+  if (state.loading && state.data === null) {
+    return (
+      <div className="ov">
+        <Section title="Status">
+          <Loading rows={4} label="Loading the overview" />
+        </Section>
+      </div>
+    );
+  }
+
+  if (state.data === null || state.data.segments.length === 0) {
+    return (
+      <div className="ov">
+        <Section title="Status">
+          <Empty
+            action={
+              <Link to="/runner" className="link focus-ring lbl lbl-2">
+                Scenario Runner &rarr;
+              </Link>
+            }
+          >
+            No attempts measured. Nothing has been observed, so there is no baseline to deviate
+            from.
+          </Empty>
+        </Section>
+      </div>
+    );
+  }
+
+  return <OverviewBody data={state.data} ledger={ledger} />;
+}
+
+/**
+ * Split from the page so the focused incident's detail can be fetched with a hook without putting
+ * a conditional hook above the loading and empty returns.
+ */
+function OverviewBody({
+  data,
+  ledger,
+}: {
+  data: OverviewData;
+  ledger: ApiState<LedgerPage>;
+}) {
+  const run = useRunHeader();
+  const incidents = realIncidents(data.incidents);
+  const focusId = incidents[0]?.id ?? null;
+
+  const detail = useApi<IncidentDetail>(focusId ? `/api/incidents/${focusId}` : null, [focusId]);
+  useStream(["incident.updated", "action.executed", "escalation.opened"], () => detail.reload());
+
+  // Only the focused incident's ledger slice is loaded, so only it can report a planner error.
+  const plannerErrors: Record<string, string> = {};
+  if (detail.data) {
+    const failure = plannerErrorOf(detail.data.timeline, detail.data.plan?.rationale);
+    if (failure) plannerErrors[detail.data.incident.id] = failure;
+  }
+
   return (
-    <div className="space-y-4">
-      <Region
-        state={state}
-        empty={<span>No attempts yet. Run a scenario.</span>}
-        rows={6}
-      >
-        {(data) =>
-          data.segments.length === 0 ? (
-            <Panel title="Overview">
-              <Empty
-                action={
-                  <Link to="/runner" className="text-sm text-accent hover:text-accent-hover">
-                    Go to Scenario Runner
-                  </Link>
-                }
-              >
-                No attempts yet. Run a scenario.
-              </Empty>
-            </Panel>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <Stat
-                  label="Attempts, last hour"
-                  value={count(data.stats.attempts_last_hour)}
-                  hint={`window ends ${timeOnly(data.window.end)} ${data.clock}`}
-                />
-                <Stat
-                  label="Success rate, last hour"
-                  value={percent(data.stats.success_rate)}
-                  tone={
-                    data.stats.success_rate !== null && data.stats.success_rate < 0.85
-                      ? "red"
-                      : "neutral"
-                  }
-                />
-                <Stat
-                  label="At-risk revenue"
-                  value={rupees(data.stats.at_risk_amount)}
-                  hint="open incidents"
-                  tone={data.stats.at_risk_amount > 0 ? "amber" : "neutral"}
-                />
-                <Stat
-                  label="Recovered"
-                  value={rupees(data.stats.recovered_amount)}
-                  hint="by link or steer"
-                  tone="green"
-                />
-              </div>
-
-              <Panel
-                title="Success rate by segment"
-                subtitle="Current 15-minute window. Baseline success rate and attempt count in small text. A red outline means the segment is inside an open incident."
-              >
-                <Heatmap segments={data.segments} />
-              </Panel>
-
-              <Panel title="Active incidents">
-                {data.incidents.length === 0 ? (
-                  <Empty>Nothing open. Every segment is inside its baseline.</Empty>
-                ) : (
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {data.incidents.map((incident) => (
-                      <Link
-                        key={incident.id}
-                        to={`/incidents/${incident.id}`}
-                        className="block border border-red-300 bg-white p-3 hover:bg-red-50"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="num text-sm font-medium">
-                            {segmentLabel(incident.segment_key)}
-                          </span>
-                          <StatusBadge status={incident.status} />
-                        </div>
-                        <div className="mt-1 text-xs text-neutral-700">
-                          {isSyntheticIncident(incident.id)
-                            ? "synthetic, opened by a baseline policy to hold its cases"
-                            : causeLabel(incident.root_cause)}
-                          {incident.confidence !== null && (
-                            <span className="num text-neutral-500">
-                              {" "}
-                              confidence {incident.confidence.toFixed(2)}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <div className="text-neutral-600">at risk</div>
-                            <div className="num font-medium">{rupees(incident.at_risk_amount)}</div>
-                          </div>
-                          <div>
-                            <div className="text-neutral-600">recovered</div>
-                            <div className="num font-medium text-green-700">
-                              {rupees(incident.recovered_amount)}
-                            </div>
-                          </div>
-                        </div>
-                        {incident.escalated && (
-                          <div className="mt-2">
-                            <Badge tone="amber">escalated</Badge>
-                          </div>
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </Panel>
-
-              <Panel
-                title="Volume and failures"
-                subtitle="Last 24 sim hours, 15-minute buckets."
-              >
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={data.series}>
-                      <CartesianGrid stroke="#e5e5e5" vertical={false} />
-                      <XAxis
-                        dataKey="t"
-                        tickFormatter={timeOnly}
-                        tick={{ fontSize: 11 }}
-                        stroke="#737373"
-                        minTickGap={40}
-                      />
-                      <YAxis tick={{ fontSize: 11 }} stroke="#737373" width={40} />
-                      <Tooltip
-                        labelFormatter={(value) => timeOnly(Number(value))}
-                        contentStyle={{ fontSize: 12 }}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="attempts"
-                        stroke="#0f766e"
-                        fill="#ccfbf1"
-                        name="attempts"
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="failures"
-                        stroke="#b91c1c"
-                        fill="#fecaca"
-                        name="failures"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </Panel>
-            </>
-          )
+    <div className="ov">
+      <Section
+        title="Status"
+        right={
+          <span className="note mono">
+            window {timeOnly(data.window.start)} to {timeOnly(data.window.end)} &middot; {data.clock}{" "}
+            clock
+          </span>
         }
-      </Region>
+      >
+        <StatusStrip data={data} />
+      </Section>
+
+      <Section
+        title="Active incidents"
+        right={
+          <span className="flex items-center gap-3">
+            {run && (
+              <span className="note mono">
+                run {run.scenario} &middot; seed {run.seed} &middot; {run.variant}
+              </span>
+            )}
+            <span className="fig-md">{String(incidents.length).padStart(2, "0")}</span>
+          </span>
+        }
+      >
+        <ActiveIncidents
+          data={data}
+          incidents={incidents}
+          run={run}
+          plannerErrors={plannerErrors}
+        />
+      </Section>
+
+      <Section
+        title="Payment health"
+        right={<span className="note">success rate against each segment&rsquo;s own baseline</span>}
+      >
+        <PaymentHealth segments={data.segments} />
+      </Section>
+
+      <Section
+        title="Traffic and incident windows"
+        right={<span className="note">last 24 sim hours</span>}
+      >
+        <TrafficTimeline data={data} run={run} />
+      </Section>
+
+      {focusId && (
+        <Section
+          title="Incident lifecycle"
+          right={
+            detail.data && (
+              <span className="flex items-center gap-2.5">
+                <span className="note mono">{detail.data.incident.id}</span>
+                <Chip flat>{causeLabel(detail.data.incident.root_cause)}</Chip>
+              </span>
+            )
+          }
+        >
+          {detail.error ? (
+            <ErrorPanel error={detail.error} retry={detail.reload} />
+          ) : detail.data ? (
+            <Lifecycle data={detail.data} />
+          ) : (
+            <Loading rows={2} label="Loading the lifecycle" />
+          )}
+        </Section>
+      )}
+
+      <Section title="Ledger activity">
+        {ledger.error ? (
+          <ErrorPanel error={ledger.error} retry={ledger.reload} />
+        ) : ledger.data ? (
+          <Activity page={ledger.data} clock={data.clock} />
+        ) : (
+          <Loading rows={4} label="Loading activity" />
+        )}
+      </Section>
     </div>
   );
 }

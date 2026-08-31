@@ -1,0 +1,431 @@
+/*
+ * The Scenario Runner's own pieces.
+ *
+ * The page wears the Overview's `.ov` class, so every token, figure size, chip, lane, track and
+ * divider comes from overview.css unchanged. This file adds only what a replay needs and does not
+ * exist there: a transport, a scrub bar, a gate ladder and a case board.
+ *
+ * Motion rule, kept from the Overview and tightened here: nothing animates on its own. The only
+ * transitions are on the scrub head and the deviation bars, and both are following the data. A
+ * held beat is marked by a border, not by a pulse, because the page is filmed paused and a pulse
+ * caught mid-cycle is a different frame every take.
+ */
+
+.rp {
+  --rail: 46px;
+}
+
+/* -- transport ------------------------------------------------------------ */
+
+.rp .transport {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  padding: var(--s3) var(--gutter) var(--s2);
+}
+
+.rp .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  padding: 5px 10px;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: background-color 120ms linear, color 120ms linear;
+}
+.rp .btn:hover:not(:disabled) {
+  background: var(--panel-3);
+  color: var(--fg);
+}
+.rp .btn:disabled {
+  opacity: 0.4;
+}
+.rp .btn-primary {
+  color: var(--fg);
+  border-color: var(--fg-3);
+}
+
+/* A segmented control, because the four speeds are one choice and not four buttons. */
+.rp .seg {
+  display: inline-flex;
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.rp .seg > button {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  background: var(--panel-2);
+  padding: 5px 10px;
+  border-left: 1px solid var(--line-2);
+  line-height: 1.4;
+  transition: background-color 120ms linear, color 120ms linear;
+}
+.rp .seg > button:first-child {
+  border-left: 0;
+}
+.rp .seg > button:hover {
+  color: var(--fg-2);
+}
+.rp .seg > button[aria-pressed="true"] {
+  background: var(--panel-3);
+  color: var(--fg);
+}
+
+.rp select.field {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--fg);
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  padding: 5px 8px;
+  max-width: 26rem;
+}
+
+/* -- scrub bar ------------------------------------------------------------ */
+
+.rp .scrub {
+  position: relative;
+  height: var(--rail);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+  touch-action: none;
+  overflow: hidden;
+}
+/* Event density. One column per bucket, height by how many entries landed in it. Drawn from the
+   bottom so the baseline of the bar is the timeline itself. */
+.rp .density {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  background: var(--fg-3);
+  opacity: 0.55;
+  border-radius: 1px;
+}
+/* The fault the simulator scheduled, which is ground truth it wrote into the chain. */
+.rp .span-fault {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(248, 81, 73, 0.16);
+  border-left: 1px solid rgba(248, 81, 73, 0.75);
+  border-right: 1px solid rgba(248, 81, 73, 0.5);
+}
+/* The incident, from opened to closed. */
+.rp .span-incident {
+  position: absolute;
+  top: 0;
+  height: 4px;
+  background: var(--crit);
+}
+/*
+ * A recorded stretch with no ledger entry in it. Same neutral grey as the density columns, because
+ * the two together say one thing: busy here, idle there. Neither is in the legend; the eye reads
+ * the shape without being told, and naming both cost two of five legend slots and a paragraph.
+ */
+.rp .span-gap {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(105, 114, 125, 0.06);
+  border-left: 1px solid rgba(105, 114, 125, 0.28);
+  border-right: 1px solid rgba(105, 114, 125, 0.28);
+}
+/* A beat: the first entry of its kind, or the first action decided by a given rule. */
+.rp .beat {
+  position: absolute;
+  bottom: 0;
+  width: 1px;
+  height: 9px;
+  background: var(--info);
+  opacity: 0.85;
+}
+.rp .beat-refusal {
+  background: var(--crit);
+  height: 13px;
+  opacity: 1;
+}
+.rp .head {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--fg);
+  pointer-events: none;
+}
+.rp .head::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -3px;
+  width: 7px;
+  height: 4px;
+  background: var(--fg);
+}
+.rp .scrub:focus-visible {
+  outline: 1px solid var(--info);
+  outline-offset: 2px;
+}
+
+.rp .ticks {
+  position: relative;
+  height: 14px;
+}
+.rp .tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* -- gate ladder ---------------------------------------------------------- */
+
+/*
+ * The most important thing on the page, so it gets the room.
+ *
+ * A gate is a row of three: a pass or refuse mark, the rule that was checked, and the sentence the
+ * policy engine wrote about it. The rule that decided the outcome is pulled out above the ladder
+ * at a size that reads across a room, because a refusal that a viewer has to hunt for is a
+ * refusal they will not believe happened.
+ */
+.rp .ladder {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--panel);
+}
+.rp .gate {
+  display: grid;
+  grid-template-columns: 1.5rem 15rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--s2);
+  padding: 7px var(--s3);
+  border-top: 1px solid var(--line);
+}
+.rp .gate:first-child {
+  border-top: 0;
+}
+.rp .gate-failed {
+  background: rgba(248, 81, 73, 0.07);
+  box-shadow: inset 2px 0 0 var(--crit);
+}
+.rp .gate-mark {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.rp .gate-rule {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-2);
+  word-break: break-word;
+}
+.rp .gate-detail {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+.rp .gate-failed .gate-rule,
+.rp .gate-failed .gate-detail {
+  color: var(--fg);
+}
+
+/* The verdict banner above the ladder. One line, large, and it names the rule. */
+.rp .verdict {
+  border: 1px solid var(--line-2);
+  border-left-width: 3px;
+  border-radius: 2px;
+  background: var(--panel);
+  padding: var(--s3);
+}
+.rp .verdict-refused {
+  border-left-color: var(--crit);
+  background: rgba(248, 81, 73, 0.06);
+}
+.rp .verdict-executed {
+  border-left-color: var(--ok);
+}
+.rp .verdict-deferred,
+.rp .verdict-queued {
+  border-left-color: var(--warn);
+}
+.rp .verdict-rule {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 21px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+/* -- confidence scale ----------------------------------------------------- */
+
+.rp .conf {
+  position: relative;
+  height: 22px;
+  background: var(--panel-2);
+  border-radius: 1px;
+}
+.rp .conf-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 1px;
+}
+/* The 0.6 action threshold. A gate, so it is drawn as a hard edge and labelled. */
+.rp .conf-threshold {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--fg);
+}
+
+/* -- case board ----------------------------------------------------------- */
+
+.rp .board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.rp .cell {
+  background: var(--panel);
+  padding: 10px var(--s3);
+  min-width: 0;
+}
+
+/* -- misc ----------------------------------------------------------------- */
+
+/*
+ * Tertiary text: provenance that is checked once and then ignored. Smaller and quieter than
+ * anything it sits under, so it cannot compete with the reads above it.
+ */
+.rp .tert {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fg-3);
+}
+
+/* A frame the transport is holding on. A border, never a pulse: the page is filmed paused. */
+.rp .held {
+  box-shadow: inset 0 0 0 1px var(--info);
+}
+.rp .kv {
+  display: grid;
+  grid-template-columns: 10.5rem minmax(0, 1fr);
+  gap: 4px var(--s3);
+  align-items: baseline;
+}
+.rp .wait {
+  border: 1px solid var(--warn);
+  border-left-width: 2px;
+  background: rgba(210, 153, 34, 0.07);
+  border-radius: 2px;
+  padding: 8px 12px;
+}
+.rp .col2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--gutter);
+}
+@media (max-width: 1180px) {
+  .rp .col2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp .gate {
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+  }
+  .rp .gate-detail {
+    grid-column: 2;
+  }
+}
+
+/* -- the entry screen ------------------------------------------------------
+ *
+ * The one place on this page where the register is prose rather than telemetry, because it is
+ * addressed to somebody who has not decided to read telemetry yet. Wider measure, larger type, and
+ * the only serif-scale heading in the console. It is shown once and then never again.
+ */
+
+.rp .entry {
+  min-height: calc(100vh - 38px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s5) var(--gutter);
+}
+.rp .entry-inner {
+  max-width: 46rem;
+}
+.rp .entry-title {
+  font-size: 30px;
+  line-height: 1.25;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  color: var(--fg);
+  max-width: 34rem;
+}
+.rp .entry-body {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--fg-2);
+  max-width: 42rem;
+}
+.rp .entry-strong {
+  color: var(--fg);
+  font-weight: 500;
+}
+.rp .entry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--fg);
+  border: 1px solid var(--fg);
+  border-radius: 2px;
+  padding: 10px 20px;
+  transition: background-color 120ms linear;
+}
+.rp .entry-button:hover {
+  background: #ffffff;
+}
+
+/* -- the narration line ----------------------------------------------------
+ *
+ * One sentence, in plain English, under the transport. It is the largest prose on the page while
+ * the run is playing, because for a visitor who reads nothing else it is the whole explanation.
+ */
+.rp .narration {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--fg);
+  max-width: 62rem;
+}

@@ -388,3 +388,57 @@ def test_bus_drops_the_oldest_rather_than_blocking_the_simulator():
         assert first["data"]["n"] == 5
 
     asyncio.run(scenario())
+
+
+def test_the_overview_never_reports_a_future_the_world_has_not_reached(client):
+    """Three of the overview's numbers are "as of now" and none of them was bounded above.
+
+    The simulator writes the whole day before the detector sees any of it, so rows dated after the
+    window the page is showing exist in the database. `attempts_last_hour` counted to the end of
+    the simulated world, 4,808 attempts where 1,227 had happened; the sparkline carried 136 buckets
+    where 96 had; and the recovered tile summed payment routes the world had not reached, beside an
+    attempts count that stopped at the window. Same family as WHAT_BROKE entries 1, 14 and 15.
+    """
+    conn = open_migrated(client.db_path)
+    window_start = 1_786_200_000 // 900 * 900
+    window_end = window_start + 900
+    conn.execute(
+        "INSERT INTO customers (id, ref_hash, consent, locale, preferred_method, typical_amount, "
+        "created_at) VALUES ('c1', 'h1', 1, 'en', 'upi', 100000, ?)",
+        (window_start - 86400,),
+    )
+    conn.execute(
+        "INSERT INTO segments_stats (segment_key, window_start, attempts, failures, "
+        "baseline_rate, p_value) VALUES ('all', ?, 25, 3, 0.1, 0.5)",
+        (window_start,),
+    )
+
+    # One attempt inside the window the page shows, one an hour after it, and a recovery paid
+    # after it. Only the first may appear anywhere in the response.
+    for order_id, created_at, paid_at in (
+        ("order_now", window_start + 60, None),
+        ("order_future", window_end + 3600, window_end + 7200),
+    ):
+        conn.execute(
+            "INSERT INTO orders (id, customer_id, amount, currency, status, source, created_at, "
+            "paid_at) VALUES (?, 'c1', 500000, 'INR', 'attempted', 'sim', ?, ?)",
+            (order_id, created_at, paid_at),
+        )
+        conn.execute(
+            "INSERT INTO payment_attempts (id, order_id, customer_id, method, status, "
+            "created_at, raw_json) VALUES (?, ?, 'c1', 'upi', 'failed', ?, '{}')",
+            (f"pay_{order_id}", order_id, created_at),
+        )
+    conn.execute(
+        "INSERT INTO recovery_routes (order_id, route, paid_at, case_id, policy) "
+        "VALUES ('order_future', 'link', ?, NULL, 'agent')",
+        (window_end + 7200,),
+    )
+    conn.commit()
+    conn.close()
+
+    body = client.get("/api/overview").json()
+    assert body["window"]["end"] == window_end
+    assert body["stats"]["attempts_last_hour"] == 1
+    assert body["stats"]["recovered_amount"] == 0
+    assert [point["t"] for point in body["series"]] == [window_start]

@@ -23,10 +23,10 @@ export function DistributionPair({
 
   return (
     <div>
-      <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-600">{title}</h4>
+      <h4 className="text-xs font-medium uppercase tracking-wide text-[color:var(--fg-2)]">{title}</h4>
       <table className="mt-1 w-full text-table">
         <thead>
-          <tr className="text-left text-[11px] text-neutral-500">
+          <tr className="text-left text-[11px] text-[color:var(--fg-3)]">
             <th scope="col" className="py-0.5 font-normal">
               bucket
             </th>
@@ -44,24 +44,24 @@ export function DistributionPair({
             const before = distribution.baseline[key] ?? 0;
             const moved = now - before;
             return (
-              <tr key={key} className="border-t border-neutral-100">
-                <td className="num py-0.5 pr-2 text-[11px] text-neutral-800">{key}</td>
+              <tr key={key} className="border-t border-[color:var(--line)]">
+                <td className="num py-0.5 pr-2 text-[11px] text-[color:var(--fg)]">{key}</td>
                 <td className="w-1/3 py-0.5 pr-2">
                   <div className="flex items-center gap-1">
                     <div
-                      className={`h-2 ${moved > 0.05 ? "bg-red-500" : "bg-neutral-400"}`}
+                      className={`h-2 ${moved > 0.05 ? "bg-[color:var(--crit)]" : "bg-[color:var(--fg-3)]"}`}
                       style={{ width: `${Math.round(now * 100)}%` }}
                     />
-                    <span className="num text-[10px] text-neutral-600">{percent(now, 0)}</span>
+                    <span className="num text-[10px] text-[color:var(--fg-2)]">{percent(now, 0)}</span>
                   </div>
                 </td>
                 <td className="w-1/3 py-0.5">
                   <div className="flex items-center gap-1">
                     <div
-                      className="h-2 bg-neutral-300"
+                      className="h-2 bg-[color:var(--line-2)]"
                       style={{ width: `${Math.round(before * 100)}%` }}
                     />
-                    <span className="num text-[10px] text-neutral-500">{percent(before, 0)}</span>
+                    <span className="num text-[10px] text-[color:var(--fg-3)]">{percent(before, 0)}</span>
                   </div>
                 </td>
               </tr>

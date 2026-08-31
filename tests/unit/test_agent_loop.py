@@ -176,3 +176,85 @@ def test_the_fixture_directory_is_empty_or_recorded_from_a_live_provider():
         record = json.loads(path.read_text())
         assert record["prompt_hash"] == path.stem
         assert record.get("recorded_from") in ("gemini", "ollama"), path.name
+
+
+# -- reading the future ----------------------------------------------------
+
+
+def _minimal_incident_world(conn, *, paid_at: int | None):
+    """One customer, one order with a failed UPI attempt, one open incident on that handle.
+
+    Everything is written directly rather than simulated, so the only variable is `paid_at`.
+    """
+    now = 1_786_200_000
+    conn.execute(
+        "INSERT INTO customers (id, ref_hash, consent, locale, preferred_method, upi_handle, "
+        "typical_amount, created_at) VALUES ('cust_1', 'abc123', 1, 'en', 'upi', "
+        "'okhdfcbank', 100000, ?)",
+        (now - 86400,),
+    )
+    conn.execute(
+        "INSERT INTO orders (id, customer_id, amount, currency, status, source, created_at, "
+        "paid_at) VALUES ('order_1', 'cust_1', 100000, 'INR', ?, 'sim', ?, ?)",
+        ("paid" if paid_at is not None else "attempted", now - 600, paid_at),
+    )
+    conn.execute(
+        "INSERT INTO payment_attempts (id, order_id, customer_id, method, upi_handle, status, "
+        "error_reason, error_source, error_step, created_at, raw_json) VALUES "
+        "('pay_1', 'order_1', 'cust_1', 'upi', 'okhdfcbank', 'failed', 'bank_technical_error', "
+        "'bank', 'payment_debit_request', ?, '{}')",
+        (now - 300,),
+    )
+    conn.execute(
+        "INSERT INTO incidents (id, segment_key, opened_at, status, affected_scope_json) "
+        "VALUES ('inc_test', 'upi:upi_handle:okhdfcbank', ?, 'open', "
+        "'[\"upi:upi_handle:okhdfcbank\"]')",
+        (now - 300,),
+    )
+    conn.commit()
+    return now, dict(conn.execute("SELECT * FROM incidents WHERE id = 'inc_test'").fetchone())
+
+
+def _runner(conn, small_params_path):
+    from salvage.execute.scheduler import AgentRunner
+    from salvage.sim.params import load
+    from salvage.sim.response import ResponseModel
+
+    params = load(small_params_path)
+    return AgentRunner(conn, response=ResponseModel(params, 1), seed=1)
+
+
+def test_the_agent_opens_a_case_for_an_order_that_will_be_paid_later(conn, small_params_path):
+    """The agent runs over a completed simulation, so an order the customer pays at 22:30 already
+    carries status 'paid' at 20:10. `_open_cases` read that status instead of calling `_paid_by`,
+    so the agent declined to open cases for exactly the customers who were about to come back,
+    which is the failure `_paid_by`'s own docstring describes.
+
+    It was asymmetric, which is what made it matter: `_open_case_for`, the path B1 and B2 take,
+    has always called `_paid_by`. Measured on S1 seed 1 at 20:45 sim time, the agent opened 81
+    cases where the honest count was 112.
+    """
+    paid_later = 1_786_200_000 + 9000
+    now, incident = _minimal_incident_world(conn, paid_at=paid_later)
+    assert paid_later > now
+    cases = _runner(conn, small_params_path)._open_cases(incident, now)
+    assert [case["order_id"] for case in cases] == ["order_1"]
+
+
+def test_the_agent_skips_an_order_already_paid_at_the_time_it_looks(conn, small_params_path):
+    """The other half. Not reading the future must not become not checking at all."""
+    now, incident = _minimal_incident_world(conn, paid_at=1_786_200_000 - 60)
+    assert _runner(conn, small_params_path)._open_cases(incident, now) == []
+
+
+def test_neither_case_path_decides_paid_by_reading_the_status_column():
+    """Both paths must ask `_paid_by`. A status comparison is the shape of the regression."""
+    from pathlib import Path
+
+    source = Path("salvage/execute/scheduler.py").read_text(encoding="utf-8")
+    offenders = [
+        f"line {index}: {line.strip()}"
+        for index, line in enumerate(source.splitlines(), start=1)
+        if '"status"] == "paid"' in line or "'status'] == 'paid'" in line
+    ]
+    assert offenders == [], offenders

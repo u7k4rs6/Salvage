@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<{ name: string; children: ReactNode
       return (
         <div
           role="alert"
-          className="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800"
+          className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-4 py-3 text-sm text-[color:var(--crit)]"
         >
           <div className="font-medium">{this.props.name} could not be rendered</div>
           <div className="num mt-1 break-words text-xs">{this.state.error.message}</div>

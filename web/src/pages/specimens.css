@@ -1,0 +1,255 @@
+/*
+ * The specimen sheet's design system. Every rule is scoped under `.specimen-sheet`, so this file
+ * changes exactly one route and nothing else in the console.
+ *
+ * Three ideas, in the order they matter:
+ *
+ *   1. Depth is three parts, never one. A border alone is level 0 and does not appear here. A
+ *      raised thing carries a darker border, an inset top highlight where the light lands, and a
+ *      cast shadow underneath. Take any one away and the object flattens.
+ *   2. Three surface tones. A tile can only sit on something if that something is a different
+ *      colour. Page, board and group region are three steps of one warm ivory.
+ *   3. One world. The chrome is milled out of the same material as the board, recessed rather
+ *      than repainted. Colour is reserved for state: red for incidents and refusals, amber for
+ *      pending and deferred, green for recovered. Nothing else is coloured.
+ */
+
+.specimen-sheet {
+  /* Surfaces, warm ivory, three steps plus the raised tile face. */
+  --page: #f2ede4;
+  --board: #f7f3ec;
+  --region: #e8e1d4;
+  --face: #fcfaf6;
+  --chrome: #e4dccd;
+
+  /* Edges, each darker than the surface it sits on. */
+  --edge: #d5cab6;
+  --edge-strong: #c2b59c;
+  --edge-chrome: #cec1a9;
+
+  /* The three parts of depth. */
+  --highlight: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --highlight-strong: inset 0 1px 0 rgba(255, 255, 255, 1);
+  --cast-2: 0 2px 3px rgba(0, 0, 0, 0.12);
+  --cast-3: 0 4px 8px rgba(0, 0, 0, 0.16);
+  --recess: inset 0 2px 3px rgba(0, 0, 0, 0.1);
+
+  /* State. The only colour in the system. */
+  --incident: #a8332a;
+  --incident-face: #eddcd6;
+  --pending: #9a6a12;
+  --pending-face: #f1e6cd;
+  --recovered: #3f6b48;
+  --recovered-face: #dfe7dc;
+
+  --ink: #2b2620;
+  --ink-soft: #6b6155;
+  --ink-faint: #948a7c;
+
+  --radius-block: 3px;
+  --radius-panel: 1px;
+
+  --display: "Space Grotesk", "General Sans", ui-sans-serif, system-ui, sans-serif;
+
+  background: var(--page);
+  color: var(--ink);
+  padding: 24px;
+  min-height: 100%;
+}
+
+/* Type. Mono is for numbers, ids, hashes and timestamps and nothing else, which is what `.num`
+   already marks. Everything structural takes the display face; body text takes the UI sans. */
+.specimen-sheet h1,
+.specimen-sheet h2,
+.specimen-sheet h3,
+.specimen-sheet .display {
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.specimen-sheet .caption {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+.specimen-sheet .caption-faint {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--ink-faint);
+}
+
+/* -- the three depth levels, on identical shapes -------------------------- */
+
+.specimen-sheet .lvl {
+  width: 148px;
+  min-height: 62px;
+  padding: 8px 10px;
+  border-radius: var(--radius-block);
+  background: var(--face);
+}
+
+/* Level 1. Flat information. Tone difference only, no shadow, no highlight. */
+.specimen-sheet .lvl-1 {
+  background: var(--region);
+  border: 1px solid transparent;
+  border-radius: var(--radius-panel);
+  box-shadow: none;
+}
+
+/* Level 2. The default raised tile. All three parts. */
+.specimen-sheet .lvl-2 {
+  border: 1px solid var(--edge);
+  box-shadow: var(--highlight), var(--cast-2);
+}
+
+/* Level 3. Active or selected. Lifts, casts further, catches more light. */
+.specimen-sheet .lvl-3 {
+  border: 1px solid var(--edge-strong);
+  box-shadow: var(--highlight-strong), var(--cast-3);
+  transform: translateY(-1px);
+}
+
+/* Level 0. Border only. Present solely so the sheet can show what is being replaced, and marked
+   as banned where it appears. */
+.specimen-sheet .lvl-0 {
+  border: 1px solid var(--edge);
+  box-shadow: none;
+  border-radius: var(--radius-panel);
+  background: var(--face);
+}
+
+/* -- surfaces ------------------------------------------------------------- */
+
+.specimen-sheet .board {
+  background: var(--board);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-block);
+  box-shadow: var(--highlight), var(--cast-2);
+  padding: 14px;
+}
+
+/* A group region is recessed into the board: darker, and lit from the top edge inward. */
+.specimen-sheet .region {
+  background: var(--region);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--recess);
+  padding: 12px;
+}
+
+/* -- chrome, milled rather than repainted --------------------------------- */
+
+.specimen-sheet .chrome {
+  background: var(--chrome);
+  border: 1px solid var(--edge-chrome);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--recess);
+}
+.specimen-sheet .chrome-item {
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.specimen-sheet .chrome-item.is-active {
+  background: var(--face);
+  color: var(--ink);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--highlight), 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* -- tokens, as objects rather than dots ---------------------------------- */
+
+.specimen-sheet .token {
+  display: inline-block;
+  border-radius: 50%;
+  /* Highlight offset toward the top left, so the light in the token agrees with the light on
+     every raised surface around it. The second shadow is the contact shadow: tight, directly
+     beneath, so the token reads as sitting on the surface rather than floating over it. */
+  background-image: radial-gradient(
+    circle at 32% 28%,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.15) 42%,
+    rgba(0, 0, 0, 0.12) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.14),
+    0 1px 1px rgba(0, 0, 0, 0.22);
+}
+.specimen-sheet .token-10 { width: 10px; height: 10px; }
+.specimen-sheet .token-12 { width: 12px; height: 12px; }
+.specimen-sheet .token-14 { width: 14px; height: 14px; }
+.specimen-sheet .token-incident { background-color: var(--incident); }
+.specimen-sheet .token-pending { background-color: var(--pending); }
+.specimen-sheet .token-recovered { background-color: var(--recovered); }
+.specimen-sheet .token-neutral { background-color: #b6ab98; }
+
+/* -- the real tile, imported from Overview -------------------------------- */
+
+/*
+ * The sheet renders `Cell` and `CollapsedGroup` from pages/Overview.tsx rather than copies, so
+ * the specimen cannot drift from the board. Overview is not restyled: everything below is a
+ * skin applied by the sheet, at a specificity that beats a single Tailwind utility class, and it
+ * exists only inside `.specimen-sheet`.
+ *
+ * What the skin adds is exactly the three parts of depth the shipped tile is missing, the warm
+ * remap of the scale so it lives in one world with the ivory, and the display face on the node
+ * name while the numbers stay mono.
+ */
+.specimen-sheet .tile-host {
+  width: 148px;
+}
+.specimen-sheet .tile-host > div,
+.specimen-sheet .tile-host > a > div {
+  border-radius: var(--radius-block);
+  border-color: var(--edge);
+  box-shadow: var(--highlight), var(--cast-2);
+}
+.specimen-sheet .tile-host > div > div:first-child,
+.specimen-sheet .tile-host > a > div > div:first-child {
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* The scale, warmed. Same five steps and the same meanings, in the ivory world's reds. */
+.specimen-sheet .tile-host .bg-red-600 { background-color: #a8332a; }
+.specimen-sheet .tile-host .bg-red-400 { background-color: #c2695c; }
+.specimen-sheet .tile-host .bg-red-200 { background-color: #e6c4ba; color: #5c261f; }
+.specimen-sheet .tile-host .bg-amber-100 { background-color: #eeddb8; color: #5c4515; }
+.specimen-sheet .tile-host .bg-neutral-100 { background-color: var(--face); color: var(--ink); }
+.specimen-sheet .tile-host .bg-neutral-50 { background-color: var(--region); color: var(--ink-faint); }
+
+/* Selected. Level 3, and the incident outline becomes the state colour rather than a Tailwind red. */
+.specimen-sheet .tile-host.is-selected > div,
+.specimen-sheet .tile-host.is-selected > a > div {
+  box-shadow: var(--highlight-strong), var(--cast-3);
+  transform: translateY(-1px);
+}
+.specimen-sheet .tile-host .border-red-600 { border-color: var(--incident); }
+
+/* A below-floor tile is not raised. It is the absence of a measurement, so it stays level 1:
+   recessed into the region, no highlight, no cast. */
+.specimen-sheet .tile-host.is-below > div {
+  background: var(--region);
+  border-style: dashed;
+  border-color: var(--edge);
+  box-shadow: none;
+}
+
+/* Collapsed group rows are information, not objects. Level 1. */
+.specimen-sheet .collapsed-host > div {
+  background: var(--region);
+  border-color: var(--edge);
+  border-radius: var(--radius-panel);
+  box-shadow: none;
+}
+
+/* -- specimen furniture --------------------------------------------------- */
+
+.specimen-sheet .swatch {
+  width: 92px;
+  height: 52px;
+  border-radius: var(--radius-panel);
+  border: 1px solid var(--edge);
+}

@@ -2,6 +2,25 @@
 
 Version 0.1, 24 August 2026. Companion to `02_TECHNICAL_ARCHITECTURE.md`. The frontend exists to make the agent's behaviour legible in a 5-minute pitch and a panel interview. It is an ops console, not a product marketing surface.
 
+**This document records what was specified, not what was built.** It is unchanged from the version
+the build was worked to, and where the two now differ the difference is deliberate and recorded
+elsewhere rather than retrofitted into this file.
+
+The largest instance is section 4.7. The Scenario Runner was rebuilt on branch `ui/board`, after
+this spec was written, as a replay of a recorded run: `POST /api/sim/run` simulates, detects,
+diagnoses, acts and settles in one uninterruptible call, so there is no moment at which the running
+system holds a partial world and nothing to watch while it works. The form, the Run and Stop
+buttons, the live event log and the summary card specified in 4.7 therefore do not exist. Section
+3's route table and section 4.1's empty-state link refer to that same page and are historical for
+the same reason. `docs/BUILD_LOG.md` carries the reasoning and `README.md` describes the page as it
+now is.
+
+Section 8 lists "Dark mode, theming" as out of scope. The console was later rebuilt on a dark
+surface, on the same branch, so that line records what was scoped rather than what shipped. It was
+a palette and surface change only: no layout, no component structure and no page's copy or numbers
+moved with it, and the contrast requirement in section 7 is still met and was measured rather than
+assumed.
+
 ## 1. Stack and constraints
 
 - Vite, React 18, TypeScript, Tailwind. React Router for pages. No state library; server state via a small `useApi` hook with SWR-style refetch and an SSE subscription for live updates.
@@ -34,7 +53,7 @@ Components:
 - Success-rate heatmap: the first row is pinned and merchant-wide, labelled "All methods", and it is where an incident attributed to the `all` segment key appears. A fault that spans every method (S3, gateway degradation) is attributed there by the detector rather than to any one method, so without a pinned row it would have no cell. The remaining rows are methods (UPI, Card, Netbanking, Wallet) and the columns are instruments within the method (UPI handles, card issuers, banks). Each cell shows the current 15-minute success rate, coloured on a neutral-to-red scale, with the baseline rate as small text. Cells inside an open incident get a red outline and link to the incident. The pinned row spans the full width and carries the merchant-wide rate and baseline.
 - Active incidents strip: one card per open incident with segment, root cause, confidence, at-risk amount, recovered so far, and status badge.
 - Volume and failures sparkline for the last 24 sim hours.
-- Four stats: attempts in the last hour, current merchant-wide success rate, at-risk revenue (open incidents), recovered today.
+- Four stats: attempts in the last hour, current merchant-wide success rate, at-risk revenue (open incidents), and recovered. The fourth is not "today": `stats.recovered_amount` has no time filter and sums the link and steer routes only, so the tile is labelled "recovered, all time" with "link and steer routes only, excludes organic recovery" beneath it. Corrected 2026-08-26; the route was always this, the spec line was wrong.
 
 Contracts: `GET /api/overview` returns `{ segments: [{key, method, instrument, attempts, failures, rate, baseline, incident_id}], incidents: [...], series: [{t, attempts, failures}], stats: {...} }`.
 

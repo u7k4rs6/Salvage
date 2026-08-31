@@ -18,12 +18,12 @@ export function Panel({
   className?: string;
 }) {
   return (
-    <section className={`border border-neutral-300 bg-white ${className}`}>
+    <section className={`border border-[color:var(--line-2)] bg-[color:var(--panel)] ${className}`}>
       {(title || right) && (
-        <header className="flex items-start justify-between gap-4 border-b border-neutral-200 px-4 py-2">
+        <header className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] px-4 py-2">
           <div>
-            {title && <h2 className="text-sm font-semibold text-neutral-900">{title}</h2>}
-            {subtitle && <p className="mt-0.5 text-xs text-neutral-600">{subtitle}</p>}
+            {title && <h2 className="text-sm font-semibold text-[color:var(--fg)]">{title}</h2>}
+            {subtitle && <p className="mt-0.5 text-xs text-[color:var(--fg-2)]">{subtitle}</p>}
           </div>
           {right && <div className="shrink-0">{right}</div>}
         </header>
@@ -36,11 +36,11 @@ export function Panel({
 type Tone = "neutral" | "red" | "amber" | "green" | "accent";
 
 const TONES: Record<Tone, string> = {
-  neutral: "bg-neutral-100 text-neutral-700 border-neutral-300",
-  red: "bg-red-50 text-red-800 border-red-300",
-  amber: "bg-amber-50 text-amber-800 border-amber-300",
-  green: "bg-green-50 text-green-800 border-green-300",
-  accent: "bg-accent-soft text-accent-hover border-accent",
+  neutral: "bg-[color:var(--panel-2)] text-[color:var(--fg-2)] border-[color:var(--line-2)]",
+  red: "bg-[color:var(--crit-bg)] text-[color:var(--crit)] border-[color:var(--crit)]",
+  amber: "bg-[color:var(--warn-bg)] text-[color:var(--warn)] border-[color:var(--warn)]",
+  green: "bg-[color:var(--ok-bg)] text-[color:var(--ok)] border-[color:var(--ok)]",
+  accent: "bg-[color:var(--info-bg)] text-[color:var(--info)] border-[color:var(--info)]",
 };
 
 export function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
@@ -79,17 +79,17 @@ export function Stat({
 }) {
   const colour =
     tone === "red"
-      ? "text-red-700"
+      ? "text-[color:var(--crit)]"
       : tone === "green"
-        ? "text-green-700"
+        ? "text-[color:var(--ok)]"
         : tone === "amber"
-          ? "text-amber-700"
-          : "text-neutral-900";
+          ? "text-[color:var(--warn)]"
+          : "text-[color:var(--fg)]";
   return (
-    <div className="border border-neutral-300 bg-white px-4 py-3">
-      <div className="text-xs uppercase tracking-wide text-neutral-600">{label}</div>
+    <div className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-4 py-3">
+      <div className="text-xs uppercase tracking-wide text-[color:var(--fg-2)]">{label}</div>
       <div className={`num mt-1 text-2xl font-semibold ${colour}`}>{value}</div>
-      {hint && <div className="mt-0.5 text-xs text-neutral-600">{hint}</div>}
+      {hint && <div className="mt-0.5 text-xs text-[color:var(--fg-2)]">{hint}</div>}
     </div>
   );
 }
@@ -107,7 +107,7 @@ export function Table({
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-table">
         <thead>
-          <tr className="border-b border-neutral-300 text-left text-neutral-600">
+          <tr className="border-b border-[color:var(--line-2)] text-left text-[color:var(--fg-2)]">
             {columns.map((column, index) => (
               <th
                 key={column}
@@ -132,7 +132,7 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
     <div aria-live="polite" aria-busy="true">
       <span className="sr-only">{label}</span>
       {Array.from({ length: rows }).map((_, index) => (
-        <div key={index} className="mb-2 h-6 w-full animate-pulse rounded bg-neutral-100" />
+        <div key={index} className="mb-2 h-6 w-full animate-pulse rounded bg-[color:var(--panel-2)]" />
       ))}
     </div>
   );
@@ -141,7 +141,7 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="py-8 text-center">
-      <p className="text-sm text-neutral-600">{children}</p>
+      <p className="text-sm text-[color:var(--fg-2)]">{children}</p>
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
@@ -149,14 +149,14 @@ export function Empty({ children, action }: { children: ReactNode; action?: Reac
 
 export function ErrorPanel({ error, retry }: { error: unknown; retry?: () => void }) {
   return (
-    <div role="alert" className="border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+    <div role="alert" className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-4 py-3 text-sm text-[color:var(--crit)]">
       <div className="font-medium">Request failed</div>
       <div className="num mt-1 break-words text-xs">{describe(error)}</div>
       {retry && (
         <button
           type="button"
           onClick={retry}
-          className="mt-2 border border-red-300 bg-white px-2 py-1 text-xs hover:bg-red-100"
+          className="mt-2 border border-[color:var(--crit)] bg-[color:var(--panel)] px-2 py-1 text-xs hover:bg-[color:var(--crit-bg)]"
         >
           Try again
         </button>
@@ -197,7 +197,7 @@ export function Disclosure({
 }) {
   return (
     <details className={`group ${className}`}>
-      <summary className="cursor-pointer select-none text-xs text-accent hover:text-accent-hover">
+      <summary className="cursor-pointer select-none text-xs text-[color:var(--info)] hover:text-[color:var(--fg)]">
         {summary}
       </summary>
       <div className="mt-2">{children}</div>
@@ -207,7 +207,7 @@ export function Disclosure({
 
 export function Code({ children }: { children: ReactNode }) {
   return (
-    <pre className="num max-h-96 overflow-auto whitespace-pre-wrap break-words border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-800">
+    <pre className="num max-h-96 overflow-auto whitespace-pre-wrap break-words border border-[color:var(--line)] bg-[color:var(--panel-2)] p-3 text-xs text-[color:var(--fg)]">
       {children}
     </pre>
   );
@@ -245,10 +245,10 @@ export function ConfirmButton({
 
   const colour =
     tone === "red"
-      ? "border-red-400 bg-red-50 text-red-800 hover:bg-red-100"
+      ? "border-[color:var(--crit)] bg-[color:var(--crit-bg)] text-[color:var(--crit)] hover:bg-[color:var(--crit-bg)]"
       : tone === "green"
-        ? "border-green-400 bg-green-50 text-green-800 hover:bg-green-100"
-        : "border-accent bg-accent-soft text-accent-hover hover:bg-teal-100";
+        ? "border-[color:var(--ok)] bg-[color:var(--ok-bg)] text-[color:var(--ok)] hover:bg-[color:var(--ok-bg)]"
+        : "border-[color:var(--info)] bg-[color:var(--info-bg)] text-[color:var(--info)] hover:bg-[color:var(--info-bg)]";
 
   if (!open) {
     return (
@@ -267,26 +267,26 @@ export function ConfirmButton({
           {label}
         </button>
         {disabled && disabledReason && (
-          <span className="ml-2 text-xs text-neutral-600">{disabledReason}</span>
+          <span className="ml-2 text-xs text-[color:var(--fg-2)]">{disabledReason}</span>
         )}
       </span>
     );
   }
 
   return (
-    <div className="border border-neutral-300 bg-neutral-50 p-3">
-      <p className="text-xs text-neutral-800">{prompt}</p>
+    <div className="border border-[color:var(--line-2)] bg-[color:var(--panel-2)] p-3">
+      <p className="text-xs text-[color:var(--fg)]">{prompt}</p>
       {requireNote && (
         <input
           autoFocus
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder={notePlaceholder}
-          className="mt-2 w-full border border-neutral-300 px-2 py-1 text-xs"
+          className="mt-2 w-full border border-[color:var(--line-2)] px-2 py-1 text-xs"
         />
       )}
       {error !== null && (
-        <div className="mt-2 text-xs text-red-700" role="alert">
+        <div className="mt-2 text-xs text-[color:var(--crit)]" role="alert">
           {describe(error)}
         </div>
       )}
@@ -315,7 +315,7 @@ export function ConfirmButton({
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-100"
+          className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-xs hover:bg-[color:var(--panel-3)]"
         >
           Cancel
         </button>

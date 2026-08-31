@@ -2,6 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * The console's ground.
+ *
+ * The palette tokens live here rather than on the Overview, because every page uses them now. They
+ * were written for the Overview and moved unchanged: same values, wider scope. `.ov` in
+ * overview.css keeps its layout and component rules and no longer declares a colour of its own.
+ */
+:root {
+  /* Ground and surfaces. Not pure black: pure black flattens the dividers. */
+  --bg: #0b0c0e;
+  --panel: #101215;
+  --panel-2: #16191d;
+  --panel-3: #1c2025;
+
+  --line: #22262c;
+  --line-2: #2d333b;
+
+  --fg: #e6e8eb;
+  --fg-2: #99a1ab;
+  /* Raised from #69727d, which measured 3.6 to 4.0 against the four grounds it is used on and
+     needs 4.5. This is the smallest value that clears AA on the lightest of them (--panel-3, where
+     it measures 4.56) while staying clear of --fg-2 above it. It is the muted tier on every page,
+     so the old value failed on roughly four hundred elements. */
+  --fg-3: #7f8894;
+
+  /* Semantic. Red is scarce. */
+  --ok: #3fb950;
+  --warn: #d29922;
+  --crit: #f85149;
+  --info: #58a6ff;
+
+  /* Tinted grounds. The light build wrote bg-red-50, bg-amber-50 and bg-green-50; on this ground
+     the same job is done by the semantic colour at low alpha, named here so no page invents one. */
+  --crit-bg: rgba(248, 81, 73, 0.08);
+  --warn-bg: rgba(210, 153, 34, 0.08);
+  --ok-bg: rgba(63, 185, 80, 0.08);
+  --info-bg: rgba(88, 166, 255, 0.08);
+
+  --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* 8px grid. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 16px;
+  --s4: 24px;
+  --s5: 32px;
+  --gutter: 24px;
+}
+
 @layer base {
   html {
     font-family:
@@ -11,8 +61,13 @@
       Roboto,
       sans-serif;
   }
+  html,
   body {
-    @apply bg-white text-neutral-900;
+    background: var(--bg);
+    color: var(--fg);
+    /* Native controls: a select, a scrollbar and a date picker are drawn by the browser, not by
+       this stylesheet, and they were still being drawn light. */
+    color-scheme: dark;
   }
   /* Every number, id and hash is monospace with tabular figures, per spec section 6. */
   .num {
@@ -20,7 +75,8 @@
     font-variant-numeric: tabular-nums;
   }
   :focus-visible {
-    @apply outline-none ring-2 ring-accent ring-offset-1;
+    outline: 1px solid var(--info);
+    outline-offset: 2px;
   }
 }
 
@@ -28,13 +84,14 @@
   .cell-pad {
     @apply px-3 py-[6px];
   }
-  /* 150 ms highlight when an SSE event inserts a row. The only motion in the console. */
+  /* 150 ms highlight when an SSE event inserts a row. The only motion in the console.
+     Was a light teal chosen to read on white; on this ground it flashed white. */
   .flash {
     animation: flash 150ms ease-out;
   }
   @keyframes flash {
     from {
-      background-color: #ccfbf1;
+      background-color: var(--info-bg);
     }
     to {
       background-color: transparent;

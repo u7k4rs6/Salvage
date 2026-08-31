@@ -100,7 +100,7 @@ export default function StorefrontPage() {
   return (
     <div className="space-y-4">
       {hint.data?.hint && (
-        <div className="border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        <div className="border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-sm text-[color:var(--warn)]">
           <span className="font-medium">
             {hint.data.hint.hidden.join(", ").toUpperCase()} is de-prioritised at checkout
           </span>{" "}
@@ -112,7 +112,7 @@ export default function StorefrontPage() {
               {" "}
               <Link
                 to={`/incidents/${hint.data.hint.incident_id}`}
-                className="text-accent underline hover:text-accent-hover"
+                className="text-[color:var(--info)] underline hover:text-[color:var(--fg)]"
               >
                 See the incident
               </Link>
@@ -129,21 +129,21 @@ export default function StorefrontPage() {
           {(data) => (
             <>
               {!data.available && (
-                <div className="mb-3 border border-neutral-300 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
+                <div className="mb-3 border border-[color:var(--line-2)] bg-[color:var(--panel-2)] px-3 py-2 text-xs text-[color:var(--fg-2)]">
                   {data.reason} Checkout is disabled rather than opened against a key that is not
                   there.
                 </div>
               )}
               <div className="grid gap-3 sm:grid-cols-3">
                 {data.skus.map((item) => (
-                  <div key={item.sku} className="border border-neutral-300 p-3">
+                  <div key={item.sku} className="border border-[color:var(--line-2)] p-3">
                     <div className="text-sm font-medium">{item.name}</div>
                     <div className="num mt-1 text-lg">{rupees(item.amount)}</div>
                     <button
                       type="button"
                       disabled={!data.available || busy || !ready}
                       onClick={() => buy(item.sku)}
-                      className="mt-2 border border-accent bg-accent-soft px-3 py-1 text-xs text-accent-hover hover:bg-teal-100 disabled:opacity-50"
+                      className="mt-2 border border-[color:var(--info)] bg-[color:var(--info-bg)] px-3 py-1 text-xs text-[color:var(--info)] hover:bg-[color:var(--info-bg)] disabled:opacity-50"
                     >
                       {busy ? "Working" : "Buy"}
                     </button>
@@ -162,7 +162,7 @@ export default function StorefrontPage() {
 
         {hint.data?.config && (
           <details className="mt-3">
-            <summary className="cursor-pointer text-xs text-accent hover:text-accent-hover">
+            <summary className="cursor-pointer text-xs text-[color:var(--info)] hover:text-[color:var(--fg)]">
               checkout config sent to Razorpay
             </summary>
             <Code>{JSON.stringify(hint.data.config, null, 2)}</Code>
@@ -195,9 +195,9 @@ export default function StorefrontPage() {
           <ul className="space-y-1">
             {entries.map((entry) => (
               <li key={entry.seq} className="num text-xs">
-                <span className="text-neutral-500">{entry.seq}</span>{" "}
+                <span className="text-[color:var(--fg-3)]">{entry.seq}</span>{" "}
                 <Badge>{entry.kind}</Badge>{" "}
-                <span className="text-neutral-600">{timestamp(entry.ts)}</span>
+                <span className="text-[color:var(--fg-2)]">{timestamp(entry.ts)}</span>
               </li>
             ))}
           </ul>
@@ -220,12 +220,12 @@ export default function StorefrontPage() {
               setError(cause);
             }
           }}
-          className="border border-red-400 bg-red-50 px-3 py-1 text-xs text-red-800 hover:bg-red-100 disabled:opacity-50"
+          className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-3 py-1 text-xs text-[color:var(--crit)] hover:bg-[color:var(--crit-bg)] disabled:opacity-50"
         >
           {!token && <span aria-hidden="true">&#128274; </span>}
           Simulate my payment failing
         </button>
-        <p className="mt-2 text-xs text-neutral-600">
+        <p className="mt-2 text-xs text-[color:var(--fg-2)]">
           This writes one failed attempt. It does not fabricate a webhook, so nothing appears in
           the webhook ledger for it.
         </p>

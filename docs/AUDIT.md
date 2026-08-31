@@ -208,7 +208,11 @@ columns to the primary table and downgrade S3 to "ties B2 on revenue with fewer 
 ### F6. Circuit breaker trip does not escalate
 
 PRD 9: "pause that incident and escalate." Code: pause yes, escalate no (only matrix refusals
-reach `_escalate`). Also neither breaker branch fires anywhere in the 200-run sweep.
+reach `_escalate`). Also neither breaker branch fires anywhere in the 200-run sweep. That figure is
+the sweep as it stood when this audit was written, four policy arms across five scenarios and ten
+seeds; `data/results/main.json` is now 250 runs across five arms. The claim was not re-checked
+against the larger sweep, because no artifact records a breaker event and re-checking means
+re-running the sweep, so read it as of the audit rather than of the current artifact.
 Invalidates: the "every stopping rule enforced" sentence, narrowly. Smallest honest fix: escalate
 on trip, one test.
 

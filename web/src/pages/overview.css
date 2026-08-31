@@ -1,0 +1,412 @@
+/*
+ * The Overview's visual language: an operational control plane.
+ *
+ * Scoped under `.ov`, which is the layout and the component vocabulary. The palette it was written
+ * against now lives at `:root` in index.css, because every page uses it.
+ *
+ * The register is engineering tooling, not a product page: a very dark neutral ground, thin
+ * dividers instead of floating cards, an 8px spacing grid, and monospace on every number so a
+ * column of figures aligns and can be compared down its length. Density is the point. A reader
+ * should be able to answer "what is broken, how badly, since when" without scrolling.
+ *
+ * Colour is scarce and semantic. Green is healthy, amber is degraded or awaiting a human, red is
+ * an active failure or a refusal, blue is informational. Red in particular is rationed: a number
+ * being important is not a reason to make it red, so the large figures are plain and the colour
+ * sits on the deltas and the status chips, where it means something.
+ */
+
+/* `.chrome-ui` is the top bar and the left nav, which exist on every page. All this does is give
+   them the UI face; the surface colours are gated on the Overview's own attribute. */
+.chrome-ui {
+  --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--font-ui);
+}
+
+.ov {
+  /* The main element pads every page by 1rem. This one is full bleed and takes that back. */
+  margin: -1rem;
+  padding: 0;
+  min-height: calc(100vh - 38px);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* -- type ----------------------------------------------------------------- */
+
+/* Every number, id, hash and segment key. Tabular figures so a column lines up. */
+.ov .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "zero" 1;
+}
+
+/* The compact system label. Uppercase is rationed to these and to section headers, so it stays a
+   signal that something is a label rather than a sentence. */
+.ov .lbl {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  line-height: 1.4;
+}
+.ov .lbl-2 {
+  color: var(--fg-2);
+}
+
+.ov .note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--fg-3);
+}
+.ov .txt {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+
+/* Figures. Restrained: telemetry, not a marketing statistic. */
+.ov .fig-xl {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  font-size: 46px;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+.ov .fig-lg {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.ov .fig-md {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.ov .ok { color: var(--ok); }
+.ov .warn { color: var(--warn); }
+.ov .crit { color: var(--crit); }
+.ov .info { color: var(--info); }
+.ov .dim { color: var(--fg-3); }
+.ov .mid { color: var(--fg-2); }
+
+/* -- structure ------------------------------------------------------------ */
+
+/* Sections are divided by a rule, not boxed. The page is one control plane. */
+.ov .section {
+  border-top: 1px solid var(--line);
+  padding: var(--s4) var(--gutter);
+}
+.ov .section:first-child {
+  border-top: 0;
+}
+.ov .section-tight {
+  padding-top: var(--s3);
+  padding-bottom: var(--s3);
+}
+
+.ov .section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+}
+.ov .section-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+/* A panel is used where grouping is genuinely load-bearing, and nowhere else. */
+.ov .panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+}
+
+/* -- chips ---------------------------------------------------------------- */
+
+/* Status carries a word as well as a colour, so colour is never the only signal. */
+.ov .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.ov .chip-flat {
+  border-color: var(--line-2);
+  color: var(--fg-2);
+}
+.ov .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+/* -- metrics -------------------------------------------------------------- */
+
+.ov .metrics {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.4fr) repeat(3, minmax(150px, 1fr));
+  gap: 0;
+  align-items: stretch;
+}
+.ov .metric {
+  padding: 0 var(--s4);
+  border-left: 1px solid var(--line);
+  min-width: 0;
+}
+.ov .metric:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.ov .metric:last-child {
+  padding-right: 0;
+}
+
+/* -- bars ----------------------------------------------------------------- */
+
+/*
+ * A deviation bar runs from the segment's own baseline to where it is now, on one shared 0 to 100
+ * axis. Its length is the excess and its direction is the sign, so the outlier is found by
+ * running down the column rather than by reading every number.
+ *
+ * A lane with no bar is a segment the detector could not test, drawn as a dashed rule rather than
+ * omitted, because absence from measurement is a fact about the detector and not missing data.
+ */
+.ov .track {
+  position: relative;
+  height: 16px;
+  background: var(--panel-2);
+  border-radius: 1px;
+}
+.ov .track-sm {
+  height: 6px;
+}
+.ov .bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 1px;
+  transition: left 180ms ease-out, width 180ms ease-out;
+}
+/* The baseline is the reference, so it reads as a rule and not as another bar. */
+.ov .baseline {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--fg-2);
+  opacity: 0.75;
+}
+.ov .track-empty {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed var(--line-2);
+}
+
+.ov .lane {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr) 4.5rem 4rem 5rem;
+  align-items: center;
+  gap: var(--s3);
+  padding: 3px var(--s2);
+  border-radius: 2px;
+}
+
+/* -- rows ----------------------------------------------------------------- */
+
+.ov .row-hover {
+  transition: background-color 120ms linear;
+}
+.ov .row-hover:hover {
+  background: var(--panel-2);
+}
+
+.ov .divide > * + * {
+  border-top: 1px solid var(--line);
+}
+
+/* -- controls ------------------------------------------------------------- */
+
+.ov a.link {
+  color: var(--fg-2);
+  text-decoration: none;
+  transition: color 120ms linear;
+}
+.ov a.link:hover {
+  color: var(--fg);
+}
+.ov .focus-ring:focus-visible {
+  outline: 1px solid var(--info);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* -- chart ---------------------------------------------------------------- */
+
+.ov .chart {
+  position: relative;
+  cursor: crosshair;
+}
+.ov .chart-tip {
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--panel-3);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  padding: 8px 10px;
+  min-width: 168px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
+}
+
+/* -- lifecycle ------------------------------------------------------------ */
+
+.ov .stage {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 8px 10px;
+  min-width: 104px;
+  min-height: 48px;
+}
+.ov .stage-done {
+  border-color: var(--line-2);
+  background: var(--panel-2);
+}
+.ov .stage-active {
+  border-color: currentColor;
+}
+.ov .stage-idle {
+  background: transparent;
+  border-style: dashed;
+}
+.ov .connector {
+  height: 1px;
+  background: var(--line);
+  flex: 1 1 12px;
+  min-width: 12px;
+}
+.ov .connector-done {
+  background: var(--line-2);
+}
+/* Escalate is terminal. The stop bar is why nothing is ever drawn from it onward to recover. */
+.ov .terminal-stop {
+  width: 2px;
+  height: 20px;
+  background: var(--warn);
+}
+
+/* -- states --------------------------------------------------------------- */
+
+.ov .skeleton {
+  background: var(--panel-2);
+  height: 16px;
+  border-radius: 2px;
+  animation: ov-pulse 1.6s ease-in-out infinite;
+}
+@keyframes ov-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.ov .alert {
+  border: 1px solid var(--crit);
+  border-left-width: 2px;
+  background: rgba(248, 81, 73, 0.06);
+  border-radius: 2px;
+  padding: 10px 12px;
+}
+
+/*
+ * A live update tints the row it landed in for 400ms and then lets go. This is the only motion in
+ * the console beyond hover: the interface should feel alive because the data moved, not because
+ * the UI is animating.
+ */
+.ov .settled {
+  animation: ov-settle 400ms ease-out;
+}
+@keyframes ov-settle {
+  from { background-color: rgba(88, 166, 255, 0.12); }
+  to { background-color: transparent; }
+}
+
+/* -- chrome ---------------------------------------------------------------
+ *
+ * The top bar and the left nav used to be overridden from here, because they were written with
+ * light utility classes and the Overview needed them dark while it was mounted. They carry the
+ * tokens themselves now, so there is one source for each of their colours and nothing here to
+ * override. `.chrome-ui` keeps only the typeface it always set.
+ */
+
+/* -- reduced motion ------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ov *,
+  .ov *::before,
+  .ov *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* -- narrow --------------------------------------------------------------- */
+
+@media (max-width: 1180px) {
+  .ov .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--s4) 0;
+  }
+  .ov .metric:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .ov .lane {
+    grid-template-columns: 8rem minmax(0, 1fr) 4rem 3.5rem;
+  }
+  .ov .lane > :last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .ov .metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ov .metric {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
