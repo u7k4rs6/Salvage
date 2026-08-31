@@ -108,38 +108,38 @@ export function Track({ state, stage }: { state: ReplayState; stage: Stage }) {
 
   return (
     <div>
-      <div className="flex items-stretch overflow-x-auto pb-1">
+      <div className="flex items-start overflow-x-auto pb-1">
         {spine.map((node, index) => (
-          <div key={node.key} className="flex items-stretch">
+          <div key={node.key} className="flex items-start">
             <Box node={node} />
             {index < spine.length - 1 && (
-              <div className="flex items-center px-1.5">
+              <div className="flex h-12 items-center px-1.5">
                 <div className={`connector ${node.status !== "idle" ? "connector-done" : ""}`} />
               </div>
             )}
           </div>
         ))}
 
-        <div className="flex items-center px-1.5">
+        <div className="flex h-12 items-center px-1.5">
           <div className={`connector ${spine[3].status !== "idle" ? "connector-done" : ""}`} />
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-stretch">
             <Box node={execute} />
-            <div className="flex items-center px-1.5">
+            <div className="flex h-12 items-center px-1.5">
               <div className={`connector ${execute.status === "done" ? "connector-done" : ""}`} />
             </div>
             <Box node={recover} />
           </div>
           <div className="flex items-stretch">
             <Box node={escalate} />
-            <div className="flex items-center px-1.5">
+            <div className="flex h-12 items-center px-1.5">
               <div
                 className="terminal-stop"
                 style={{ opacity: escalate.status === "idle" ? 0.3 : 1 }}
               />
             </div>
-            <div className="flex items-center">
+            <div className="flex h-12 items-center">
               <span className={`lbl ${escalate.status === "idle" ? "" : "warn"}`}>terminal</span>
             </div>
           </div>
@@ -167,7 +167,7 @@ function Box({ node }: { node: Node }) {
         <span className={`lbl ${node.status === "idle" ? "" : "lbl-2"}`}>{node.key}</span>
       </div>
       <div
-        className={`mono mt-1.5 max-w-[12rem] truncate text-[length:var(--fs-micro)] ${
+        className={`mono mt-1.5 w-full truncate text-[length:var(--fs-micro)] ${
           node.status === "idle" ? "dim" : "mid"
         }`}
         title={node.detail}
@@ -176,7 +176,7 @@ function Box({ node }: { node: Node }) {
       </div>
       {node.sub && (
         <div
-          className={`mono mt-0.5 max-w-[12rem] truncate text-[length:var(--fs-micro)] ${
+          className={`mono mt-0.5 w-full truncate text-[length:var(--fs-micro)] ${
             node.status === "idle" ? "dim" : "crit"
           }`}
           title={node.sub}
@@ -185,7 +185,7 @@ function Box({ node }: { node: Node }) {
         </div>
       )}
       {node.tert && (
-        <div className="tert mt-0.5 max-w-[12rem] truncate" title={node.tert}>
+        <div className="tert mt-0.5 w-full truncate" title={node.tert}>
           {node.tert}
         </div>
       )}

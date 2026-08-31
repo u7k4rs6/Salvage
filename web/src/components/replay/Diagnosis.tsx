@@ -100,9 +100,9 @@ export function Diagnosis({
         </div>
 
         {diagnosis.escalate && diagnosis.escalationReason && (
-          <div className="alert mt-4">
-            <div className="lbl warn">Escalating</div>
-            <div className="txt mt-1">{diagnosis.escalationReason}</div>
+          <div className="notice notice-danger mt-4">
+            <div className="notice-label">Escalating</div>
+            <div className="notice-body">{diagnosis.escalationReason}</div>
           </div>
         )}
       </div>

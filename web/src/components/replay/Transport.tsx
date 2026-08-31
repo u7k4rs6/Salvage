@@ -193,9 +193,9 @@ export function Transport({
       )}
 
       {transport.inGap && (
-        <div className="wait mt-3">
-          <div className="lbl warn">The agent does nothing here</div>
-          <div className="txt mt-1">
+        <div className="notice notice-warning mt-3">
+          <div className="notice-label">The agent does nothing here</div>
+          <div className="notice-body">
             No ledger entry between {timestamp(transport.inGap.start)} and{" "}
             {timestamp(transport.inGap.end)}, a stretch of{" "}
             <span className="mono">

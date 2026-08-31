@@ -49,9 +49,9 @@ export function Gates({ state, meta }: { state: ReplayState; meta: RecordingMeta
         {state.plan ? (
           <div className="panel p-4">
             {state.plan.planner_error && (
-              <div className="alert mb-3">
-                <div className="lbl crit">Planner failed</div>
-                <div className="txt mt-1">{state.plan.planner_error}</div>
+              <div className="notice notice-danger mb-3">
+                <div className="notice-label">Planner failed</div>
+                <div className="notice-body">{state.plan.planner_error}</div>
                 <div className="note mt-2">
                   A planner that cannot plan does not fall back to doing something to customers. It
                   falls back to asking a person, so the plan below is the escalation default and not

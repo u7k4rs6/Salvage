@@ -291,9 +291,9 @@ function Runner({
           </div>
           <div>
             {state.escalation && (
-              <div className="alert">
-                <div className="lbl warn">Escalated at {timeOnly(state.escalation.ts)}</div>
-                <div className="txt mt-1">{state.escalation.reason}</div>
+              <div className="notice notice-danger">
+                <div className="notice-label">Escalated at {timeOnly(state.escalation.ts)}</div>
+                <div className="notice-body">{state.escalation.reason}</div>
               </div>
             )}
           </div>

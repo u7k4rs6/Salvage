@@ -112,7 +112,7 @@ export default function StorefrontPage() {
         caveat="Test mode only. Startup refuses to run if the Razorpay key does not begin with rzp_test_, so no live key can be used here."
       />
       {hint.data?.hint && (
-        <div className="border border-[color:var(--warning)] bg-[color:var(--warning-bg)] px-3 py-2 text-[length:var(--fs-meta)] text-[color:var(--warning)]">
+        <div className="notice notice-warning text-[length:var(--fs-meta)] text-[color:var(--warning)]">
           <span className="font-medium">
             {hint.data.hint.hidden.join(", ").toUpperCase()} is de-prioritised at checkout
           </span>{" "}
@@ -143,15 +143,13 @@ export default function StorefrontPage() {
               {/* This state reads as a broken page unless it says, at the size of a warning rather
                   than a footnote, that nothing is broken and exactly what is missing. */}
               {!data.available && (
-                <div className="mb-4 border border-[color:var(--warning)] border-l-2 bg-[color:var(--warning-bg)] px-4 py-3">
-                  <div className="text-[length:var(--fs-micro)] font-semibold uppercase tracking-[0.08em] text-[color:var(--warning)]">
-                    Checkout is switched off, not broken
-                  </div>
-                  <p className="mt-1.5 text-[length:var(--fs-meta)] leading-relaxed text-[color:var(--text-primary)]">
+                <div className="notice notice-warning mb-4">
+                  <div className="notice-label">Checkout is switched off, not broken</div>
+                  <p className="notice-body">
                     {data.reason} Checkout is disabled rather than opened against a key that is not
                     there, so the Buy buttons below do nothing on purpose.
                   </p>
-                  <p className="mt-2 text-[length:var(--fs-meta)] leading-relaxed text-[color:var(--text-secondary)]">
+                  <p className="notice-body">
                     To turn it on, put a Razorpay <span className="num">test</span> key pair in{" "}
                     <span className="num">.env</span> as{" "}
                     <span className="num">RAZORPAY_KEY_ID</span> and{" "}

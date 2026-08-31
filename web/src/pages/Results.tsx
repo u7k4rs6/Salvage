@@ -56,15 +56,16 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
   // Every policy column is numeric, so the recovered figure, the action count and the rate all
   // share one right edge down the whole table, whatever their digit lengths.
   const columns: Column[] = [
-    { key: "scenario", label: "Scenario", align: "text", width: "8%" },
-    { key: "at_risk", label: "At-risk orders", align: "num", width: "12%" },
-    // The five arms are the comparison, so they share the remaining width equally and each one is
-    // wider than the two identifying columns.
+    // The two identifying columns are narrow because their content is: a scenario id and a count
+    // of at most four digits. The five arms are the comparison, so they take the rest in equal
+    // shares and every boundary between them falls at the same interval.
+    { key: "scenario", label: "Scenario", align: "text", width: "9%" },
+    { key: "at_risk", label: "At-risk orders", align: "num", width: "13%" },
     ...policies.map((policy) => ({
       key: policy,
       label: policy,
       align: "num" as const,
-      width: `${80 / policies.length}%`,
+      width: `${78 / policies.length}%`,
     })),
   ];
 

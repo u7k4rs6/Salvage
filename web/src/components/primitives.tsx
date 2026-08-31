@@ -26,11 +26,7 @@ export function Panel({
         <header className="panel-head">
           <div className="min-w-0">
             {title && <h2 className="section-title">{title}</h2>}
-            {subtitle && (
-              <p className="mt-1 text-[length:var(--fs-meta)] leading-[var(--lh-normal)] text-[color:var(--text-secondary)]">
-                {subtitle}
-              </p>
-            )}
+            {subtitle && <p className="panel-note">{subtitle}</p>}
           </div>
           {right && <div className="shrink-0">{right}</div>}
         </header>
@@ -237,20 +233,27 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
   );
 }
 
+/**
+ * An empty state, on the same left edge as the content that will replace it.
+ *
+ * Centred in a surface a thousand pixels wide, one short line read as a void with a caption in the
+ * middle of it. It sits where the first row of data will sit, so the panel does not change shape
+ * when the data arrives.
+ */
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="py-8 text-center">
-      <p className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">{children}</p>
-      {action && <div className="mt-2">{action}</div>}
+    <div className="px-5 py-6">
+      <p className="text-[length:var(--fs-meta)] text-[color:var(--text-muted)]">{children}</p>
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
 
 export function ErrorPanel({ error, retry }: { error: unknown; retry?: () => void }) {
   return (
-    <div role="alert" className="border border-[color:var(--danger)] bg-[color:var(--danger-bg)] px-4 py-3 text-[length:var(--fs-meta)] text-[color:var(--danger)]">
-      <div className="font-medium">Request failed</div>
-      <div className="num mt-1 break-words text-[length:var(--fs-meta)]">{describe(error)}</div>
+    <div role="alert" className="notice notice-danger">
+      <div className="notice-label">Request failed</div>
+      <div className="num notice-body break-words">{describe(error)}</div>
       {retry && (
         <button
           type="button"

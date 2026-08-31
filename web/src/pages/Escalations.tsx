@@ -110,32 +110,22 @@ function Card({
 
       {/* 5. Confidence, 6. financial risk. One row, one grid, labels above values. */}
       {escalation.incident && (
-        <dl className="mt-5 grid gap-x-8 gap-y-3 sm:grid-cols-3">
+        <dl className="field-grid mt-5">
           <div>
-            <dt className="text-[length:var(--fs-micro)] uppercase tracking-[var(--ls-caps)] text-[color:var(--text-muted)]">
-              Cause
-            </dt>
-            <dd className="mt-1 text-[color:var(--text-primary)]">
-              {causeLabel(escalation.incident.root_cause)}
-            </dd>
+            <dt className="field-label">Cause</dt>
+            <dd className="field-value">{causeLabel(escalation.incident.root_cause)}</dd>
           </div>
           <div>
-            <dt className="text-[length:var(--fs-micro)] uppercase tracking-[var(--ls-caps)] text-[color:var(--text-muted)]">
-              Confidence
-            </dt>
-            <dd className="dt-mono mt-1 text-[color:var(--text-primary)]">
+            <dt className="field-label">Confidence</dt>
+            <dd className="field-value mono">
               {escalation.incident.confidence === null
                 ? "-"
                 : escalation.incident.confidence.toFixed(2)}
             </dd>
           </div>
           <div>
-            <dt className="text-[length:var(--fs-micro)] uppercase tracking-[var(--ls-caps)] text-[color:var(--text-muted)]">
-              At risk
-            </dt>
-            <dd className="dt-mono mt-1 text-[color:var(--text-primary)]">
-              {rupees(escalation.incident.at_risk_amount)}
-            </dd>
+            <dt className="field-label">At risk</dt>
+            <dd className="field-value mono">{rupees(escalation.incident.at_risk_amount)}</dd>
           </div>
         </dl>
       )}

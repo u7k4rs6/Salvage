@@ -176,7 +176,12 @@
 
 .ov .metrics {
   display: grid;
-  grid-template-columns: minmax(280px, 1.4fr) repeat(3, minmax(150px, 1fr));
+  /*
+   * Four equal columns. The headline metric used to take 1.4fr and the other three shared what
+   * was left, so the status strip weighted itself to the left before any content was in it.
+   * Emphasis belongs to the type, which already sets payment success larger than its neighbours.
+   */
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
   align-items: stretch;
 }
@@ -311,7 +316,12 @@
   border: 1px solid var(--border);
   border-radius: 2px;
   padding: 8px 10px;
-  min-width: 104px;
+  /*
+   * Every stage the same size, so the lifecycle reads as a sequence of equal steps rather than as
+   * boxes that happen to be as wide as whatever text landed in them. The detail line truncates
+   * inside its box and carries the full value on its title.
+   */
+  width: 9.5rem;
   min-height: 48px;
 }
 .ov .stage-done {
@@ -354,12 +364,9 @@
   50% { opacity: 0.5; }
 }
 
-.ov .alert {
-  border: 1px solid var(--danger);
-  border-left-width: 2px;
-  background: rgba(248, 81, 73, 0.06);
-  border-radius: 2px;
-  padding: 10px 12px;
+/* Alerts use the shared `.notice` in index.css. This only restates the padding rhythm. */
+.ov .notice {
+  padding: 10px var(--space-3);
 }
 
 /*

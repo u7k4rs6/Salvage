@@ -63,7 +63,7 @@ function IncidentRow({
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="field-grid mt-4">
         <Field label="Opened">
           <span className="mono">{timeOnly(incident.opened_at)}</span>{" "}
           <span className="dim mono text-[length:var(--fs-meta)]">{elapsed(incident.opened_at, now)}</span>
@@ -104,12 +104,12 @@ function IncidentRow({
       </div>
 
       {failed && (
-        <div className="alert mt-4" role="alert">
+        <div className="notice notice-danger mt-4" role="alert">
           <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="lbl crit">Planner error</span>
+            <span className="notice-label">Planner error</span>
             <span className="mono text-[length:var(--fs-meta)]">{plannerError}</span>
           </div>
-          <p className="note mt-1.5">
+          <p className="notice-body">
             No action was chosen. The executor escalated because planning failed, which is not an
             agent deciding a human should take this one.
           </p>

@@ -35,8 +35,8 @@ export function Empty({ children, action }: { children: ReactNode; action?: Reac
 
 export function ErrorPanel({ error, retry }: { error: unknown; retry?: () => void }) {
   return (
-    <div role="alert" className="alert">
-      <div className="lbl crit">Request failed</div>
+    <div role="alert" className="notice notice-danger">
+      <div className="notice-label">Request failed</div>
       <div className="mono mid mt-1.5 break-words text-[length:var(--fs-meta)]">{describe(error)}</div>
       {retry && (
         <button type="button" onClick={retry} className="link focus-ring lbl lbl-2 mt-2.5 block">

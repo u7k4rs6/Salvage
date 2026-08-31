@@ -309,12 +309,9 @@
   gap: 4px var(--space-4);
   align-items: baseline;
 }
-.rp .wait {
-  border: 1px solid var(--warning);
-  border-left-width: 2px;
-  background: rgba(210, 153, 34, 0.07);
-  border-radius: 2px;
-  padding: 8px 12px;
+/* The gap banner uses the shared `.notice`; only its padding is tuned for the transport row. */
+.rp .notice {
+  padding: 8px var(--space-3);
 }
 .rp .col2 {
   display: grid;

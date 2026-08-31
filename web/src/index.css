@@ -74,14 +74,15 @@
   --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --fs-page-title: 25px;
+  --fs-page-title: 27px;
   --fs-section: 16px;
   --fs-body: 15px;
   --fs-meta: 13px;
   --fs-table: 14px;
-  --fs-table-head: 12px;
+  --fs-figure: 15px;
+  --fs-table-head: 11px;
   --fs-micro: 12px;
-  --fs-metric: 30px;
+  --fs-metric: 28px;
   --fs-metric-sm: 19px;
 
   --fw-regular: 400;
@@ -96,24 +97,22 @@
   --ls-tight: -0.01em;
 
   /*
-   * Measure. There are two, and conflating them was the bug that made every page look left-biased.
+   * Two measures, because prose and data want opposite things and one token cannot serve both.
    *
-   * `--measure-prose` caps a page description or a long explanation, where a line that runs the
-   * width of a monitor is genuinely hard to read. It is deliberately generous: the previous single
-   * value pinned text to about 480px inside a 974px panel, which left half of every alert empty.
+   * `--measure-prose` caps running text: a page description, a panel note, an alert body, a
+   * caveat. Around 830px, which is a comfortable line at any of the sizes on this page. It is in
+   * rem rather than ch on purpose: `ch` resolves against the element's own font size, so a 15px
+   * description wrapped at 910px while the 13px note under it wrapped at 608px, two ragged edges
+   * stacked on each other.
    *
-   * Operational content does not get a measure at all. An alert body, a panel subtitle, a metric,
-   * a table cell and an incident rationale are data surfaces, and a data surface uses the width it
-   * is given. The old value was applied to all of them by a blanket script, which is what produced
-   * the dead right-hand half on Overview, Storefront and Results.
+   * `--canvas` is the other one, and it caps the operational surface: tables, metric grids,
+   * incident records, the things that genuinely want width. It exists so an ultrawide monitor
+   * gets a margin rather than a seven column table pulled across three thousand pixels.
+   *
+   * A data surface takes the canvas. Prose takes the measure. Nothing takes a width of its own.
    */
-  /*
-   * In rem, not ch, and deliberately so. `ch` resolves against the element's own font size, so a
-   * 15px description wrapped at 910px while the 13px caveat directly beneath it wrapped at 608px:
-   * two different ragged edges stacked on top of each other, which is what read as "stuck on the
-   * left". One constant edge for every piece of prose on a page, whatever size it is set in.
-   */
-  --measure-prose: 56rem;
+  --measure-prose: 52rem;
+  --canvas: 1400px;
 
   /* -- space ------------------------------------------------------------ */
   --space-1: 4px;
@@ -131,7 +130,7 @@
   --radius-md: 5px;
 
   --sidebar-w: 200px;
-  --page-pad-x: var(--space-7);
+  --page-pad-x: var(--space-8);
   --page-pad-y: var(--space-6);
   --control-h: 32px;
 }
@@ -285,14 +284,12 @@
     flex: 1 1 auto;
     min-width: 0;
     padding: var(--page-pad-y) var(--page-pad-x) var(--space-9);
-    /* One ceiling, at the shell, so an ultrawide monitor does not stretch a seven column table to
-       three thousand pixels. Sections inside it span it; none of them carries its own width. */
-    max-width: 1720px;
-  }
-  /* Wide enough for a twelve column table to breathe, narrow enough that a line of prose never
-     runs the width of a monitor. Pages that are genuinely full-bleed opt out. */
-  .app-measure {
-    max-width: 1440px;
+    /*
+     * The canvas, plus its own gutters. Below this the page simply fills what it is given; above
+     * it the surplus becomes a right margin instead of extra table. Sections inside span the
+     * canvas and none of them carries a width of its own.
+     */
+    max-width: calc(var(--canvas) + 2 * var(--page-pad-x));
   }
 
   /* -- sidebar ------------------------------------------------------------ */
@@ -427,8 +424,117 @@
   .panel-body {
     padding: var(--space-5);
   }
+  /*
+   * A panel's explanatory line is prose, and it was the last thing still running the full width
+   * of the surface: a hundred and thirty characters on one line above a table.
+   */
+  .panel-note {
+    margin-top: var(--space-1);
+    max-width: var(--measure-prose);
+    font-size: var(--fs-meta);
+    line-height: var(--lh-normal);
+    color: var(--text-secondary);
+  }
   .panel-flush {
     padding: 0;
+  }
+
+  /*
+   * The field grid: label over value, on six columns.
+   *
+   * Two pages had written this twice, one as three columns and one as six, so an incident record
+   * and the escalation raised from that same incident put their metadata on different vertical
+   * lines. Six is the shared track. A row of three fields fills the first three columns and leaves
+   * the rest, which reads as a grid with space in it rather than as three items stretched over a
+   * surface, and every field on every page lands on the same line as the one above it.
+   *
+   * Labels and values are both left aligned. These are a definition list, not a numeric column:
+   * the value is read against its own label directly above it, not down a column of its peers, so
+   * there is no last digit to line up and right aligning would only push each value away from the
+   * word that names it.
+   */
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: var(--space-5) var(--space-5);
+  }
+  .field-grid-narrow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .field-label {
+    font-size: var(--fs-micro);
+    font-weight: var(--fw-medium);
+    letter-spacing: var(--ls-caps);
+    text-transform: uppercase;
+    line-height: var(--lh-tight);
+    color: var(--text-muted);
+  }
+  .field-value {
+    margin-top: var(--space-1);
+    font-size: var(--fs-meta);
+    line-height: var(--lh-tight);
+    color: var(--text-primary);
+  }
+  @media (max-width: 1180px) {
+    .field-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 760px) {
+    .field-grid,
+    .field-grid-narrow {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  /*
+   * A notice: the one treatment for anything the page needs to say out of band.
+   *
+   * Three ad-hoc versions of this existed, two written inline on Storefront and one in the
+   * Overview stylesheet, and each was a full saturated rectangle in its severity colour. Severity
+   * belongs on one edge and in one label. The surface stays close to the page so the notice reads
+   * as part of the console rather than as a warning sticker pasted onto it, the border is a
+   * hairline everywhere except the left edge that carries the meaning, and the body keeps the
+   * prose measure even though the notice itself spans the surface it sits on.
+   */
+  .notice {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    padding: var(--space-3) var(--space-4);
+  }
+  .notice-warning {
+    border-left-color: var(--warning);
+    background: var(--warning-bg);
+  }
+  .notice-danger {
+    border-left-color: var(--danger);
+    background: var(--danger-bg);
+  }
+  .notice-label {
+    font-size: var(--fs-micro);
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-caps);
+    text-transform: uppercase;
+    line-height: var(--lh-tight);
+  }
+  .notice-warning .notice-label {
+    color: var(--warning);
+  }
+  .notice-danger .notice-label {
+    color: var(--danger);
+  }
+  .notice-body {
+    margin-top: var(--space-2);
+    max-width: var(--measure-prose);
+    font-size: var(--fs-meta);
+    line-height: var(--lh-normal);
+    color: var(--text-primary);
+  }
+  .notice-body + .notice-body {
+    margin-top: var(--space-2);
+    color: var(--text-secondary);
   }
 
   /* -- controls ------------------------------------------------------------
@@ -604,7 +710,13 @@
   }
   .dt th,
   .dt td {
-    padding: 10px var(--space-4);
+    padding: 9px var(--space-4);
+    /*
+     * Baseline, not middle. The cells in a row are a headline figure and, beside it, a stack of a
+     * figure and two subordinate lines. Centring the short cell against the tall one floats the
+     * scenario id into the middle of its neighbour's stack; a shared first baseline puts every
+     * primary value on one line across the row, which is the line the eye reads.
+     */
     vertical-align: baseline;
     overflow-wrap: anywhere;
   }
@@ -617,7 +729,8 @@
     padding-right: var(--space-5);
   }
   .dt thead th {
-    background: var(--surface);
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
     border-bottom: 1px solid var(--border-strong);
     font-size: var(--fs-table-head);
     font-weight: var(--fw-semibold);
@@ -630,34 +743,73 @@
     border-top: 1px solid var(--border);
   }
   .dt tbody tr:hover td {
-    background: var(--surface-raised);
+    background: var(--surface-hover);
   }
 
-  /* The three column kinds. Applied to the th and to every td in that column, from one source. */
-  .dt .col-text { text-align: left; }
+  /*
+   * The three column kinds. Each is declared once and applied to the th and to every td beneath
+   * it from the same source, so a header cannot disagree with its own column.
+   *
+   * Numbers are right aligned, never centred: a column of currency is read by its last digit, and
+   * centring moves that digit with the width of every value. Tabular figures hold the digits on a
+   * fixed pitch so the columns inside a number line up too.
+   */
+  .dt .col-text {
+    text-align: left;
+  }
   .dt .col-num {
     text-align: right;
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
-  .dt .col-status { text-align: center; }
+  /* A status word is an identifier, not a measurement, so it reads from the left like one. */
+  .dt .col-status {
+    text-align: left;
+  }
 
-  /* A stacked metric. Alignment comes from the column, so the block cannot drift. */
+  /*
+   * A stacked metric: one headline figure with its supporting counts under it.
+   *
+   * This is a single component, not three elements that happen to sit above each other. It takes
+   * its alignment from the column, so the three lines share one edge by construction and cannot
+   * drift apart when the data changes. The rhythm is deliberate: a wider gap under the primary
+   * separates it from its own footnotes, a tighter one holds those footnotes together.
+   */
   .dt-metric {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
-  .col-num .dt-metric { align-items: flex-end; }
-  .col-text .dt-metric { align-items: flex-start; }
+  .col-num .dt-metric {
+    align-items: flex-end;
+  }
+  .col-text .dt-metric {
+    align-items: flex-start;
+  }
   .dt-metric-primary {
-    font-size: var(--fs-table);
-    font-weight: var(--fw-medium);
+    margin-bottom: 2px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-figure);
+    font-weight: var(--fw-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--lh-tight);
     color: var(--text-primary);
   }
+  /* Subordinate by size and colour, not by a different alignment or a decorative tint. */
   .dt-metric-secondary {
     font-size: var(--fs-micro);
+    font-variant-numeric: tabular-nums;
+    line-height: var(--lh-tight);
     color: var(--text-muted);
+  }
+
+  /* A lone figure in a numeric column carries the same weight as a metric's primary line. */
+  .dt-figure {
+    font-family: var(--font-mono);
+    font-size: var(--fs-figure);
+    font-weight: var(--fw-medium);
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
   }
 
   .dt-mono {
@@ -666,8 +818,8 @@
     color: var(--text-secondary);
   }
   .dt-empty {
-    padding: var(--space-8) var(--space-5);
-    text-align: center;
+    padding: var(--space-6) var(--space-5);
+    text-align: left;
     color: var(--text-muted);
     font-size: var(--fs-body);
   }

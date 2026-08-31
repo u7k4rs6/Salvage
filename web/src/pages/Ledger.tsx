@@ -29,9 +29,9 @@ const LEDGER_COLUMNS: Column[] = [
   // Sized so a full timestamp and the longest kind each sit on one line at the table's floor.
   { key: "time", label: "Time", align: "text", width: "19%" },
   { key: "kind", label: "Kind", align: "text", width: "21%" },
-  { key: "ref", label: "Reference", align: "text", width: "20%" },
+  { key: "ref", label: "Reference", align: "text", width: "23%" },
   // The summary absorbs the width the others do not need.
-  { key: "summary", label: "Summary", align: "text", width: "23%" },
+  { key: "summary", label: "Summary", align: "text", width: "20%" },
   { key: "hash", label: "Hash", align: "text", width: "12%" },
 ];
 
