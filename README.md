@@ -102,22 +102,27 @@ npx vercel --cwd web            # preview deployment, prints the URL
 npx vercel --prod --cwd web     # production
 ```
 
-Deploying to Vercel from the dashboard instead, by connecting the repository. One setting matters
-and it is not the default: **Root Directory must be `web`**, because that is where `package.json`
-and `vercel.json` live. Point Vercel at the repository root and the build fails with no
-`package.json` found. Everything else Vercel infers correctly from `web/vercel.json`:
+Deploying to Vercel from the dashboard instead, by connecting the repository. Leave Root Directory
+at the repository root and import it; the root `vercel.json` sends the build into `web/`:
 
 | Setting | Value | Where it comes from |
 | --- | --- | --- |
-| Root Directory | `web` | set this by hand |
-| Framework preset | Vite | detected |
-| Build command | `npm run build` | `web/vercel.json` |
-| Output directory | `dist` | `web/vercel.json` |
-| Install command | `npm ci` | the committed lockfile |
+| Root Directory | repository root | leave it alone |
+| Framework preset | Other | `"framework": null` in `vercel.json` |
+| Install command | `cd web && npm ci` | `vercel.json` |
+| Build command | `cd web && npm run build` | `vercel.json` |
+| Output directory | `web/dist` | `vercel.json` |
 | Environment variables | none | a production build reads none |
 
 Leave the environment variables empty. Setting `VITE_SALVAGE_FULL=1` there would ship the five
 pages that need a backend, and on Vercel there is no backend for them to reach.
+
+This repository is a Python project with a frontend inside it, and Vercel inspects the whole tree
+before it reads any of that. Finding `pyproject.toml` it detects a FastAPI app and fails asking for
+an entrypoint, before the frontend build is ever attempted. `.vercelignore` keeps the backend out
+of the upload, so there is nothing to misdetect and the upload is the size of the frontend rather
+than the repository. Setting Root Directory to `web` instead of importing at the root also works,
+and then `web/vercel.json` is the file in charge.
 
 Deploying to GitHub Pages. Pages has no rewrite rule, so the build copies `index.html` to
 `404.html` and Pages serves that for any unknown path, which does the same job. A project site

@@ -1,0 +1,21 @@
+# Vercel builds the frontend in web/ and nothing else. Without this it uploads the Python project
+# too, sees pyproject.toml, and auto-detects a FastAPI app it then fails to find an entrypoint for.
+# Keeping the backend out of the upload removes the thing being misdetected, and makes the upload
+# the size of the frontend rather than the repository.
+salvage/
+tests/
+scripts/
+migrations/
+data/
+docs/
+design-pack/
+pyproject.toml
+uv.lock
+*.zip
+
+.venv/
+__pycache__/
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
+.playwright-mcp/
