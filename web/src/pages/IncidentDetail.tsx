@@ -34,22 +34,24 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
         evidence.window_start,
       )} to ${timestamp(evidence.window_end)}.`}
     >
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="field-grid">
         <div>
-          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">attempts</div>
-          <div className="num text-[length:var(--fs-section)] font-semibold">{count(evidence.attempts)}</div>
+          <div className="field-label">Attempts</div>
+          <div className="field-value num text-[length:var(--fs-section)] font-semibold">{count(evidence.attempts)}</div>
         </div>
         <div>
-          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">failure rate</div>
-          <div className="num text-[length:var(--fs-section)] font-semibold text-[color:var(--danger)]">{percent(evidence.rate)}</div>
+          <div className="field-label">Failure rate</div>
+          <div className="field-value num text-[length:var(--fs-section)] font-semibold text-[color:var(--danger)]">
+            {percent(evidence.rate)}
+          </div>
         </div>
         <div>
-          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">baseline</div>
-          <div className="num text-[length:var(--fs-section)] font-semibold">{percent(evidence.baseline_rate)}</div>
+          <div className="field-label">Baseline</div>
+          <div className="field-value num text-[length:var(--fs-section)] font-semibold">{percent(evidence.baseline_rate)}</div>
         </div>
         <div>
-          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">excess failures</div>
-          <div className="num text-[length:var(--fs-section)] font-semibold">{count(evidence.excess_failures)}</div>
+          <div className="field-label">Excess failures</div>
+          <div className="field-value num text-[length:var(--fs-section)] font-semibold">{count(evidence.excess_failures)}</div>
         </div>
       </div>
 
@@ -136,21 +138,19 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
       title="Diagnosis"
       subtitle="Rules and model run on the same packet. The reconciler decides what happens when they disagree."
     >
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="field-grid">
         <div>
-          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">rules</div>
-          <div className="num text-[length:var(--fs-meta)]">{causeLabel(diagnosis.rules)}</div>
-          {diagnosis.rules_detail && (
-            <div className="mt-1 text-[length:var(--fs-micro)] text-[color:var(--text-secondary)]">{diagnosis.rules_detail}</div>
-          )}
+          <div className="field-label">Rules</div>
+          <div className="field-value num">{causeLabel(diagnosis.rules)}</div>
+          {diagnosis.rules_detail && <div className="field-note">{diagnosis.rules_detail}</div>}
         </div>
         <div>
-          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">model</div>
-          <div className="num text-[length:var(--fs-meta)]">{causeLabel(diagnosis.llm)}</div>
+          <div className="field-label">Model</div>
+          <div className="field-value num">{causeLabel(diagnosis.llm)}</div>
         </div>
         <div>
-          <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">reconciled</div>
-          <div className="num text-[length:var(--fs-meta)] font-semibold">{causeLabel(diagnosis.reconciled)}</div>
+          <div className="field-label">Reconciled</div>
+          <div className="field-value num font-semibold">{causeLabel(diagnosis.reconciled)}</div>
           <Badge tone={diagnosis.agreed ? "success" : "warning"}>
             {diagnosis.agreed ? "agreed" : "disagreed"}
           </Badge>
@@ -406,34 +406,34 @@ export default function IncidentDetailPage() {
                   opened, while recovered spans the incident's whole life and is not restricted
                   to those orders. Dividing one by the other produces a number that means
                   nothing, so each carries its scope instead. */}
-              <div className="grid gap-3 sm:grid-cols-6">
+              <div className="field-grid">
                 <div>
-                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">status</div>
-                  <StatusBadge status={data.incident.status} />
+                  <div className="field-label">Status</div>
+                  <div className="field-value">
+                    <StatusBadge status={data.incident.status} />
+                  </div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">opened</div>
-                  <div className="num text-[length:var(--fs-meta)]">{timestamp(data.incident.opened_at)}</div>
+                  <div className="field-label">Opened</div>
+                  <div className="field-value num">{timestamp(data.incident.opened_at)}</div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">closed</div>
-                  <div className="num text-[length:var(--fs-meta)]">
+                  <div className="field-label">Closed</div>
+                  <div className="field-value num">
                     {data.incident.closed_at ? timestamp(data.incident.closed_at) : "still open"}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">at risk</div>
-                  <div className="num text-[length:var(--fs-meta)] font-semibold">
+                  <div className="field-label">At risk</div>
+                  <div className="field-value num font-semibold">
                     {rupees(data.incident.at_risk_amount)}
                   </div>
-                  <div className="text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">
-                    detection window, unpaid at open
-                  </div>
+                  <div className="field-note">detection window, unpaid at open</div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">recovered</div>
+                  <div className="field-label">Recovered</div>
                   <div
-                    className={`num text-[length:var(--fs-meta)] font-semibold ${
+                    className={`field-value num font-semibold ${
                       data.incident.recovered_amount > 0
                         ? "text-[color:var(--success)]"
                         : "text-[color:var(--text-muted)]"
@@ -441,14 +441,12 @@ export default function IncidentDetailPage() {
                   >
                     {rupees(data.incident.recovered_amount)}
                   </div>
-                  <div className="text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">whole incident, all cases</div>
+                  <div className="field-note">whole incident, all cases</div>
                 </div>
                 <div>
-                  <div className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">actions</div>
-                  <div className="num text-[length:var(--fs-meta)] font-semibold">{count(data.incident.actions)}</div>
-                  <div className="text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">
-                    on {count(data.incident.cases)} cases, not messages
-                  </div>
+                  <div className="field-label">Actions</div>
+                  <div className="field-value num font-semibold">{count(data.incident.actions)}</div>
+                  <div className="field-note">on {count(data.incident.cases)} cases, not messages</div>
                 </div>
               </div>
             </Panel>
