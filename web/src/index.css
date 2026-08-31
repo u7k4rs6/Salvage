@@ -113,10 +113,15 @@
    * In `ch` because the invariant for prose is a character count, and `ch` is the one unit that
    * tracks the element's own size. Measured in this face a character costs 6.74px at 15px and
    * 5.84px at 13px while `ch` is 9px and 7.8px, so `ch` runs about a third wider than an average
-   * character, so 56ch holds close to 75 of them at any size: 504px on a 15px description, 437px
+   * character, so 79ch holds close to 105 of them at any size: 711px on a 15px description, 616px
    * on a 13px note. A fixed rem cannot hold a character count across two sizes.
+   *
+   * 56ch was tried, for the 70 to 80 characters that is the usual advice, and it read worse: a
+   * 504px paragraph inside a 1400px panel is a third of the surface and every line stopped 930px
+   * short of the edge beside it. The canvas is sized for a nine column table, and prose sharing
+   * that canvas has to be measured against it rather than against a rule of thumb.
    */
-  --measure-prose: 56ch;
+  --measure-prose: 79ch;
   --canvas: 1400px;
 
   /* -- space ------------------------------------------------------------ */
@@ -301,6 +306,14 @@
      */
     max-width: calc(var(--canvas) + 2 * var(--page-pad-x));
     margin-inline: auto;
+  }
+  /*
+   * A page with no table does not need the canvas the tables are sized for. Same shell, same
+   * centring, same gutters; only the ceiling differs, so prose sits in a container proportioned
+   * for prose rather than for a nine column grid.
+   */
+  .app-main-narrow {
+    --canvas: 1100px;
   }
 
   /* -- sidebar ------------------------------------------------------------ */

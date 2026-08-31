@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { FULL_CONSOLE } from "./lib/build";
 import { SessionProvider } from "./lib/session";
 import { TopBar } from "./components/TopBar";
@@ -65,7 +65,20 @@ const DEMO_NAV: { group: string; items: { to: string; label: string }[] }[] = [
 
 const NAV = FULL_CONSOLE ? FULL_NAV : DEMO_NAV;
 
+/**
+ * How much canvas a route needs, decided by what it holds rather than by one number for all.
+ *
+ * The wide canvas exists for the tables: Incidents is nine columns, Results seven, Ledger six, and
+ * they want every pixel. Storefront and Escalations have no table at all. Giving them the same
+ * 1400px put their prose in a container built for a different page, a paragraph occupying a third
+ * of its panel with the rest empty, which is what read as content stranded on the left.
+ */
+const NARROW_CANVAS = new Set(["/storefront", "/escalations"]);
+
 export default function App() {
+  const { pathname } = useLocation();
+  const narrowCanvas = NARROW_CANVAS.has(pathname);
+
   return (
     <SessionProvider>
       {/* A column that fills the viewport, with the row under the bar taking what is left. The nav
@@ -87,7 +100,7 @@ export default function App() {
               </div>
             ))}
           </nav>
-          <main className="app-main min-w-0">
+          <main className={`app-main min-w-0${narrowCanvas ? " app-main-narrow" : ""}`}>
             <ErrorBoundary name="This page">
               <Routes>
                 <Route
