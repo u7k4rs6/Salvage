@@ -18,7 +18,6 @@ import { DistributionPair } from "../components/Distributions";
 import { Timeline } from "../components/Timeline";
 import { causeLabel, count, percent, rupees, segmentLabel, timestamp } from "../lib/format";
 import type { Diagnosis, Evidence, IncidentDetail, Plan, RecoveryCase } from "../lib/types";
-import { PageIntro } from "../components/PageIntro";
 
 // The threshold the reconciler uses. Marked on the bar so the reader can see which side of it
 // this incident fell on rather than being told the answer.
@@ -34,19 +33,19 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
     >
       <div className="grid gap-3 sm:grid-cols-4">
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">attempts</div>
+          <div className="text-xs text-neutral-600">attempts</div>
           <div className="num text-lg font-semibold">{count(evidence.attempts)}</div>
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">failure rate</div>
-          <div className="num text-lg font-semibold text-[color:var(--crit)]">{percent(evidence.rate)}</div>
+          <div className="text-xs text-neutral-600">failure rate</div>
+          <div className="num text-lg font-semibold text-red-700">{percent(evidence.rate)}</div>
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">baseline</div>
+          <div className="text-xs text-neutral-600">baseline</div>
           <div className="num text-lg font-semibold">{percent(evidence.baseline_rate)}</div>
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">excess failures</div>
+          <div className="text-xs text-neutral-600">excess failures</div>
           <div className="num text-lg font-semibold">{count(evidence.excess_failures)}</div>
         </div>
       </div>
@@ -58,12 +57,12 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
       </div>
 
       <div className="mt-4">
-        <h4 className="text-[13px] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+        <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-600">
           sibling segments
         </h4>
         <div className="mt-1 flex flex-wrap gap-1">
           {Object.keys(evidence.sibling_segments ?? {}).length === 0 ? (
-            <span className="text-[13px] text-[color:var(--fg-2)]">
+            <span className="text-xs text-neutral-600">
               No siblings. This segment has no peer to compare against, which is itself part of
               the evidence.
             </span>
@@ -79,30 +78,30 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 text-[13px] sm:grid-cols-4">
+      <div className="mt-4 grid gap-3 text-xs sm:grid-cols-4">
         <div>
-          <span className="text-[color:var(--fg-2)]">share of merchant volume </span>
+          <span className="text-neutral-600">share of merchant volume </span>
           <span className="num">{percent(evidence.share_of_merchant_volume)}</span>
         </div>
         <div>
-          <span className="text-[color:var(--fg-2)]">minutes since onset </span>
+          <span className="text-neutral-600">minutes since onset </span>
           <span className="num">{count(evidence.minutes_since_onset)}</span>
         </div>
         <div>
-          <span className="text-[color:var(--fg-2)]">trend </span>
+          <span className="text-neutral-600">trend </span>
           <span className="num">{evidence.trend}</span>
         </div>
         <div>
-          <span className="text-[color:var(--fg-2)]">merchant config changed recently </span>
+          <span className="text-neutral-600">merchant config changed recently </span>
           <span className="num">{String(evidence.merchant_config_changed_recently)}</span>
         </div>
       </div>
 
       <div className="mt-4">
-        <h4 className="text-[13px] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+        <h4 className="text-xs font-medium uppercase tracking-wide text-neutral-600">
           sample descriptions
         </h4>
-        <p className="mb-1 text-[12.5px] text-[color:var(--warn)]">
+        <p className="mb-1 text-[11px] text-amber-800">
           Untrusted text, shown as data. These strings come from the gateway and are never treated
           as instructions.
         </p>
@@ -114,13 +113,13 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
 
 function ConfidenceBar({ confidence }: { confidence: number }) {
   return (
-    <div className="relative mt-1 h-3 w-full max-w-md border border-[color:var(--line-2)] bg-[color:var(--panel-2)]">
+    <div className="relative mt-1 h-3 w-full max-w-md border border-neutral-300 bg-neutral-100">
       <div
-        className={`h-full ${confidence >= CONFIDENCE_THRESHOLD ? "bg-[color:var(--ok)]" : "bg-[color:var(--warn)]"}`}
+        className={`h-full ${confidence >= CONFIDENCE_THRESHOLD ? "bg-green-500" : "bg-amber-500"}`}
         style={{ width: `${Math.round(confidence * 100)}%` }}
       />
       <div
-        className="absolute top-0 h-full border-l-2 border-[color:var(--fg)]"
+        className="absolute top-0 h-full border-l-2 border-neutral-900"
         style={{ left: `${CONFIDENCE_THRESHOLD * 100}%` }}
         title={`threshold ${CONFIDENCE_THRESHOLD}`}
       />
@@ -136,18 +135,18 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
     >
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">rules</div>
+          <div className="text-xs text-neutral-600">rules</div>
           <div className="num text-sm">{causeLabel(diagnosis.rules)}</div>
           {diagnosis.rules_detail && (
-            <div className="mt-1 text-[12.5px] text-[color:var(--fg-2)]">{diagnosis.rules_detail}</div>
+            <div className="mt-1 text-[11px] text-neutral-600">{diagnosis.rules_detail}</div>
           )}
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">model</div>
+          <div className="text-xs text-neutral-600">model</div>
           <div className="num text-sm">{causeLabel(diagnosis.llm)}</div>
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">reconciled</div>
+          <div className="text-xs text-neutral-600">reconciled</div>
           <div className="num text-sm font-semibold">{causeLabel(diagnosis.reconciled)}</div>
           <Badge tone={diagnosis.agreed ? "green" : "amber"}>
             {diagnosis.agreed ? "agreed" : "disagreed"}
@@ -157,7 +156,7 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
 
       {diagnosis.confidence !== null && (
         <div className="mt-3">
-          <div className="text-[13px] text-[color:var(--fg-2)]">
+          <div className="text-xs text-neutral-600">
             confidence <span className="num">{diagnosis.confidence.toFixed(2)}</span>, threshold{" "}
             <span className="num">{CONFIDENCE_THRESHOLD}</span>
           </div>
@@ -166,29 +165,29 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
       )}
 
       {diagnosis.escalate && (
-        <div className="mt-3 border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[13px] text-[color:var(--warn)]">
+        <div className="mt-3 border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
           Escalated: {diagnosis.escalation_reason ?? "reason not recorded"}
         </div>
       )}
 
       {diagnosis.rationale && (
-        <p className="mt-3 whitespace-pre-wrap text-sm text-[color:var(--fg)]">{diagnosis.rationale}</p>
+        <p className="mt-3 whitespace-pre-wrap text-sm text-neutral-800">{diagnosis.rationale}</p>
       )}
 
       <Disclosure summary="Show prompt and raw response" className="mt-3">
         {diagnosis.prompt || diagnosis.raw_response ? (
           <div className="space-y-2">
             <div>
-              <div className="text-[13px] text-[color:var(--fg-2)]">prompt</div>
+              <div className="text-xs text-neutral-600">prompt</div>
               <Code>{diagnosis.prompt ?? "not recorded"}</Code>
             </div>
             <div>
-              <div className="text-[13px] text-[color:var(--fg-2)]">raw response</div>
+              <div className="text-xs text-neutral-600">raw response</div>
               <Code>{diagnosis.raw_response ?? "not recorded"}</Code>
             </div>
           </div>
         ) : (
-          <p className="text-[13px] text-[color:var(--fg-2)]">
+          <p className="text-xs text-neutral-600">
             No prompt was recorded for this incident. Either no model ran, or the diagnosis came
             from cache.
           </p>
@@ -205,15 +204,15 @@ function PlanPanel({ plan }: { plan: Plan }) {
       subtitle="What the planner proposed and what the policy engine did with it. A refused action names the rule that refused it."
     >
       {plan.rationale && (
-        <p className="mb-3 whitespace-pre-wrap text-sm text-[color:var(--fg)]">{plan.rationale}</p>
+        <p className="mb-3 whitespace-pre-wrap text-sm text-neutral-800">{plan.rationale}</p>
       )}
 
       {plan.proposed.length > 0 && (
         <div className="mb-3 space-y-1">
           {plan.proposed.map((action, index) => (
-            <div key={index} className="num text-[13px] text-[color:var(--fg-2)]">
+            <div key={index} className="num text-xs text-neutral-700">
               proposed {action.type} over {action.scope}{" "}
-              <span className="text-[color:var(--fg-3)]">{JSON.stringify(action.params)}</span>
+              <span className="text-neutral-500">{JSON.stringify(action.params)}</span>
             </div>
           ))}
         </div>
@@ -227,10 +226,10 @@ function PlanPanel({ plan }: { plan: Plan }) {
             const refused = action.status === "refused";
             const deferred = action.status === "deferred";
             return (
-              <li key={action.id} className="border border-[color:var(--line)] p-2">
+              <li key={action.id} className="border border-neutral-200 p-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`num text-sm font-medium ${refused ? "text-[color:var(--fg-3)] line-through" : ""}`}
+                    className={`num text-sm font-medium ${refused ? "text-neutral-500 line-through" : ""}`}
                   >
                     {action.type}
                   </span>
@@ -238,17 +237,17 @@ function PlanPanel({ plan }: { plan: Plan }) {
                     {action.status}
                   </Badge>
                   {action.case_id && (
-                    <span className="num text-[12.5px] text-[color:var(--fg-3)]">{action.case_id}</span>
+                    <span className="num text-[11px] text-neutral-500">{action.case_id}</span>
                   )}
                 </div>
                 <ul className="mt-1 space-y-0.5">
                   {action.gate.map((check) => (
-                    <li key={check.rule} className="num text-[12.5px]">
-                      <span className={check.passed ? "text-[color:var(--ok)]" : "text-[color:var(--crit)]"}>
+                    <li key={check.rule} className="num text-[11px]">
+                      <span className={check.passed ? "text-green-700" : "text-red-700"}>
                         {check.passed ? "pass" : "fail"}
                       </span>{" "}
-                      <span className="text-[color:var(--fg)]">{check.rule}</span>{" "}
-                      <span className="text-[color:var(--fg-3)]">{check.detail}</span>
+                      <span className="text-neutral-800">{check.rule}</span>{" "}
+                      <span className="text-neutral-500">{check.detail}</span>
                     </li>
                   ))}
                 </ul>
@@ -279,9 +278,9 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
             align={["left", "left", "right", "left", "right", "left", "left"]}
           >
             {cases.map((item) => (
-              <tr key={item.id} className="border-b border-[color:var(--line)]">
-                <td className="cell-pad num text-[13px]">{item.ref_hash}</td>
-                <td className="cell-pad num text-[13px]">{item.order_id}</td>
+              <tr key={item.id} className="border-b border-neutral-100">
+                <td className="cell-pad num text-xs">{item.ref_hash}</td>
+                <td className="cell-pad num text-xs">{item.order_id}</td>
                 <td className="cell-pad num text-right">{rupees(item.amount)}</td>
                 <td className="cell-pad">
                   <Badge
@@ -297,8 +296,8 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
                   </Badge>
                 </td>
                 <td className="cell-pad num text-right">{item.nudges}</td>
-                <td className="cell-pad num text-[13px]">{item.link_id ?? "-"}</td>
-                <td className="cell-pad num text-[13px]">
+                <td className="cell-pad num text-xs">{item.link_id ?? "-"}</td>
+                <td className="cell-pad num text-xs">
                   {item.next_action_at ? timestamp(item.next_action_at) : "-"}
                 </td>
               </tr>
@@ -323,20 +322,7 @@ export default function IncidentDetailPage() {
 
   return (
     <div className="space-y-4">
-      <PageIntro
-        title="Incident detail"
-        what="One incident from the first failure to the last thing the agent did about it."
-        use="Read down: what the evidence was, what the diagnosis made of it, what was planned, then what each rule allowed or refused."
-        shows={[
-          ["Evidence", "exactly what the diagnosis was given: failure rate against this segment's own baseline, which errors, and whether sibling segments are healthy. No customer detail is in it, by construction"],
-          ["Diagnosis", "the rules verdict and the model verdict side by side, then the reconciled cause. Agreement raises confidence, disagreement pushes it below the 0.6 threshold and escalates"],
-          ["Plan", "what the agent decided to do, chosen from a fixed menu of five things. It cannot invent a sixth"],
-          ["Actions", "every action with the rules it was checked against. A refusal names the rule that stopped it"],
-          ["Cases", "one per affected order, and the state each reached"],
-          ["Ledger slice", "the chain entries for this incident alone"],
-        ]}
-      />
-      <Link to="/incidents" className="text-[13px] text-[color:var(--info)] hover:text-[color:var(--fg)]">
+      <Link to="/incidents" className="text-xs text-accent hover:text-accent-hover">
         Back to incidents
       </Link>
 
@@ -358,7 +344,7 @@ export default function IncidentDetailPage() {
                 <div className="flex items-center gap-2">
                   <a
                     href={`/api/ledger/export?ref_id=${encodeURIComponent(data.incident.id)}`}
-                    className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[13px] hover:bg-[color:var(--panel-3)]"
+                    className="border border-neutral-300 bg-white px-2 py-1 text-xs hover:bg-neutral-100"
                   >
                     Export ledger slice
                   </a>
@@ -391,45 +377,39 @@ export default function IncidentDetailPage() {
                   nothing, so each carries its scope instead. */}
               <div className="grid gap-3 sm:grid-cols-6">
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">status</div>
+                  <div className="text-xs text-neutral-600">status</div>
                   <StatusBadge status={data.incident.status} />
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">opened</div>
-                  <div className="num text-[13px]">{timestamp(data.incident.opened_at)}</div>
+                  <div className="text-xs text-neutral-600">opened</div>
+                  <div className="num text-xs">{timestamp(data.incident.opened_at)}</div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">closed</div>
-                  <div className="num text-[13px]">
+                  <div className="text-xs text-neutral-600">closed</div>
+                  <div className="num text-xs">
                     {data.incident.closed_at ? timestamp(data.incident.closed_at) : "still open"}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">at risk</div>
+                  <div className="text-xs text-neutral-600">at risk</div>
                   <div className="num text-sm font-semibold">
                     {rupees(data.incident.at_risk_amount)}
                   </div>
-                  <div className="text-[11.5px] text-[color:var(--fg-3)]">
+                  <div className="text-[10px] text-neutral-500">
                     detection window, unpaid at open
                   </div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">recovered</div>
-                  <div
-                    className={`num text-sm font-semibold ${
-                      data.incident.recovered_amount > 0
-                        ? "text-[color:var(--ok)]"
-                        : "text-[color:var(--fg-3)]"
-                    }`}
-                  >
+                  <div className="text-xs text-neutral-600">recovered</div>
+                  <div className="num text-sm font-semibold text-green-700">
                     {rupees(data.incident.recovered_amount)}
                   </div>
-                  <div className="text-[11.5px] text-[color:var(--fg-3)]">whole incident, all cases</div>
+                  <div className="text-[10px] text-neutral-500">whole incident, all cases</div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">actions</div>
+                  <div className="text-xs text-neutral-600">actions</div>
                   <div className="num text-sm font-semibold">{count(data.incident.actions)}</div>
-                  <div className="text-[11.5px] text-[color:var(--fg-3)]">
+                  <div className="text-[10px] text-neutral-500">
                     on {count(data.incident.cases)} cases, not messages
                   </div>
                 </div>

@@ -15,6 +15,7 @@ import {
 import { summarise } from "../components/Timeline";
 import { shortHash, timestamp } from "../lib/format";
 import type { LedgerPage, VerifyResult } from "../lib/types";
+import { PageIntro } from "../components/PageIntro";
 
 const REF_TYPES = ["", "sim_run", "incident", "case", "action", "escalation", "webhook", "control"];
 
@@ -36,6 +37,18 @@ export default function LedgerPageView() {
 
   return (
     <div className="space-y-4">
+      <PageIntro
+        title="Ledger"
+        what="The append-only record of everything the system did, in order, with each entry sealed against the one before it."
+        use="Filter by kind or by what an entry refers to. Verify recomputes the whole chain and reports the first entry that does not match. Export writes the same bytes an offline verifier reads."
+        shows={[
+          ["seq", "position in the chain. They run 1, 2, 3 with no gaps, so a gap is a deleted entry"],
+          ["kind", "what happened, such as detect.incident.opened, decide.plan or execute.action.refused"],
+          ["hash", "a fingerprint of this entry and of the one before it, so changing any byte of any entry breaks every entry after it"],
+          ["Verify", "recomputes every fingerprint from the entries themselves and reports whether the chain is intact"],
+        ]}
+        caveat="What the chain proves is that the record was not altered after it was written. It does not prove the process wrote the truth: a wrong decision, faithfully recorded, verifies perfectly."
+      />
       <Panel
         title="Ledger"
         right={
@@ -50,21 +63,21 @@ export default function LedgerPageView() {
                   setVerifyError(cause);
                 }
               }}
-              className="border border-[color:var(--info)] bg-[color:var(--info-bg)] px-2 py-1 text-xs text-[color:var(--info)] hover:bg-[color:var(--info-bg)]"
+              className="border border-[color:var(--info)] bg-[color:var(--info-bg)] px-2 py-1 text-[13px] text-[color:var(--info)] hover:bg-[color:var(--info-bg)]"
             >
               Verify chain
             </button>
             <a
               href="/api/ledger/export"
               download="salvage-ledger.jsonl"
-              className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-xs hover:bg-[color:var(--panel-3)]"
+              className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[13px] hover:bg-[color:var(--panel-3)]"
             >
               Export JSONL
             </a>
           </div>
         }
       >
-        <p className="max-w-3xl text-xs text-[color:var(--fg-2)]">
+        <p className="max-w-3xl text-[13px] text-[color:var(--fg-2)]">
           {state.data?.proves ??
             "This chain proves the record has not been altered after it was written. It does not prove the process wrote the truth."}
         </p>
@@ -87,7 +100,7 @@ export default function LedgerPageView() {
             {/* The server's message already opens with the verdict, so the banner shows it
                 once rather than prefixing a second copy of the same word. */}
             <span className="num font-medium">{verify.message}</span>
-            <div className="num mt-1 text-[11px] opacity-80">
+            <div className="num mt-1 text-[12.5px] opacity-80">
               genesis {shortHash(verify.genesis_hash)}
             </div>
           </div>
@@ -95,7 +108,7 @@ export default function LedgerPageView() {
       </Panel>
 
       <Panel title="Entries">
-        <div className="mb-3 flex flex-wrap items-end gap-3 text-xs">
+        <div className="mb-3 flex flex-wrap items-end gap-3 text-[13px]">
           <label className="flex flex-col gap-1">
             kind
             <select
@@ -157,33 +170,33 @@ export default function LedgerPageView() {
                 >
                   {data.entries.map((entry) => (
                     <tr key={entry.seq} className="border-b border-[color:var(--line)] align-top">
-                      <td className="cell-pad num text-right text-xs">{entry.seq}</td>
-                      <td className="cell-pad num whitespace-nowrap text-xs">
+                      <td className="cell-pad num text-right text-[13px]">{entry.seq}</td>
+                      <td className="cell-pad num whitespace-nowrap text-[13px]">
                         {timestamp(entry.ts)}
                       </td>
                       <td className="cell-pad">
                         <Badge>{entry.kind}</Badge>
                       </td>
-                      <td className="cell-pad num text-xs text-[color:var(--fg-2)]">
+                      <td className="cell-pad num text-[13px] text-[color:var(--fg-2)]">
                         {entry.ref_type}
                         <div className="text-[color:var(--fg-3)]">{entry.ref_id}</div>
                       </td>
-                      <td className="cell-pad text-xs">
+                      <td className="cell-pad text-[13px]">
                         {summarise(entry)}
                         <Disclosure summary="payload" className="mt-1">
                           <Code>{JSON.stringify(entry.payload, null, 2)}</Code>
-                          <div className="num mt-1 text-[11px] text-[color:var(--fg-3)]">
+                          <div className="num mt-1 text-[12.5px] text-[color:var(--fg-3)]">
                             previous {shortHash(entry.prev_hash)}
                           </div>
                         </Disclosure>
                       </td>
-                      <td className="cell-pad num text-xs text-[color:var(--fg-2)]">
+                      <td className="cell-pad num text-[13px] text-[color:var(--fg-2)]">
                         {shortHash(entry.hash)}
                       </td>
                     </tr>
                   ))}
                 </Table>
-                <div className="mt-3 flex items-center gap-3 text-xs text-[color:var(--fg-2)]">
+                <div className="mt-3 flex items-center gap-3 text-[13px] text-[color:var(--fg-2)]">
                   <span className="num">{data.total} entries</span>
                   <button
                     type="button"

@@ -37,7 +37,7 @@ export function ErrorPanel({ error, retry }: { error: unknown; retry?: () => voi
   return (
     <div role="alert" className="alert">
       <div className="lbl crit">Request failed</div>
-      <div className="mono mid mt-1.5 break-words text-[12px]">{describe(error)}</div>
+      <div className="mono mid mt-1.5 break-words text-[13px]">{describe(error)}</div>
       {retry && (
         <button type="button" onClick={retry} className="link focus-ring lbl lbl-2 mt-2.5 block">
           Retry &rarr;

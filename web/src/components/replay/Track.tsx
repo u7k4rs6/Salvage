@@ -167,7 +167,7 @@ function Box({ node }: { node: Node }) {
         <span className={`lbl ${node.status === "idle" ? "" : "lbl-2"}`}>{node.key}</span>
       </div>
       <div
-        className={`mono mt-1.5 max-w-[12rem] truncate text-[11px] ${
+        className={`mono mt-1.5 max-w-[12rem] truncate text-[12.5px] ${
           node.status === "idle" ? "dim" : "mid"
         }`}
         title={node.detail}
@@ -176,7 +176,7 @@ function Box({ node }: { node: Node }) {
       </div>
       {node.sub && (
         <div
-          className={`mono mt-0.5 max-w-[12rem] truncate text-[11px] ${
+          className={`mono mt-0.5 max-w-[12rem] truncate text-[12.5px] ${
             node.status === "idle" ? "dim" : "crit"
           }`}
           title={node.sub}

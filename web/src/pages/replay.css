@@ -31,7 +31,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -65,7 +65,7 @@
 }
 .rp .seg > button {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--fg-3);
@@ -88,7 +88,7 @@
 
 .rp select.field {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: 12.5px;
   color: var(--fg);
   background: var(--panel-2);
   border: 1px solid var(--line-2);
@@ -227,18 +227,18 @@
 }
 .rp .gate-mark {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 .rp .gate-rule {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--fg-2);
   word-break: break-word;
 }
 .rp .gate-detail {
-  font-size: 12.5px;
-  line-height: 1.45;
+  font-size: 13.5px;
+  line-height: 1.5;
   color: var(--fg-2);
 }
 .rp .gate-failed .gate-rule,
@@ -268,7 +268,7 @@
 .rp .verdict-rule {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 21px;
+  font-size: 23px;
   font-weight: 500;
   line-height: 1.2;
   letter-spacing: -0.01em;
@@ -324,7 +324,7 @@
 .rp .tert {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 10.5px;
+  font-size: 11.5px;
   line-height: 1.5;
   color: var(--fg-3);
 }
@@ -371,7 +371,8 @@
  */
 
 .rp .entry {
-  min-height: calc(100vh - 38px);
+  /* Fills the row the app shell gives it, rather than guessing the top bar's height. */
+  min-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -381,7 +382,7 @@
   max-width: 46rem;
 }
 .rp .entry-title {
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1.25;
   font-weight: 500;
   letter-spacing: -0.015em;
@@ -389,8 +390,8 @@
   max-width: 34rem;
 }
 .rp .entry-body {
-  font-size: 15px;
-  line-height: 1.65;
+  font-size: 16px;
+  line-height: 1.7;
   color: var(--fg-2);
   max-width: 42rem;
 }
@@ -403,7 +404,7 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -424,8 +425,8 @@
  * the run is playing, because for a visitor who reads nothing else it is the whole explanation.
  */
 .rp .narration {
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 17px;
+  line-height: 1.55;
   color: var(--fg);
   max-width: 62rem;
 }

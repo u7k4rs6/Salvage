@@ -14,6 +14,7 @@ import { FULL_CONSOLE } from "../lib/build";
 import { Badge, Empty, Panel, Region, Table } from "../components/primitives";
 import { count, percent, rupees, rupeesShort } from "../lib/format";
 import type { ResultsRun } from "../lib/types";
+import { PageIntro } from "../components/PageIntro";
 
 interface RunList {
   runs: { run_id: string; scenarios: string[]; seeds: number[]; policies: string[]; runs: number }[];
@@ -24,7 +25,7 @@ interface RunList {
 function Notes({ notes }: { notes: string[] }) {
   if (notes.length === 0) return null;
   return (
-    <div className="border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-xs text-[color:var(--warn)]">
+    <div className="border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[13px] text-[color:var(--warn)]">
       {notes.map((note, index) => (
         <p key={index} className={index > 0 ? "mt-1" : ""}>
           {note}
@@ -54,10 +55,10 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
               return (
                 <td key={policy} className="cell-pad num text-right">
                   <div className="font-medium">{rupees(row.at_risk_recovered_amount)}</div>
-                  <div className="text-[11px] text-[color:var(--fg-2)]">
+                  <div className="text-[12.5px] text-[color:var(--fg-2)]">
                     {count(row.at_risk_messages, 0)} msg
                   </div>
-                  <div className="text-[11px] text-[color:var(--fg-3)]">
+                  <div className="text-[12.5px] text-[color:var(--fg-3)]">
                     rate {percent(row.at_risk_recovery_rate, 1)}
                   </div>
                 </td>
@@ -84,7 +85,7 @@ function WholeRunTable({ run }: { run: ResultsRun }) {
             return (
               <td key={policy} className="cell-pad num text-right">
                 <div>{rupees(row.recovered_amount)}</div>
-                <div className="text-[11px] text-[color:var(--fg-3)]">
+                <div className="text-[12.5px] text-[color:var(--fg-3)]">
                   sd {rupeesShort(row.recovered_std)} / {count(row.messages, 0)} msg /{" "}
                   {count(row.opt_outs, 0)} opt-out
                 </div>
@@ -147,7 +148,7 @@ function SecondaryTable({ run }: { run: ResultsRun }) {
 function CaptureNotice({ runId }: { runId: string | null }) {
   if (FULL_CONSOLE) return null;
   return (
-    <p className="mb-3 border-l-2 border-[color:var(--line-2)] pl-3 text-xs text-[color:var(--fg-2)]">
+    <p className="mb-3 border-l-2 border-[color:var(--line-2)] pl-3 text-[13px] text-[color:var(--fg-2)]">
       These figures are a captured snapshot of a real evaluation run
       {runId ? (
         <>
@@ -170,6 +171,20 @@ export default function ResultsPage() {
 
   return (
     <div className="space-y-4">
+      <PageIntro
+        title="Results"
+        what="How the agent scored against three simpler strategies over the same simulated worlds, ten seeds each."
+        use="Read the primary table first, then the secondary one directly under it. They measure different populations and they disagree, and both are here on purpose."
+        shows={[
+          ["agent", "the full system: detect, diagnose, decide, act inside its rules"],
+          ["echo", "the same agent with the language model replaced by a stub that repeats the rules verdict. A control, not a product"],
+          ["B0", "does nothing. Whatever it recovers, the shoppers recovered on their own"],
+          ["B1 and B2", "send a payment link to every failed order on fixed timers, with no idea why anything failed"],
+          ["Primary table", "money recovered from the orders the fault actually broke, with the number of actions sent beside it. Revenue is never shown without contact volume"],
+          ["Secondary table", "the same over every order that failed that day, fault or not. The link-sending baselines beat the agent here, on every scenario"],
+        ]}
+        caveat="A message costs nothing in this simulator except a 2.6 percent chance the shopper opts out. There is no regulatory cost, no per-message fee and no fatigue, so read every advantage a link-sending baseline shows in that light."
+      />
       <Region state={runs} rows={2}>
         {(list) =>
           list.runs.length === 0 ? (
@@ -186,12 +201,12 @@ export default function ResultsPage() {
             <Panel
               title="Results"
               right={
-                <label className="text-xs text-[color:var(--fg-2)]">
+                <label className="text-[13px] text-[color:var(--fg-2)]">
                   run{" "}
                   <select
                     value={runId ?? ""}
                     onChange={(event) => setSelected(event.target.value)}
-                    className="num border border-[color:var(--line-2)] px-2 py-1 text-xs"
+                    className="num border border-[color:var(--line-2)] px-2 py-1 text-[13px]"
                   >
                     {list.runs.map((item) => (
                       <option key={item.run_id} value={item.run_id}>
@@ -237,7 +252,7 @@ export default function ResultsPage() {
 
             <Panel title="Secondary metrics">
               <SecondaryTable run={data} />
-              <div className="mt-3 flex flex-wrap gap-3 text-xs">
+              <div className="mt-3 flex flex-wrap gap-3 text-[13px]">
                 <span>
                   worlds{" "}
                   <span className="num">
@@ -277,7 +292,7 @@ export default function ResultsPage() {
                 {(data.diagnosis.misses ?? []).length > 0 && (
                   <ul className="mt-2 space-y-0.5">
                     {data.diagnosis.misses.map((miss: string, index: number) => (
-                      <li key={index} className="num text-[11px] text-[color:var(--fg-2)]">
+                      <li key={index} className="num text-[12.5px] text-[color:var(--fg-2)]">
                         {miss}
                       </li>
                     ))}
@@ -319,10 +334,10 @@ export default function ResultsPage() {
                 </div>
                 {data.sensitivity.adversarial && (
                   <div className="mt-3">
-                    <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+                    <h3 className="text-[13px] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
                       Adversarial set
                     </h3>
-                    <p className="mt-1 text-xs text-[color:var(--fg-2)]">
+                    <p className="mt-1 text-[13px] text-[color:var(--fg-2)]">
                       Organic retry probability raised to 0.60 everywhere and every response
                       multiplier set to 1.0. Customers recover on their own; the agent has no
                       advantage here, by design.
@@ -354,7 +369,7 @@ export default function ResultsPage() {
                 title="Fault injection"
                 subtitle="Every injected fault, and whether the agent refused it and wrote the refusal down."
               >
-                <div className="grid grid-cols-2 gap-3 text-xs lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 text-[13px] lg:grid-cols-4">
                   <div>
                     <div className="text-[color:var(--fg-2)]">attempts</div>
                     <div className="num text-lg">{data.fault_injection.attempts}</div>

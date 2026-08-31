@@ -7,6 +7,7 @@ import { post } from "../lib/api";
 import { Badge, Code, Empty, ErrorPanel, Panel, Region } from "../components/primitives";
 import { rupees, timestamp } from "../lib/format";
 import type { LedgerEntry } from "../lib/types";
+import { PageIntro } from "../components/PageIntro";
 
 interface Skus {
   skus: { sku: string; name: string; amount: number }[];
@@ -99,6 +100,17 @@ export default function StorefrontPage() {
 
   return (
     <div className="space-y-4">
+      <PageIntro
+        title="Storefront"
+        what="What a shopper sees, so you can watch a real failure go in one end and come out the other end of the console."
+        use="Buying needs Razorpay test keys in .env, and Simulate a failure needs the dashboard token in the top bar. Without either, the buttons stay disabled on purpose rather than pretending to work."
+        shows={[
+          ["Demo store", "three items at real prices. Buy opens Razorpay's own hosted test checkout, not a mock of it"],
+          ["What happened", "the result the browser saw, then the webhook Salvage received. Those arrive at different times and the ledger records the second"],
+          ["Simulate a failure", "writes one failed attempt for the demo customer so the rest of the console reacts, without needing a real card to decline"],
+        ]}
+        caveat="Test mode only. Startup refuses to run if the Razorpay key does not begin with rzp_test_, so no live key can be used here."
+      />
       {hint.data?.hint && (
         <div className="border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-sm text-[color:var(--warn)]">
           <span className="font-medium">
@@ -128,10 +140,26 @@ export default function StorefrontPage() {
         <Region state={skus} rows={2}>
           {(data) => (
             <>
+              {/* This state reads as a broken page unless it says, at the size of a warning rather
+                  than a footnote, that nothing is broken and exactly what is missing. */}
               {!data.available && (
-                <div className="mb-3 border border-[color:var(--line-2)] bg-[color:var(--panel-2)] px-3 py-2 text-xs text-[color:var(--fg-2)]">
-                  {data.reason} Checkout is disabled rather than opened against a key that is not
-                  there.
+                <div className="mb-4 border border-[color:var(--warn)] border-l-2 bg-[color:var(--warn-bg)] px-4 py-3">
+                  <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[color:var(--warn)]">
+                    Checkout is switched off, not broken
+                  </div>
+                  <p className="mt-1.5 text-[14px] leading-relaxed text-[color:var(--fg)]">
+                    {data.reason} Checkout is disabled rather than opened against a key that is not
+                    there, so the Buy buttons below do nothing on purpose.
+                  </p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-[color:var(--fg-2)]">
+                    To turn it on, put a Razorpay <span className="num">test</span> key pair in{" "}
+                    <span className="num">.env</span> as{" "}
+                    <span className="num">RAZORPAY_KEY_ID</span> and{" "}
+                    <span className="num">RAZORPAY_KEY_SECRET</span>, then restart the API. Startup
+                    refuses any key that does not begin with <span className="num">rzp_test_</span>,
+                    so a live key cannot be used here. Everything else on this page, and every other
+                    page, works without it.
+                  </p>
                 </div>
               )}
               <div className="grid gap-3 sm:grid-cols-3">
@@ -143,7 +171,7 @@ export default function StorefrontPage() {
                       type="button"
                       disabled={!data.available || busy || !ready}
                       onClick={() => buy(item.sku)}
-                      className="mt-2 border border-[color:var(--info)] bg-[color:var(--info-bg)] px-3 py-1 text-xs text-[color:var(--info)] hover:bg-[color:var(--info-bg)] disabled:opacity-50"
+                      className="mt-2 border border-[color:var(--info)] bg-[color:var(--info-bg)] px-3 py-1 text-[13px] text-[color:var(--info)] hover:bg-[color:var(--info-bg)] disabled:opacity-50"
                     >
                       {busy ? "Working" : "Buy"}
                     </button>
@@ -162,7 +190,7 @@ export default function StorefrontPage() {
 
         {hint.data?.config && (
           <details className="mt-3">
-            <summary className="cursor-pointer text-xs text-[color:var(--info)] hover:text-[color:var(--fg)]">
+            <summary className="cursor-pointer text-[13px] text-[color:var(--info)] hover:text-[color:var(--fg)]">
               checkout config sent to Razorpay
             </summary>
             <Code>{JSON.stringify(hint.data.config, null, 2)}</Code>
@@ -194,7 +222,7 @@ export default function StorefrontPage() {
         ) : (
           <ul className="space-y-1">
             {entries.map((entry) => (
-              <li key={entry.seq} className="num text-xs">
+              <li key={entry.seq} className="num text-[13px]">
                 <span className="text-[color:var(--fg-3)]">{entry.seq}</span>{" "}
                 <Badge>{entry.kind}</Badge>{" "}
                 <span className="text-[color:var(--fg-2)]">{timestamp(entry.ts)}</span>
@@ -220,12 +248,12 @@ export default function StorefrontPage() {
               setError(cause);
             }
           }}
-          className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-3 py-1 text-xs text-[color:var(--crit)] hover:bg-[color:var(--crit-bg)] disabled:opacity-50"
+          className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-3 py-1 text-[13px] text-[color:var(--crit)] hover:bg-[color:var(--crit-bg)] disabled:opacity-50"
         >
-          {!token && <span aria-hidden="true">&#128274; </span>}
+
           Simulate my payment failing
         </button>
-        <p className="mt-2 text-xs text-[color:var(--fg-2)]">
+        <p className="mt-2 text-[13px] text-[color:var(--fg-2)]">
           This writes one failed attempt. It does not fabricate a webhook, so nothing appears in
           the webhook ledger for it.
         </p>

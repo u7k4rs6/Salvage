@@ -21,6 +21,7 @@ import { count, rupeesShort, timeOnly, timestamp } from "../lib/format";
 import { elapsed } from "../lib/health";
 import "./overview.css";
 import "./replay.css";
+import { PageIntro } from "../components/PageIntro";
 
 /**
  * The Scenario Runner: a recorded run, replayed from its own ledger.
@@ -200,6 +201,28 @@ function Runner({
         onTogglePresenting={() => setPresenting((current) => !current)}
       />
 
+      {/* Hidden in presentation mode with the rest of the driving furniture: by the time this is
+          being filmed the explanation is in the voiceover, and the panels need the height. */}
+      {!presenting && (
+      <div className="px-[var(--gutter)] pt-[var(--s3)]">
+        <PageIntro
+          title="Scenario Runner"
+          what="A run that already happened, replayed from the record it left behind. Every frame on this page is recorded data."
+          use="Press play, or step one entry at a time. Beat jumps to the next moment worth reading. The scrub bar seeks anywhere in the run, and P hides the controls for filming."
+          shows={[
+            ["What is happening", "one sentence saying what the run is doing right now, in plain English. If you read nothing else on this page, read that"],
+            ["Sim time", "the whole run on one bar. Red is the fault, the rule along the top is the incident, and the ticks are the moments the replay pauses on"],
+            ["Incident", "where this incident has reached, and how long the detector took to notice the fault"],
+            ["Payment health", "each segment against its own baseline, moving one detector window at a time as the clock advances"],
+            ["Diagnosis", "the rules verdict and the model verdict, then what they reconciled to, against the 0.6 threshold an action needs"],
+            ["Plan and gates", "what the agent decided to do, then every rule each action was checked against and which one decided it"],
+            ["Cases and outcomes", "the affected orders and where each ended up"],
+          ]}
+          caveat="Where the run did not record something, this page shows nothing rather than a guess. Both input confidences read 'not recorded' for that reason, and a segment with too little traffic is drawn empty."
+        />
+      </div>
+      )}
+
       <Section title="What is happening" tight>
         <p className="narration" key={narration.key}>
           {narration.text}
@@ -233,27 +256,27 @@ function Runner({
             {state.incident ? (
               <div className="kv">
                 <span className="lbl">Segment</span>
-                <span className="mono mid text-[12px]">{state.incident.segmentKey}</span>
+                <span className="mono mid text-[13px]">{state.incident.segmentKey}</span>
                 <span className="lbl">Affected scope</span>
-                <span className="mono mid text-[12px]">
+                <span className="mono mid text-[13px]">
                   {state.incident.scope.join(", ") || "-"}
                 </span>
                 <span className="lbl">Opened</span>
-                <span className="mono mid text-[12px]">
+                <span className="mono mid text-[13px]">
                   {timestamp(state.incident.openedAt)}
                 </span>
                 <span className="lbl">Detection latency</span>
-                <span className="mono mid text-[12px]">
+                <span className="mono mid text-[13px]">
                   {detectSeconds === null
                     ? "no recorded fault to measure from"
                     : `${Math.round(detectSeconds / 60)} sim minutes after the fault started`}
                 </span>
                 <span className="lbl">At risk when opened</span>
-                <span className="mono mid text-[12px]">
+                <span className="mono mid text-[13px]">
                   {rupeesShort(state.incident.atRisk)}
                 </span>
                 <span className="lbl">Closed</span>
-                <span className="mono mid text-[12px]">
+                <span className="mono mid text-[13px]">
                   {state.incident.closedAt === null
                     ? "still open"
                     : timestamp(state.incident.closedAt)}
@@ -329,18 +352,18 @@ function Runner({
       <Section title="Provenance" tight>
         <div className="kv">
           <span className="lbl">Run</span>
-          <span className="mono mid text-[12px]">{meta.run_id}</span>
+          <span className="mono mid text-[13px]">{meta.run_id}</span>
           <span className="lbl">Captured from</span>
-          <span className="mono mid text-[12px]">
+          <span className="mono mid text-[13px]">
             salvage agent run --scenario {meta.scenario} --seed {meta.seed} --policy {meta.policy}{" "}
             --provider {meta.provider}
           </span>
           <span className="lbl">Params hash</span>
-          <span className="mono mid text-[12px]">{meta.params_hash.slice(0, 16)}</span>
+          <span className="mono mid text-[13px]">{meta.params_hash.slice(0, 16)}</span>
           <span className="lbl">Source revision</span>
-          <span className="mono mid text-[12px]">{meta.git_rev || "not recorded"}</span>
+          <span className="mono mid text-[13px]">{meta.git_rev || "not recorded"}</span>
           <span className="lbl">Observed window</span>
-          <span className="mono mid text-[12px]">
+          <span className="mono mid text-[13px]">
             {timestamp(replay.start)} to {timestamp(replay.end)}, {elapsed(replay.start, replay.end)}{" "}
             of sim time
           </span>

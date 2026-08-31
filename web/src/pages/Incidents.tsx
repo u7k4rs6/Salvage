@@ -12,6 +12,7 @@ import {
   timestamp,
 } from "../lib/format";
 import type { IncidentList } from "../lib/types";
+import { PageIntro } from "../components/PageIntro";
 
 const STATUSES = ["all", "open", "escalated", "paused", "recovering", "closed"];
 
@@ -23,11 +24,26 @@ export default function IncidentsPage() {
   useStream(["incident.opened", "incident.updated", "incident.closed"], () => state.reload());
 
   return (
+    <>
+      <PageIntro
+        title="Incidents"
+        what="Every incident the detector has opened, newest first. An incident is one slice of traffic failing far more than that same slice normally does."
+        use="Click a row to open the evidence, the diagnosis, and every action the agent took or refused for that incident."
+        shows={[
+          ["Segment", "the slice of traffic that is failing, such as one card BIN, one UPI handle, or the whole merchant"],
+          ["Root cause", "what the diagnosis settled on after a rules classifier and a language model both read the same evidence"],
+          ["Confidence", "how sure that diagnosis is. Below 0.6 the agent may not do anything to a customer"],
+          ["At risk", "money in orders that failed inside this incident and were still unpaid when it opened"],
+          ["Recovered", "money from orders the agent brought back, by payment link or by steering the shopper to another method"],
+          ["Actions", "how many things the agent did or refused to do. A refusal is recorded as fully as an action"],
+        ]}
+        caveat="At risk and recovered are never divided by one another. They are measured over different populations and different windows, so a ratio of the two would not mean anything."
+      />
     <Panel
       title="Incidents"
       subtitle="Every incident the detector opened, newest first."
       right={
-        <label className="text-xs text-[color:var(--fg-2)]">
+        <label className="text-[13px] text-[color:var(--fg-2)]">
           status{" "}
           <select
             value={status}
@@ -35,7 +51,7 @@ export default function IncidentsPage() {
               setStatus(event.target.value);
               setOffset(0);
             }}
-            className="border border-[color:var(--line-2)] px-2 py-1 text-xs"
+            className="border border-[color:var(--line-2)] px-2 py-1 text-[13px]"
           >
             {STATUSES.map((value) => (
               <option key={value} value={value}>
@@ -81,7 +97,7 @@ export default function IncidentsPage() {
               >
                 {data.incidents.map((incident) => (
                   <tr key={incident.id} className="border-b border-[color:var(--line)] hover:bg-[color:var(--panel-2)]">
-                    <td className="cell-pad num whitespace-nowrap text-xs">
+                    <td className="cell-pad num whitespace-nowrap text-[13px]">
                       <Link
                         to={`/incidents/${incident.id}`}
                         className="text-[color:var(--info)] hover:text-[color:var(--fg)]"
@@ -123,7 +139,7 @@ export default function IncidentsPage() {
                   </tr>
                 ))}
               </Table>
-              <div className="mt-3 flex items-center gap-3 text-xs text-[color:var(--fg-2)]">
+              <div className="mt-3 flex items-center gap-3 text-[13px] text-[color:var(--fg-2)]">
                 <span className="num">
                   {offset + 1} to {Math.min(offset + data.limit, data.total)} of {data.total}
                 </span>
@@ -149,5 +165,6 @@ export default function IncidentsPage() {
         }
       </Region>
     </Panel>
+    </>
   );
 }

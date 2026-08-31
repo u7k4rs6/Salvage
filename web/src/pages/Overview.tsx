@@ -14,6 +14,7 @@ import { Activity } from "../components/overview/Activity";
 import { causeLabel, timeOnly } from "../lib/format";
 import type { IncidentDetail, LedgerPage, Overview as OverviewData } from "../lib/types";
 import "./overview.css";
+import { PageIntro } from "../components/PageIntro";
 
 /**
  * The Overview: an operational control plane, read top to bottom in severity order.
@@ -131,6 +132,22 @@ function OverviewBody({
 
   return (
     <div className="ov">
+      <div className="px-[var(--gutter)] pt-[var(--s4)]">
+        <PageIntro
+          title="Overview"
+          what="The state of payments right now: what is succeeding, what is failing, and what the agent has done about it."
+          use="Read top to bottom. It is ordered by severity, so the worst thing is highest. Click an incident to open it in full."
+          shows={[
+            ["Status", "success rate over the last 60 minutes, and separately how far the merchant-wide rate has moved from its own seven-day baseline. Two windows, so they are shown as two facts rather than subtracted into one"],
+            ["Active incidents", "what the detector has opened, the cause it settled on, and how long it took to notice"],
+            ["Payment health", "every segment against its own baseline, not against each other. The bar runs from that segment's normal rate to where it is now, so its length is the excess"],
+            ["Traffic and incident windows", "the last 24 simulated hours of attempts, with the incident marked on it"],
+            ["Incident lifecycle", "where the current incident has reached. Escalate is a terminal branch: nothing runs from it to recovery"],
+            ["Ledger activity", "the most recent entries in the tamper-evident record"],
+          ]}
+          caveat="A segment with too little traffic to test is drawn as an empty dashed lane rather than left out. That is the detector declining to measure it, which is different from the segment being healthy."
+        />
+      </div>
       <Section
         title="Status"
         right={

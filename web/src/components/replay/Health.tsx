@@ -118,7 +118,7 @@ export function Health({
                     style={{ background: "var(--crit)", flex: "none" }}
                   />
                 )}
-                <span className="mono truncate text-[12px]" title={key}>
+                <span className="mono truncate text-[13px]" title={key}>
                   {segmentLabel(key)}
                 </span>
               </div>
@@ -140,7 +140,7 @@ export function Health({
               </div>
               <div className="fig-md text-right">{percent(segment.rate)}</div>
               <div className="text-right">
-                <span className={`mono text-[11.5px] ${SEVERITY_CLASS[severity]}`}>
+                <span className={`mono text-[12.5px] ${SEVERITY_CLASS[severity]}`}>
                   {deviationArrow(points)} {formatPoints(points)}
                 </span>
               </div>

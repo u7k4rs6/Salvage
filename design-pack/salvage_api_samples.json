@@ -1,0 +1,896 @@
+{
+  "_note": "Real payloads from a live Salvage run: scenario S1, seed 1, agent arm. Every shape is exact. Long arrays are truncated with a marker so the file stays readable; the real responses carry hundreds of entries.",
+  "_auth": "Read routes are open on loopback. Mutating routes need Authorization: Bearer <token>. POST /api/control/kill-switch, /api/sim/run, /api/sim/stop, /api/incidents/{id}/close, /api/escalations/{id}/decision, /api/storefront/order.",
+  "GET /api/health": {
+    "status": "ok",
+    "version": "0.1.0",
+    "env": "dev",
+    "kill_switch": false,
+    "llm_provider": "fixture",
+    "token_configured": true
+  },
+  "GET /api/control/status": {
+    "env": "dev",
+    "kill_switch": false,
+    "llm_provider": "fixture"
+  },
+  "GET /api/overview": {
+    "clock": "sim",
+    "now": 1786213800,
+    "window": {
+      "start": 1786212900,
+      "end": 1786213800
+    },
+    "segments": [
+      {
+        "key": "all",
+        "method": "all",
+        "instrument": "All methods",
+        "attempts": 193,
+        "failures": 23,
+        "rate": 0.8808290155440415,
+        "failure_rate": 0.11917098445595854,
+        "baseline": 0.12779021721566908,
+        "incident_id": null
+      },
+      {
+        "key": "upi",
+        "method": "upi",
+        "instrument": "All",
+        "attempts": 115,
+        "failures": 13,
+        "rate": 0.8869565217391304,
+        "failure_rate": 0.11304347826086956,
+        "baseline": 0.10339269567952196,
+        "incident_id": null
+      },
+      {
+        "key": "card",
+        "method": "card",
+        "instrument": "All",
+        "attempts": 50,
+        "failures": 5,
+        "rate": 0.9,
+        "failure_rate": 0.1,
+        "baseline": 0.16211775445002283,
+        "incident_id": null
+      },
+      {
+        "key": "card:card_network:Visa",
+        "method": "card",
+        "instrument": "Visa",
+        "attempts": 24,
+        "failures": 1,
+        "rate": 0.9583333333333334,
+        "failure_rate": 0.041666666666666664,
+        "baseline": 0.16201636904761904,
+        "incident_id": null
+      },
+      {
+        "key": "upi:nb_bank:HDFC",
+        "method": "upi",
+        "instrument": "HDFC",
+        "attempts": 25,
+        "failures": 6,
+        "rate": 0.76,
+        "failure_rate": 0.24,
+        "baseline": 0.10295420974889218,
+        "incident_id": null
+      },
+      {
+        "key": "upi:nb_bank:SBIN",
+        "method": "upi",
+        "instrument": "SBIN",
+        "attempts": 23,
+        "failures": 3,
+        "rate": 0.8695652173913043,
+        "failure_rate": 0.13043478260869565,
+        "baseline": 0.10191586016195932,
+        "incident_id": null
+      },
+      "...4 more items of the same shape"
+    ],
+    "incidents": [],
+    "series": [
+      {
+        "t": 1786127400,
+        "attempts": 32,
+        "failures": 4
+      },
+      {
+        "t": 1786128300,
+        "attempts": 42,
+        "failures": 6
+      },
+      {
+        "t": 1786129200,
+        "attempts": 48,
+        "failures": 4
+      },
+      {
+        "t": 1786130100,
+        "attempts": 50,
+        "failures": 9
+      },
+      {
+        "t": 1786131000,
+        "attempts": 26,
+        "failures": 1
+      },
+      {
+        "t": 1786131900,
+        "attempts": 23,
+        "failures": 2
+      },
+      "...117 more items of the same shape"
+    ],
+    "stats": {
+      "attempts_last_hour": 773,
+      "success_rate": 0.8835705045278137,
+      "at_risk_amount": 0,
+      "recovered_amount": 12251688
+    }
+  },
+  "GET /api/incidents": {
+    "clock": "sim",
+    "total": 1,
+    "limit": 50,
+    "offset": 0,
+    "incidents": [
+      {
+        "id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+        "segment_key": "upi:upi_handle:okhdfcbank",
+        "affected_scope": [
+          "upi:error_step:payment_debit_request",
+          "upi:upi_handle:okhdfcbank"
+        ],
+        "opened_at": 1786200180,
+        "closed_at": 1786206420,
+        "status": "closed",
+        "rules_cause": "issuer_outage",
+        "llm_cause": "issuer_outage",
+        "root_cause": "issuer_outage",
+        "confidence": 0.95,
+        "at_risk_amount": 2104883,
+        "recovered_amount": 2005941,
+        "cases": 194,
+        "actions": 206,
+        "escalated": false
+      }
+    ]
+  },
+  "GET /api/incidents/{id}": {
+    "clock": "sim",
+    "incident": {
+      "id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+      "segment_key": "upi:upi_handle:okhdfcbank",
+      "affected_scope": [
+        "upi:error_step:payment_debit_request",
+        "upi:upi_handle:okhdfcbank"
+      ],
+      "opened_at": 1786200180,
+      "closed_at": 1786206420,
+      "status": "closed",
+      "rules_cause": "issuer_outage",
+      "llm_cause": "issuer_outage",
+      "root_cause": "issuer_outage",
+      "confidence": 0.95,
+      "at_risk_amount": 2104883,
+      "recovered_amount": 2005941,
+      "cases": 194,
+      "actions": 206,
+      "escalated": false
+    },
+    "evidence": {
+      "affected_scope": [
+        "upi:error_step:payment_debit_request",
+        "upi:upi_handle:okhdfcbank"
+      ],
+      "attempts": 51,
+      "baseline_rate": 0.1033,
+      "error_code_top5": [
+        "GATEWAY_ERROR",
+        "BAD_REQUEST_ERROR"
+      ],
+      "error_reason_dist": {
+        "baseline": {
+          "bank_technical_error": 0.1535,
+          "gateway_technical_error": 0.0658,
+          "insufficient_funds": 0.2152,
+          "invalid_vpa": 0.0747,
+          "payment_cancelled": 0.1439,
+          "payment_timed_out": 0.1885,
+          "psp_not_available": 0.0439,
+          "transaction_limit_exceeded": 0.035,
+          "vpa_resolution_failed": 0.0795
+        },
+        "window": {
+          "bank_not_available": 0.1364,
+          "bank_technical_error": 0.3182,
+          "payment_declined": 0.3182,
+          "payment_timed_out": 0.1364,
+          "transaction_limit_exceeded": 0.0455,
+          "vpa_resolution_failed": 0.0455
+        }
+      },
+      "error_source_dist": {
+        "baseline": {
+          "customer": 0.6223,
+          "customer_psp": 0.1234,
+          "gateway": 0.0658,
+          "issuer_bank": 0.1885
+        },
+        "window": {
+          "bank": 0.4091,
+          "customer": 0.1364,
+          "customer_psp": 0.0455,
+          "issuer_bank": 0.4091
+        }
+      },
+      "error_step_dist": {
+        "baseline": {
+          "payment_authentication": 0.3324,
+          "payment_authorization": 0.2502,
+          "payment_debit_request": 0.1535,
+          "payment_initiation": 0.1186,
+          "payment_request": 0.1453
+        },
+        "window": {
+          "payment_authentication": 0.1364,
+          "payment_authorization": 0.0455,
+          "payment_debit_request": 0.6364,
+          "payment_initiation": 0.1364,
+          "payment_request": 0.0455
+        }
+      },
+      "excess_failures": 16.7,
+      "failures": 22,
+      "merchant_config_changed_recently": false,
+      "minutes_since_onset": 19,
+      "rate": 0.4314,
+      "sample_descriptions": [
+        "You have exceeded the transaction limit on your card.",
+        "Payment was not completed on time.",
+        "Payment failed due to a technical error at bank. Try another method.",
+        "Your payment could not be processed using the UPI ID entered.",
+        "...1 more items of the same shape"
+      ],
+      "segment_key": "upi:upi_handle:okhdfcbank",
+      "share_of_merchant_volume": 0.191,
+      "sibling_segments": {
+        "upi:upi_handle:okicici": "healthy",
+        "upi:upi_handle:oksbi": "healthy",
+        "upi:upi_handle:ybl": "healthy"
+      },
+      "trend": "worsening",
+      "window_end": 1786200180,
+      "window_start": 1786199280
+    },
+    "diagnosis": {
+      "rules": "issuer_outage",
+      "llm": "issuer_outage",
+      "reconciled": "issuer_outage",
+      "confidence": 0.95,
+      "agreed": true,
+      "rationale": "The `error_source` is dominated by `bank` (0.409) and `issuer_bank` (0.409), significantly above baselines. The `error_step` `payment_debit_request` is highly elevated at 0.636. Crucially, `sibling_segments` like okicici and oksbi are healthy, isolating the issue to `upi:upi_handle:okhdfcbank` and i...truncated",
+      "rules_detail": "segment is a single upi_handle, dominant source issuer_bank at 0.41, 3 sibling(s) all healthy",
+      "escalate": false,
+      "escalation_reason": null,
+      "prompt": null,
+      "raw_response": null
+    },
+    "plan": {
+      "proposed": [
+        {
+          "params": {},
+          "scope": "only_failing_method",
+          "type": "STEER_METHOD"
+        },
+        {
+          "params": {},
+          "scope": "consented_with_alternate",
+          "type": "SEND_RECOVERY_LINK"
+        }
+      ],
+      "rationale": "The issuer is experiencing an outage. We will steer customers away from the failing UPI handle and provide recovery links to consented customers who have alternate payment methods available, allowing them to complete their payments.",
+      "actions": [
+        {
+          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00001",
+          "type": "STEER_METHOD",
+          "case_id": null,
+          "status": "executed",
+          "params": {},
+          "gate": [
+            {
+              "detail": "STEER_METHOD is allowed for issuer_outage",
+              "passed": true,
+              "rule": "matrix.action_allowed_for_cause"
+            },
+            {
+              "detail": "confidence 0.95 against threshold 0.6",
+              "passed": true,
+              "rule": "matrix.confidence_threshold"
+            },
+            {
+              "detail": "kill switch off",
+              "passed": true,
+              "rule": "global.kill_switch_off"
+            },
+            {
+              "detail": "circuit breaker closed",
+              "passed": true,
+              "rule": "global.circuit_breaker_closed"
+            }
+          ],
+          "executed_at": 1786200180
+        },
+        {
+          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00002",
+          "type": "SEND_RECOVERY_LINK",
+          "case_id": "case_order_sim000000091973",
+          "status": "deferred",
+          "params": {
+            "case_id": "case_order_sim000000091973"
+          },
+          "gate": [
+            {
+              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
+              "passed": true,
+              "rule": "matrix.action_allowed_for_cause"
+            },
+            {
+              "detail": "confidence 0.95 against threshold 0.6",
+              "passed": true,
+              "rule": "matrix.confidence_threshold"
+            },
+            {
+              "detail": "order is unpaid",
+              "passed": true,
+              "rule": "case.order_unpaid"
+            },
+            {
+              "detail": "no open link for this order, one will be created",
+              "passed": true,
+              "rule": "case.single_open_link"
+            },
+            "...8 more items of the same shape"
+          ],
+          "executed_at": 1786200180
+        },
+        {
+          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00003",
+          "type": "SEND_RECOVERY_LINK",
+          "case_id": "case_order_sim000000092101",
+          "status": "deferred",
+          "params": {
+            "case_id": "case_order_sim000000092101"
+          },
+          "gate": [
+            {
+              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
+              "passed": true,
+              "rule": "matrix.action_allowed_for_cause"
+            },
+            {
+              "detail": "confidence 0.95 against threshold 0.6",
+              "passed": true,
+              "rule": "matrix.confidence_threshold"
+            },
+            {
+              "detail": "order is unpaid",
+              "passed": true,
+              "rule": "case.order_unpaid"
+            },
+            {
+              "detail": "no open link for this order, one will be created",
+              "passed": true,
+              "rule": "case.single_open_link"
+            },
+            "...8 more items of the same shape"
+          ],
+          "executed_at": 1786200180
+        },
+        {
+          "id": "act_inc_upi_upi_handle_okhdfcbank_1786200180_00004",
+          "type": "SEND_RECOVERY_LINK",
+          "case_id": "case_order_sim000000092095",
+          "status": "deferred",
+          "params": {
+            "case_id": "case_order_sim000000092095"
+          },
+          "gate": [
+            {
+              "detail": "SEND_RECOVERY_LINK is allowed for issuer_outage",
+              "passed": true,
+              "rule": "matrix.action_allowed_for_cause"
+            },
+            {
+              "detail": "confidence 0.95 against threshold 0.6",
+              "passed": true,
+              "rule": "matrix.confidence_threshold"
+            },
+            {
+              "detail": "order is unpaid",
+              "passed": true,
+              "rule": "case.order_unpaid"
+            },
+            {
+              "detail": "no open link for this order, one will be created",
+              "passed": true,
+              "rule": "case.single_open_link"
+            },
+            "...8 more items of the same shape"
+          ],
+          "executed_at": 1786200180
+        },
+        "...202 more items of the same shape"
+      ]
+    },
+    "cases": [
+      {
+        "id": "case_order_sim000000090994",
+        "order_id": "order_sim000000090994",
+        "ref_hash": "594ab52b2291",
+        "amount": 57958,
+        "state": "CLOSED_NO_ACTION",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": "CLOSED_NO_ACTION"
+      },
+      {
+        "id": "case_order_sim000000091098",
+        "order_id": "order_sim000000091098",
+        "ref_hash": "2e5b326ec705",
+        "amount": 286500,
+        "state": "ABANDONED",
+        "nudges": 2,
+        "link_id": "plink_sim000000000035",
+        "next_action_at": null,
+        "outcome": "ABANDONED"
+      },
+      {
+        "id": "case_order_sim000000091288",
+        "order_id": "order_sim000000091288",
+        "ref_hash": "55b8b3280cd0",
+        "amount": 67537,
+        "state": "CLOSED_NO_ACTION",
+        "nudges": 0,
+        "link_id": null,
+        "next_action_at": null,
+        "outcome": "CLOSED_NO_ACTION"
+      },
+      {
+        "id": "case_order_sim000000091728",
+        "order_id": "order_sim000000091728",
+        "ref_hash": "4446aacf1029",
+        "amount": 71163,
+        "state": "ABANDONED",
+        "nudges": 2,
+        "link_id": "plink_sim000000000054",
+        "next_action_at": null,
+        "outcome": "ABANDONED"
+      },
+      "...190 more items of the same shape"
+    ],
+    "timeline": [
+      {
+        "seq": 3,
+        "ts": 1786200180,
+        "kind": "detect.incident.opened",
+        "ref_type": "incident",
+        "ref_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+        "hash": "45c3c4b4afea",
+        "payload": {
+          "affected_scope": [
+            "upi:upi_handle:okhdfcbank"
+          ],
+          "at_risk_amount": 2104883,
+          "segment_key": "upi:upi_handle:okhdfcbank",
+          "window_end": 1786200180,
+          "window_start": 1786199280
+        }
+      },
+      {
+        "seq": 4,
+        "ts": 1786206420,
+        "kind": "detect.incident.closed",
+        "ref_type": "incident",
+        "ref_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+        "hash": "e39a06786dbc",
+        "payload": {
+          "closed_at": 1786206420,
+          "segment_key": "upi:upi_handle:okhdfcbank"
+        }
+      },
+      {
+        "seq": 5,
+        "ts": 1786200180,
+        "kind": "diagnose.reconciled",
+        "ref_type": "incident",
+        "ref_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+        "hash": "1eb59ae178c6",
+        "payload": {
+          "agreed": true,
+          "confidence": 0.95,
+          "escalate": false,
+          "escalation_reason": null,
+          "evidence": {
+            "affected_scope": [
+              "upi:error_step:payment_debit_request",
+              "upi:upi_handle:okhdfcbank"
+            ],
+            "attempts": 51,
+            "baseline_rate": 0.1033,
+            "error_code_top5": [
+              "GATEWAY_ERROR",
+              "BAD_REQUEST_ERROR"
+            ],
+            "error_reason_dist": {
+              "baseline": {
+                "bank_technical_error": 0.1535,
+                "gateway_technical_error": 0.0658,
+                "insufficient_funds": 0.2152,
+                "invalid_vpa": 0.0747,
+                "payment_cancelled": 0.1439,
+                "payment_timed_out": 0.1885,
+                "psp_not_available": 0.0439,
+                "transaction_limit_exceeded": 0.035,
+                "vpa_resolution_failed": 0.0795
+              },
+              "window": {
+                "bank_not_available": 0.1364,
+                "bank_technical_error": 0.3182,
+                "payment_declined": 0.3182,
+                "payment_timed_out": 0.1364,
+                "transaction_limit_exceeded": 0.0455,
+                "vpa_resolution_failed": 0.0455
+              }
+            },
+            "error_source_dist": {
+              "baseline": {
+                "customer": 0.6223,
+                "customer_psp": 0.1234,
+                "gateway": 0.0658,
+                "issuer_bank": 0.1885
+              },
+              "window": {
+                "bank": 0.4091,
+                "customer": 0.1364,
+                "customer_psp": 0.0455,
+                "issuer_bank": 0.4091
+              }
+            },
+            "error_step_dist": {
+              "baseline": {
+                "payment_authentication": 0.3324,
+                "payment_authorization": 0.2502,
+                "payment_debit_request": 0.1535,
+                "payment_initiation": 0.1186,
+                "payment_request": 0.1453
+              },
+              "window": {
+                "payment_authentication": 0.1364,
+                "payment_authorization": 0.0455,
+                "payment_debit_request": 0.6364,
+                "payment_initiation": 0.1364,
+                "payment_request": 0.0455
+              }
+            },
+            "excess_failures": 16.7,
+            "failures": 22,
+            "merchant_config_changed_recently": false,
+            "minutes_since_onset": 19,
+            "rate": 0.4314,
+            "sample_descriptions": [
+              "You have exceeded the transaction limit on your card.",
+              "Payment was not completed on time.",
+              "Payment failed due to a technical error at bank. Try another method.",
+              "Your payment could not be processed using the UPI ID entered.",
+              "...1 more items of the same shape"
+            ],
+            "segment_key": "upi:upi_handle:okhdfcbank",
+            "share_of_merchant_volume": 0.191,
+            "sibling_segments": {
+              "upi:upi_handle:okicici": "healthy",
+              "upi:upi_handle:oksbi": "healthy",
+              "upi:upi_handle:ybl": "healthy"
+            },
+            "trend": "worsening",
+            "window_end": 1786200180,
+            "window_start": 1786199280
+          },
+          "llm_cause": "issuer_outage",
+          "rationale": "The `error_source` is dominated by `bank` (0.409) and `issuer_bank` (0.409), significantly above baselines. The `error_step` `payment_debit_request` is highly elevated at 0.636. Crucially, `sibling_segments` like okicici and oksbi are healthy, isolating the issue to `upi:upi_handle:okhdfcbank` and i...truncated",
+          "root_cause": "issuer_outage",
+          "rules_cause": "issuer_outage",
+          "rules_detail": "segment is a single upi_handle, dominant source issuer_bank at 0.41, 3 sibling(s) all healthy"
+        }
+      },
+      {
+        "seq": 6,
+        "ts": 1786200180,
+        "kind": "decide.plan",
+        "ref_type": "incident",
+        "ref_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+        "hash": "18713ce988d0",
+        "payload": {
+          "eligibility": {
+            "above_value_threshold": 5,
+            "affected_orders": 19,
+            "consented": 12,
+            "consented_with_alternate": 6,
+            "hard_declined": 0,
+            "opted_out": 0,
+            "unpaid_orders": 19
+          },
+          "plan": {
+            "actions": [
+              {
+                "params": {},
+                "scope": "only_failing_method",
+                "type": "STEER_METHOD"
+              },
+              {
+                "params": {},
+                "scope": "consented_with_alternate",
+                "type": "SEND_RECOVERY_LINK"
+              }
+            ],
+            "incident_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+            "rationale": "The issuer is experiencing an outage. We will steer customers away from the failing UPI handle and provide recovery links to consented customers who have alternate payment methods available, allowing them to complete their payments."
+          },
+          "planner_error": null
+        }
+      },
+      "...298 more items of the same shape"
+    ]
+  },
+  "GET /api/escalations": {
+    "clock": "sim",
+    "status": "pending",
+    "escalations": []
+  },
+  "GET /api/ledger?limit=5": {
+    "clock": "sim",
+    "total": 304,
+    "kinds": [
+      "channel.opt_out",
+      "decide.plan",
+      "detect.incident.closed",
+      "detect.incident.opened",
+      "...9 more items of the same shape"
+    ],
+    "next_cursor": 5,
+    "proves": "This chain proves the record has not been altered after it was written: every entry commits to the one before it, and changing any byte of any entry breaks verification from that point on. It does not prove the process wrote the truth. A wrong decision, faithfully recorded, verifies perfectly.",
+    "entries": [
+      {
+        "seq": 1,
+        "ts": 1785522600,
+        "kind": "sim.run.started",
+        "ref_type": "sim_run",
+        "ref_id": "run_S1_s1_b892d6a4",
+        "hash": "399f91697ff7dd587a68ccf95716c7424ef048d1dfb7b78f0abada84528eb0e6",
+        "prev_hash": "e033221f96520f784ef136e1ba52ae6b04cba31331157e223f1c97e64ae59524",
+        "payload": {
+          "attempts_per_day": 12000,
+          "eval_days": 1,
+          "faults": [
+            {
+              "end_ts": 1786205220,
+              "selector": {
+                "method": "upi",
+                "upi_handle": "okhdfcbank"
+              },
+              "start_ts": 1786199820
+            }
+          ],
+          "params_hash": "b892d6a4ceaedf3bbc1ba50f00d086f5e65ef884ef0cca71628d9d1474c1d491",
+          "scenario": "S1",
+          "seed": 1,
+          "settle_days": 3,
+          "variant": "peak",
+          "warmup_days": 7
+        }
+      },
+      {
+        "seq": 2,
+        "ts": 1786472999,
+        "kind": "sim.run.finished",
+        "ref_type": "sim_run",
+        "ref_id": "run_S1_s1_b892d6a4",
+        "hash": "269318643a4f62c05449d6b42b474e56f8ac487c5a91dc59471736c4f7c2882d",
+        "prev_hash": "399f91697ff7dd587a68ccf95716c7424ef048d1dfb7b78f0abada84528eb0e6",
+        "payload": {
+          "attempts": 100533,
+          "dropped_retries": 0,
+          "failures": 12998,
+          "first_attempts": 96135,
+          "orders": 96135,
+          "orders_paid": 87535,
+          "orders_paid_on_retry": 3792,
+          "retries": 4398,
+          "sim_end": 1786472999,
+          "sim_start": 1785522600,
+          "stream_attempts": 100533,
+          "stream_digest": "6a6e30230725aae55cb1568e5a9617e43e5632e5469565116c22323f740051f2",
+          "stream_fields": [
+            "id",
+            "order_id",
+            "method",
+            "instrument",
+            "...3 more items of the same shape"
+          ]
+        }
+      },
+      {
+        "seq": 3,
+        "ts": 1786200180,
+        "kind": "detect.incident.opened",
+        "ref_type": "incident",
+        "ref_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+        "hash": "45c3c4b4afea0899318bf438ed2597d1491b0430c429ccf85d5191c1a439f075",
+        "prev_hash": "269318643a4f62c05449d6b42b474e56f8ac487c5a91dc59471736c4f7c2882d",
+        "payload": {
+          "affected_scope": [
+            "upi:upi_handle:okhdfcbank"
+          ],
+          "at_risk_amount": 2104883,
+          "segment_key": "upi:upi_handle:okhdfcbank",
+          "window_end": 1786200180,
+          "window_start": 1786199280
+        }
+      },
+      {
+        "seq": 4,
+        "ts": 1786206420,
+        "kind": "detect.incident.closed",
+        "ref_type": "incident",
+        "ref_id": "inc_upi_upi_handle_okhdfcbank_1786200180",
+        "hash": "e39a06786dbcb3f8a5173cf0fcd384fc7af235a4902cc6631b0e168bbfb740db",
+        "prev_hash": "45c3c4b4afea0899318bf438ed2597d1491b0430c429ccf85d5191c1a439f075",
+        "payload": {
+          "closed_at": 1786206420,
+          "segment_key": "upi:upi_handle:okhdfcbank"
+        }
+      },
+      "...1 more items of the same shape"
+    ]
+  },
+  "GET /api/results": {
+    "runs": [
+      {
+        "run_id": "main",
+        "scenarios": [
+          "S0",
+          "S1",
+          "S2",
+          "S3",
+          "...1 more items of the same shape"
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          "...6 more items of the same shape"
+        ],
+        "policies": [
+          "agent",
+          "echo",
+          "B0",
+          "B1",
+          "...1 more items of the same shape"
+        ],
+        "variant": "peak",
+        "finished_at": 1787689036,
+        "runs": 250
+      },
+      {
+        "run_id": "shard_S3",
+        "scenarios": [
+          "S3"
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          "...6 more items of the same shape"
+        ],
+        "policies": [
+          "agent",
+          "echo",
+          "B0",
+          "B1",
+          "...1 more items of the same shape"
+        ],
+        "variant": "peak",
+        "finished_at": 1787689036,
+        "runs": 50
+      },
+      {
+        "run_id": "shard_S1",
+        "scenarios": [
+          "S1"
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          "...6 more items of the same shape"
+        ],
+        "policies": [
+          "agent",
+          "echo",
+          "B0",
+          "B1",
+          "...1 more items of the same shape"
+        ],
+        "variant": "peak",
+        "finished_at": 1787688895,
+        "runs": 50
+      },
+      {
+        "run_id": "shard_S4",
+        "scenarios": [
+          "S4"
+        ],
+        "seeds": [
+          0,
+          1,
+          2,
+          3,
+          "...6 more items of the same shape"
+        ],
+        "policies": [
+          "agent",
+          "echo",
+          "B0",
+          "B1",
+          "...1 more items of the same shape"
+        ],
+        "variant": "peak",
+        "finished_at": 1787688860,
+        "runs": 50
+      },
+      "...4 more items of the same shape"
+    ],
+    "latest": "main",
+    "notes": []
+  },
+  "GET /api/sim/status": {
+    "running": false,
+    "scenario": null,
+    "seed": null,
+    "policy": null,
+    "started_at": 0,
+    "finished_at": 0,
+    "error": null,
+    "stop_requested": false,
+    "summary": {}
+  },
+  "GET /api/storefront/skus": {
+    "skus": [
+      {
+        "sku": "kettle",
+        "name": "Steel Kettle",
+        "amount": 129900
+      },
+      {
+        "sku": "kurta",
+        "name": "Cotton Kurta",
+        "amount": 249900
+      },
+      {
+        "sku": "rug",
+        "name": "Jute Rug",
+        "amount": 589900
+      }
+    ],
+    "key_id": "",
+    "available": false,
+    "reason": "RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are not set, so no real order can be created. Fill them in .env and restart."
+  }
+}

@@ -52,7 +52,7 @@ function useDisplayFace() {
 function Section({ title, note, children }: { title: string; note?: ReactNode; children: ReactNode }) {
   return (
     <section className="mt-8">
-      <h2 className="display text-[13px] uppercase tracking-[0.08em]">{title}</h2>
+      <h2 className="display text-[14px] uppercase tracking-[0.08em]">{title}</h2>
       {note && <p className="caption mt-1 max-w-3xl">{note}</p>}
       <div className="mt-3 flex flex-wrap items-start gap-5">{children}</div>
     </section>
@@ -74,7 +74,7 @@ function Specimen({
     <figure className="m-0" style={width ? { width } : undefined}>
       <div>{children}</div>
       <figcaption className="mt-1.5 max-w-[15rem]">
-        <div className="num text-[11px] font-medium" style={{ color: "var(--ink-soft)" }}>
+        <div className="num text-[12.5px] font-medium" style={{ color: "var(--ink-soft)" }}>
           {state}
         </div>
         {note && <div className="caption-faint">{note}</div>}
@@ -168,7 +168,7 @@ export default function SpecimensPage() {
     <div className="specimen-sheet">
       <header>
         <h1 className="text-[22px]">Specimen sheet</h1>
-        <p className="caption mt-1.5 max-w-3xl text-[12px]">
+        <p className="caption mt-1.5 max-w-3xl text-[13px]">
           Every primitive at every state, on synthetic data. Nothing here is measured and nothing
           here fetches. Numbers sit on the boundaries of the scales they belong to, so several are
           deliberately implausible as traffic. The board tile and the collapsed group row are the
@@ -183,27 +183,27 @@ export default function SpecimensPage() {
       >
         <Specimen state="level 1, flat" note="information. Tone difference only, no shadow.">
           <div className="lvl lvl-1">
-            <div className="display text-[12px]">nb_bank</div>
+            <div className="display text-[13px]">nb_bank</div>
             <div className="caption-faint mt-1">below detection floor</div>
           </div>
         </Specimen>
         <Specimen state="level 2, default" note="border, inset highlight, 0 2px 3px at 12 percent.">
           <div className="lvl lvl-2">
-            <div className="display text-[12px]">okicici</div>
+            <div className="display text-[13px]">okicici</div>
             <div className="num mt-0.5 text-[15px] font-semibold">83.3%</div>
             <div className="num caption-faint">n 30</div>
           </div>
         </Specimen>
         <Specimen state="level 3, active" note="0 4px 8px at 16 percent, lifted 1px, stronger highlight.">
           <div className="lvl lvl-3">
-            <div className="display text-[12px]">okhdfcbank</div>
+            <div className="display text-[13px]">okhdfcbank</div>
             <div className="num mt-0.5 text-[15px] font-semibold">5.6%</div>
             <div className="num caption-faint">n 54</div>
           </div>
         </Specimen>
         <Specimen state="level 0, banned" note="border only. Here so the miss is visible, and nowhere else.">
           <div className="lvl lvl-0" style={{ opacity: 0.85 }}>
-            <div className="text-[12px] font-medium">okhdfcbank</div>
+            <div className="text-[13px] font-medium">okhdfcbank</div>
             <div className="num mt-0.5 text-[15px] font-semibold">5.6%</div>
             <div className="num caption-faint">n 54</div>
           </div>
@@ -228,7 +228,7 @@ export default function SpecimensPage() {
         </Specimen>
         <Specimen state="all four, assembled" width="100%" note="the same three tones doing their job">
           <div className="board">
-            <div className="display mb-2 text-[12px]">upi</div>
+            <div className="display mb-2 text-[13px]">upi</div>
             <div className="region flex flex-wrap gap-2">
               {SCALE.slice(0, 3).map((entry) => (
                 <div key={entry.state} className="tile-host">
@@ -340,7 +340,7 @@ export default function SpecimensPage() {
         <Specimen state="in a tile" width="100%" note="the status indicator sitting on the tile face">
           <div className="lvl lvl-2" style={{ width: "180px" }}>
             <div className="flex items-center justify-between">
-              <span className="display text-[12px]">okhdfcbank</span>
+              <span className="display text-[13px]">okhdfcbank</span>
               <span className="token token-10 token-incident" />
             </div>
             <div className="num mt-0.5 text-[15px] font-semibold">5.6%</div>
@@ -355,7 +355,7 @@ export default function SpecimensPage() {
       >
         <Specimen state="top bar" width="100%">
           <div className="chrome flex items-center justify-between px-3 py-1.5">
-            <span className="display text-[13px]">Salvage</span>
+            <span className="display text-[14px]">Salvage</span>
             <span className="num caption">sim 20:45 &middot; dev</span>
           </div>
         </Specimen>
@@ -390,10 +390,10 @@ export default function SpecimensPage() {
           <div className="display text-[18px]">okhdfcbank</div>
         </Specimen>
         <Specimen state="UI sans" width="16rem">
-          <div className="text-[13px]">Two consecutive windows above threshold.</div>
+          <div className="text-[14px]">Two consecutive windows above threshold.</div>
         </Specimen>
         <Specimen state="mono, numbers" width="16rem">
-          <div className="num text-[13px]">25,631.93 &middot; 20:45:00 &middot; inc_upi_okhdfcbank</div>
+          <div className="num text-[14px]">25,631.93 &middot; 20:45:00 &middot; inc_upi_okhdfcbank</div>
         </Specimen>
       </Section>
 

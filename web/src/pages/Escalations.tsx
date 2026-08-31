@@ -16,6 +16,7 @@ import {
 import { causeLabel, rupees, segmentLabel, timestamp } from "../lib/format";
 import { isPlannerFailureReason } from "../lib/health";
 import type { Escalation } from "../lib/types";
+import { PageIntro } from "../components/PageIntro";
 
 interface EscalationList {
   clock: string;
@@ -80,30 +81,30 @@ function Card({
             ? segmentLabel(escalation.incident.segment_key)
             : escalation.incident_id}
         </Link>
-        <span className="num text-xs text-[color:var(--fg-2)]">{timestamp(escalation.created_at)}</span>
+        <span className="num text-[13px] text-[color:var(--fg-2)]">{timestamp(escalation.created_at)}</span>
       </div>
 
       {plannerFailed ? (
         <div className="mt-2 border border-[color:var(--crit)] border-l-2 bg-[color:var(--crit-bg)] px-3 py-2">
           <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[color:var(--crit)]">
+            <span className="text-[11.5px] font-medium uppercase tracking-[0.08em] text-[color:var(--crit)]">
               Planner error
             </span>
-            <span className="num text-xs text-[color:var(--fg)]">{escalation.reason}</span>
+            <span className="num text-[13px] text-[color:var(--fg)]">{escalation.reason}</span>
           </div>
-          <p className="mt-1.5 text-xs text-[color:var(--fg-2)]">
+          <p className="mt-1.5 text-[13px] text-[color:var(--fg-2)]">
             No action was chosen. The executor escalated because planning failed, which is not an
             agent deciding a human should take this one.
           </p>
         </div>
       ) : (
-        <p className="mt-1 text-xs text-[color:var(--fg-2)]">
+        <p className="mt-1 text-[13px] text-[color:var(--fg-2)]">
           {REASONS[escalation.reason] ?? "Escalated for a reason the console does not have text for."}
         </p>
       )}
 
       {escalation.incident && (
-        <div className="mt-2 grid gap-2 text-xs sm:grid-cols-3">
+        <div className="mt-2 grid gap-2 text-[13px] sm:grid-cols-3">
           <div>
             <span className="text-[color:var(--fg-2)]">cause </span>
             <span className="num">{causeLabel(escalation.incident.root_cause)}</span>
@@ -124,7 +125,7 @@ function Card({
       )}
 
       {Object.keys(escalation.proposed_action ?? {}).length > 0 && (
-        <div className="num mt-2 text-xs text-[color:var(--fg)]">
+        <div className="num mt-2 text-[13px] text-[color:var(--fg)]">
           proposed {String(escalation.proposed_action.type ?? "action")}{" "}
           <span className="text-[color:var(--fg-3)]">{JSON.stringify(escalation.proposed_action)}</span>
         </div>
@@ -135,7 +136,7 @@ function Card({
       </Disclosure>
 
       {decided ? (
-        <div className="mt-2 text-xs">
+        <div className="mt-2 text-[13px]">
           <Badge tone={escalation.decision === "approve" ? "green" : "neutral"}>
             {escalation.decision}
           </Badge>{" "}
@@ -194,6 +195,18 @@ export default function EscalationsPage() {
 
   return (
     <div className="space-y-4">
+      <PageIntro
+        title="Escalations"
+        what="Everything the agent stopped and handed to a person instead of acting on."
+        use="Read the reason, open the evidence, then approve or reject with a written note. Both need the dashboard token pasted into the top bar."
+        shows={[
+          ["Waiting on you", "escalations nobody has decided yet. Nothing customer-facing happens on these until somebody does"],
+          ["Reason", "why it stopped: low confidence, a cause the action matrix forbids acting on, a rules and model disagreement, or a tripped circuit breaker"],
+          ["Planner error", "a red card means planning failed, rather than the agent deciding a human should take this one. Those two look alike and mean opposite things"],
+          ["Proposed", "what the agent would have done, so the decision is about a specific action rather than a vague handover"],
+          ["Decided", "the history, with the note whoever decided it wrote"],
+        ]}
+      />
       <Panel
         title="Waiting on you"
         subtitle="The agent stopped and asked. Nothing here has been acted on."
@@ -225,7 +238,7 @@ export default function EscalationsPage() {
               <Empty>No decisions yet.</Empty>
             ) : (
               <details>
-                <summary className="cursor-pointer text-xs text-[color:var(--info)] hover:text-[color:var(--fg)]">
+                <summary className="cursor-pointer text-[13px] text-[color:var(--info)] hover:text-[color:var(--fg)]">
                   {data.escalations.length} decided
                 </summary>
                 <div className="mt-2 space-y-2">

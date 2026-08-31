@@ -46,8 +46,8 @@ export function Cell({ node }: { node: BoardNode }) {
         title={`About ${peak} attempts expected in a peak 15-minute window. Floor is ${FLOOR_ATTEMPTS}.${marginal}`}
         className="h-full border border-dashed border-neutral-300 bg-neutral-50 px-2 py-1.5 text-neutral-400"
       >
-        <div className="truncate text-[11px] font-medium">{node.instrument}</div>
-        <div className="text-[10px] leading-tight">below detection floor</div>
+        <div className="truncate text-[12.5px] font-medium">{node.instrument}</div>
+        <div className="text-[11.5px] leading-tight">below detection floor</div>
       </div>
     );
   }
@@ -62,12 +62,12 @@ export function Cell({ node }: { node: BoardNode }) {
         segment.incident_id ? "border-2 border-red-600" : "border-neutral-200"
       } ${cellColour(segment)} px-2 py-1.5`}
     >
-      <div className="truncate text-[11px] font-medium">{segment.instrument}</div>
+      <div className="truncate text-[12.5px] font-medium">{segment.instrument}</div>
       <div className="num text-sm font-semibold">{percent(segment.rate)}</div>
-      <div className="num text-[10px] opacity-80">
+      <div className="num text-[11.5px] opacity-80">
         base {percent(1 - segment.baseline)} / n {segment.attempts}
       </div>
-      {segment.incident_id && <div className="mt-0.5 text-[10px] font-semibold">incident</div>}
+      {segment.incident_id && <div className="mt-0.5 text-[11.5px] font-semibold">incident</div>}
     </div>
   );
   return segment.incident_id ? (
@@ -85,9 +85,9 @@ export function CollapsedGroup({ group }: { group: BoardGroup }) {
   if (!collapsed) return null;
   return (
     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border border-dashed border-neutral-300 bg-neutral-50 px-2 py-1.5">
-      <span className="text-[11px] font-medium text-neutral-500">{group.title}</span>
-      <span className="text-[11px] text-neutral-500">{collapsed.label}</span>
-      <span className="text-[10px] text-neutral-400">{collapsed.detail}</span>
+      <span className="text-[12.5px] font-medium text-neutral-500">{group.title}</span>
+      <span className="text-[12.5px] text-neutral-500">{collapsed.label}</span>
+      <span className="text-[11.5px] text-neutral-400">{collapsed.detail}</span>
     </div>
   );
 }

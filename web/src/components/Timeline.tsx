@@ -66,7 +66,7 @@ function Gates({ payload }: { payload: Record<string, unknown> }) {
   return (
     <ul className="mt-1 space-y-0.5">
       {gate.map((check) => (
-        <li key={check.rule} className="num text-[11px]">
+        <li key={check.rule} className="num text-[12.5px]">
           <span className={check.passed ? "text-[color:var(--ok)]" : "text-[color:var(--crit)]"}>
             {check.passed ? "pass" : "fail"}
           </span>{" "}
@@ -84,18 +84,18 @@ export function Timeline({ entries }: { entries: LedgerEntry[] }) {
       {entries.map((entry) => (
         <li key={entry.seq} className="py-2">
           <div className="flex items-baseline gap-2">
-            <span className="num w-10 shrink-0 text-right text-xs text-[color:var(--fg-3)]">
+            <span className="num w-10 shrink-0 text-right text-[13px] text-[color:var(--fg-3)]">
               {entry.seq}
             </span>
-            <span className="num w-20 shrink-0 text-xs text-[color:var(--fg-2)]">{timeOnly(entry.ts)}</span>
+            <span className="num w-20 shrink-0 text-[13px] text-[color:var(--fg-2)]">{timeOnly(entry.ts)}</span>
             <Badge tone={toneFor(entry.kind)}>{entry.kind}</Badge>
-            <span className="text-xs text-[color:var(--fg)]">{summarise(entry)}</span>
+            <span className="text-[13px] text-[color:var(--fg)]">{summarise(entry)}</span>
           </div>
           <div className="ml-32">
             <Gates payload={entry.payload} />
             <Disclosure summary="payload" className="mt-1">
               <Code>{JSON.stringify(entry.payload, null, 2)}</Code>
-              <div className="num mt-1 text-[11px] text-[color:var(--fg-3)]">
+              <div className="num mt-1 text-[12.5px] text-[color:var(--fg-3)]">
                 hash {shortHash(entry.hash)}
                 {entry.prev_hash ? ` after ${shortHash(entry.prev_hash)}` : ""}
               </div>

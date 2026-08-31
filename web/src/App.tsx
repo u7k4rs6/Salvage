@@ -68,13 +68,20 @@ const NAV = FULL_CONSOLE ? FULL_NAV : DEMO_NAV;
 export default function App() {
   return (
     <SessionProvider>
-      <div className="chrome-ui min-h-screen">
+      {/* A column that fills the viewport, with the row under the bar taking what is left. The nav
+          used to carry min-h-[calc(100vh-36px)], which hardcoded the bar's height; raising the type
+          made the bar taller and every page grew a spurious scrollbar. Nothing measures the bar
+          now. */}
+      <div className="chrome-ui flex min-h-screen flex-col">
         <TopBar />
-        <div className="flex">
-          <nav className="min-h-[calc(100vh-36px)] w-44 shrink-0 border-r border-[color:var(--line)] bg-[color:var(--bg)] py-2">
+        <div className="flex min-h-0 flex-1">
+          <nav className="w-44 shrink-0 border-r border-[color:var(--line)] bg-[color:var(--bg)] py-2">
             {NAV.map((section) => (
               <div key={section.group} className="mb-1 last:mb-0">
-                <div className="nav-group px-4 pb-1 pt-2 text-[9.5px] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
+                {/* The heading and the items under it were both --fg-3, so the heading read as
+                    another item rather than as the label for a group. It is brighter than what it
+                    labels now, with a hairline above it, which is the whole job. */}
+                <div className="nav-group mx-4 mb-1.5 mt-3 border-t border-[color:var(--line)] pt-3 text-[12.5px] font-semibold uppercase tracking-[0.14em] text-[color:var(--fg-2)] first:mt-1 first:border-t-0 first:pt-0">
                   {section.group}
                 </div>
                 {section.items.map((item) => (
@@ -83,7 +90,7 @@ export default function App() {
                     to={item.to}
                     className={({ isActive }) =>
                       // A 2px marker and weight, nothing else. No pill, no card.
-                      `block border-l-2 px-4 py-[5px] text-[12.5px] tracking-[0.01em] ${
+                      `block border-l-2 px-4 py-[5px] text-[14.5px] tracking-[0.01em] ${
                         isActive
                           ? "border-[color:var(--info)] font-semibold text-[color:var(--fg)]"
                           : "border-transparent text-[color:var(--fg-3)] hover:border-[color:var(--line-2)] hover:text-[color:var(--fg)]"
