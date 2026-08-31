@@ -4,7 +4,14 @@ import { useApi } from "../lib/useApi";
 import { useSession } from "../lib/session";
 import { useStream } from "../lib/useStream";
 import { post } from "../lib/api";
-import { Badge, Code, Empty, ErrorPanel, Panel, Region } from "../components/primitives";
+import {
+  Badge,
+  Code,
+  Empty,
+  ErrorPanel,
+  Panel,
+  Region,
+} from "../components/primitives";
 import { rupees, timestamp } from "../lib/format";
 import type { LedgerEntry } from "../lib/types";
 import { PageIntro } from "../components/PageIntro";
@@ -105,20 +112,33 @@ export default function StorefrontPage() {
         what="What a shopper sees, so you can watch a real failure go in one end and come out the other end of the console."
         use="Buying needs Razorpay test keys in .env, and Simulate a failure needs the dashboard token in the top bar. Without either, the buttons stay disabled on purpose rather than pretending to work."
         shows={[
-          ["Demo store", "three items at real prices. Buy opens Razorpay's own hosted test checkout, not a mock of it"],
-          ["What happened", "the result the browser saw, then the webhook Salvage received. Those arrive at different times and the ledger records the second"],
-          ["Simulate a failure", "writes one failed attempt for the demo customer so the rest of the console reacts, without needing a real card to decline"],
+          [
+            "Demo store",
+            "three items at real prices. Buy opens Razorpay's own hosted test checkout, not a mock of it",
+          ],
+          [
+            "What happened",
+            "the result the browser saw, then the webhook Salvage received. Those arrive at different times and the ledger records the second",
+          ],
+          [
+            "Simulate a failure",
+            "writes one failed attempt for the demo customer so the rest of the console reacts, without needing a real card to decline",
+          ],
         ]}
         caveat="Test mode only. Startup refuses to run if the Razorpay key does not begin with rzp_test_, so no live key can be used here."
       />
       {hint.data?.hint && (
         <div className="notice notice-warning text-[length:var(--fs-meta)] text-[color:var(--warning)]">
           <span className="font-medium">
-            {hint.data.hint.hidden.join(", ").toUpperCase()} is de-prioritised at checkout
+            {hint.data.hint.hidden.join(", ").toUpperCase()} is de-prioritised
+            at checkout
           </span>{" "}
           because{" "}
-          <span className="num">{(hint.data.hint.root_cause ?? "an incident").replace(/_/g, " ")}</span>{" "}
-          is affecting <span className="num">{hint.data.hint.segment_key}</span>.
+          <span className="num">
+            {(hint.data.hint.root_cause ?? "an incident").replace(/_/g, " ")}
+          </span>{" "}
+          is affecting <span className="num">{hint.data.hint.segment_key}</span>
+          .
           {hint.data.hint.incident_id && (
             <>
               {" "}
@@ -144,27 +164,44 @@ export default function StorefrontPage() {
                   than a footnote, that nothing is broken and exactly what is missing. */}
               {!data.available && (
                 <div className="notice notice-warning mb-4">
-                  <div className="notice-label">Checkout is switched off, not broken</div>
-                  <p className="notice-body">
-                    {data.reason} Checkout is disabled rather than opened against a key that is not
-                    there, so the Buy buttons below do nothing on purpose.
-                  </p>
-                  <p className="notice-body">
-                    To turn it on, put a Razorpay <span className="num">test</span> key pair in{" "}
-                    <span className="num">.env</span> as{" "}
-                    <span className="num">RAZORPAY_KEY_ID</span> and{" "}
-                    <span className="num">RAZORPAY_KEY_SECRET</span>, then restart the API. Startup
-                    refuses any key that does not begin with <span className="num">rzp_test_</span>,
-                    so a live key cannot be used here. Everything else on this page, and every other
-                    page, works without it.
-                  </p>
+                  <div className="notice-label">
+                    Checkout is switched off, not broken
+                  </div>
+                  {/* Two pieces of information, what is missing and how to supply it, so they
+                      read as two columns of the alert rather than as two long lines down its
+                      left edge. */}
+                  <div className="prose-cols mt-2">
+                    <p className="notice-body">
+                      {data.reason} Checkout is disabled rather than opened
+                      against a key that is not there, so the Buy buttons below
+                      do nothing on purpose.
+                    </p>
+                    <p className="notice-body">
+                      To turn it on, put a Razorpay{" "}
+                      <span className="num">test</span> key pair in{" "}
+                      <span className="num">.env</span> as{" "}
+                      <span className="num">RAZORPAY_KEY_ID</span> and{" "}
+                      <span className="num">RAZORPAY_KEY_SECRET</span>, then
+                      restart the API. Startup refuses any key that does not
+                      begin with <span className="num">rzp_test_</span>, so a
+                      live key cannot be used here. Everything else on this
+                      page, and every other page, works without it.
+                    </p>
+                  </div>
                 </div>
               )}
               <div className="grid gap-3 sm:grid-cols-3">
                 {data.skus.map((item) => (
-                  <div key={item.sku} className="border border-[color:var(--border-strong)] p-3">
-                    <div className="text-[length:var(--fs-meta)] font-medium">{item.name}</div>
-                    <div className="num mt-1 text-[length:var(--fs-section)]">{rupees(item.amount)}</div>
+                  <div
+                    key={item.sku}
+                    className="border border-[color:var(--border-strong)] p-3"
+                  >
+                    <div className="text-[length:var(--fs-meta)] font-medium">
+                      {item.name}
+                    </div>
+                    <div className="num mt-1 text-[length:var(--fs-section)]">
+                      {rupees(item.amount)}
+                    </div>
                     <button
                       type="button"
                       disabled={!data.available || busy || !ready}
@@ -221,9 +258,13 @@ export default function StorefrontPage() {
           <ul className="space-y-1">
             {entries.map((entry) => (
               <li key={entry.seq} className="num text-[length:var(--fs-meta)]">
-                <span className="text-[color:var(--text-muted)]">{entry.seq}</span>{" "}
+                <span className="text-[color:var(--text-muted)]">
+                  {entry.seq}
+                </span>{" "}
                 <Badge>{entry.kind}</Badge>{" "}
-                <span className="text-[color:var(--text-secondary)]">{timestamp(entry.ts)}</span>
+                <span className="text-[color:var(--text-secondary)]">
+                  {timestamp(entry.ts)}
+                </span>
               </li>
             ))}
           </ul>
@@ -248,12 +289,11 @@ export default function StorefrontPage() {
           }}
           className="btn btn-danger focus-ring"
         >
-
           Simulate my payment failing
         </button>
         <p className="mt-2 text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
-          This writes one failed attempt. It does not fabricate a webhook, so nothing appears in
-          the webhook ledger for it.
+          This writes one failed attempt. It does not fabricate a webhook, so
+          nothing appears in the webhook ledger for it.
         </p>
       </Panel>
     </div>

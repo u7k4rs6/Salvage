@@ -34,17 +34,26 @@ export function PageIntro({
   return (
     <header className="page-head">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="page-title">{title}</h1>
-          <p className="page-sub">{what}</p>
-          {use && <p className="page-sub mt-1 text-[color:var(--text-muted)]">{use}</p>}
+          {/* What the page is and what to do with it are two separate sentences, so they sit as
+              two columns rather than as two stacked blocks each ending two thirds of the way
+              across the header. */}
+          <div className="prose-cols mt-2">
+            <p className="page-sub">{what}</p>
+            {use && (
+              <p className="page-sub text-[color:var(--text-muted)]">{use}</p>
+            )}
+          </div>
         </div>
         {right && <div className="shrink-0">{right}</div>}
       </div>
 
       {(shows || caveat) && (
         <details className="intro-details">
-          <summary className="intro-summary focus-ring">What each section shows</summary>
+          <summary className="intro-summary focus-ring">
+            What each section shows
+          </summary>
           <div className="intro-detail-body">
             {shows && (
               <dl className="intro-shows">
