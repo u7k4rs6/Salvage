@@ -97,31 +97,18 @@
   --ls-tight: -0.01em;
 
   /*
-   * Three width roles, and only one of them needs a number.
+   * Width, by role.
    *
-   * FULL is the default and carries no token: tables, metric grids and anything data dense take
-   * the width they are given. COMPACT is intrinsic: buttons, badges and short metadata are as
-   * wide as their content. READABLE is `--measure-prose`, and it is the only case where a width
-   * has to be chosen, because a line of prose has a length past which it stops being readable
-   * regardless of how much room is going spare beside it.
+   * FULL is everything: tables, metric grids, and prose alike. Text fills the surface it sits on
+   * and the page canvas is the only thing that limits a line.
    *
-   * A card being 1200px wide and the paragraph inside it being 700px is not a defect. The defect
-   * this replaced was one measure of 780px applied to text at four different sizes; the defect
-   * after that was filling the leftover space with invented columns. Space to the right of a
-   * paragraph is intentional and is left alone.
-   *
-   * In `ch` because the invariant for prose is a character count, and `ch` is the one unit that
-   * tracks the element's own size. Measured in this face a character costs 6.74px at 15px and
-   * 5.84px at 13px while `ch` is 9px and 7.8px, so `ch` runs about a third wider than an average
-   * character, so 79ch holds close to 105 of them at any size: 711px on a 15px description, 616px
-   * on a 13px note. A fixed rem cannot hold a character count across two sizes.
-   *
-   * 56ch was tried, for the 70 to 80 characters that is the usual advice, and it read worse: a
-   * 504px paragraph inside a 1400px panel is a third of the surface and every line stopped 930px
-   * short of the edge beside it. The canvas is sized for a nine column table, and prose sharing
-   * that canvas has to be measured against it rather than against a rule of thumb.
+   * There is no separate prose measure any more. One was tried at four values, 780px, 660px,
+   * 711px and 504px, and every one of them put a paragraph in the top left corner of a panel with
+   * a few hundred pixels of nothing beside it. Narrowing the text made that worse rather than
+   * better, which is the tell that the measure was the wrong instrument: what limits the line is
+   * `--canvas`, which is already sized per page in App.tsx, 1100px where a page is mostly prose
+   * and 1400px where it carries a table.
    */
-  --measure-prose: 79ch;
   --canvas: 1400px;
 
   /* -- space ------------------------------------------------------------ */
@@ -258,7 +245,6 @@
   }
   .intro-caveat {
     margin-top: var(--space-4);
-    max-width: var(--measure-prose);
     font-size: var(--fs-meta);
     line-height: var(--lh-normal);
     color: var(--text-muted);
@@ -413,7 +399,6 @@
   }
   .page-sub {
     margin-top: var(--space-2);
-    max-width: var(--measure-prose);
     font-size: var(--fs-body);
     line-height: var(--lh-normal);
     color: var(--text-secondary);
@@ -462,7 +447,6 @@
    */
   .panel-note {
     margin-top: var(--space-1);
-    max-width: var(--measure-prose);
     font-size: var(--fs-meta);
     line-height: var(--lh-normal);
     color: var(--text-secondary);
@@ -563,7 +547,6 @@
   /* One warning, one column of text. Its two paragraphs are the same warning, read in order. */
   .notice-body {
     margin-top: var(--space-2);
-    max-width: var(--measure-prose);
     font-size: var(--fs-meta);
     line-height: var(--lh-normal);
     color: var(--text-primary);
