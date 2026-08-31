@@ -14,6 +14,7 @@ import {
   Region,
 } from "../components/primitives";
 import { causeLabel, rupees, segmentLabel, timestamp } from "../lib/format";
+import { isPlannerFailureReason } from "../lib/health";
 import type { Escalation } from "../lib/types";
 
 interface EscalationList {
@@ -41,6 +42,10 @@ function Card({
 }) {
   const { token } = useSession();
   const decided = escalation.decision !== null;
+  // A planner failure and a considered handover both arrive here as an escalation and mean opposite
+  // things. The Overview separates them; this page did not, so a run whose planner had no fixture
+  // read as the agent deciding a human should take an issuer outage. Same test, same words.
+  const plannerFailed = isPlannerFailureReason(escalation.reason);
 
   async function decide(decision: "approve" | "reject", note: string) {
     await post(
@@ -53,12 +58,20 @@ function Card({
 
   return (
     <div
-      className={`border p-3 ${decided ? "border-[color:var(--line-2)]" : "border-[color:var(--warn)] bg-[color:var(--warn-bg)]"} ${
+      className={`border p-3 ${
+        decided
+          ? "border-[color:var(--line-2)]"
+          : plannerFailed
+            ? "border-[color:var(--crit)] bg-[color:var(--crit-bg)]"
+            : "border-[color:var(--warn)] bg-[color:var(--warn-bg)]"
+      } ${
         fresh ? "flash" : ""
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={decided ? "neutral" : "amber"}>{escalation.reason}</Badge>
+        <Badge tone={decided ? "neutral" : plannerFailed ? "red" : "amber"}>
+          {plannerFailed ? "planner error" : escalation.reason}
+        </Badge>
         <Link
           to={`/incidents/${escalation.incident_id}`}
           className="num text-sm text-[color:var(--info)] hover:text-[color:var(--fg)]"
@@ -70,9 +83,24 @@ function Card({
         <span className="num text-xs text-[color:var(--fg-2)]">{timestamp(escalation.created_at)}</span>
       </div>
 
-      <p className="mt-1 text-xs text-[color:var(--fg-2)]">
-        {REASONS[escalation.reason] ?? "Escalated for a reason the console does not have text for."}
-      </p>
+      {plannerFailed ? (
+        <div className="mt-2 border border-[color:var(--crit)] border-l-2 bg-[color:var(--crit-bg)] px-3 py-2">
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[color:var(--crit)]">
+              Planner error
+            </span>
+            <span className="num text-xs text-[color:var(--fg)]">{escalation.reason}</span>
+          </div>
+          <p className="mt-1.5 text-xs text-[color:var(--fg-2)]">
+            No action was chosen. The executor escalated because planning failed, which is not an
+            agent deciding a human should take this one.
+          </p>
+        </div>
+      ) : (
+        <p className="mt-1 text-xs text-[color:var(--fg-2)]">
+          {REASONS[escalation.reason] ?? "Escalated for a reason the console does not have text for."}
+        </p>
+      )}
 
       {escalation.incident && (
         <div className="mt-2 grid gap-2 text-xs sm:grid-cols-3">

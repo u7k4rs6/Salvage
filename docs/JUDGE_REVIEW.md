@@ -539,15 +539,15 @@ instruction.
 
 | | Severity | What |
 |---|---|---|
-| Q1 | low | `recovered 0.00` renders in the success colour on Incidents and Incident detail. |
-| Q2 | medium | `data/salvage.db` shows a fixture-miss as an agent escalation; the Overview labels it a planner error, Escalations does not. |
+| ~~Q1~~ | resolved | Fixed. A recovered figure of zero renders in the muted tier on both pages; a positive one is still green. |
+| ~~Q2~~ | resolved | Fixed. Escalations now labels a planner failure the way the Overview does, from one shared test, so neither page can call it a decision. |
 | Q3 | low | Escalations says "Escalated for a reason the console does not have text for", which reads as a rendering bug. |
 | Q4 | low | Storefront is now on the console's dark surface, and it is the one page that is a shopper's view rather than an operator's. |
 | Q5 | low | Escalations shows "enter the token" twice on one line beside the disabled approve and reject controls. |
-| Q6 | low | `docs/PITCH.md` says the agent "loses some seeds outright" on S3; it loses one of ten. Under-claiming. |
+| ~~Q6~~ | resolved | Fixed in PITCH and README: "loses 1 of the 10 seeds outright". |
 | ~~Q7~~ | resolved | Capture inspected and accepted. Verified verbatim against the live routes, and the demo's Results page now says on its face that the figures are a captured snapshot and names the run. |
 | ~~Q8~~ | resolved | Fixed. PITCH now reads "across all 250 runs", matching README and SUBMISSION and the artifact. |
-| Q9 | low | `docs/PITCH.md` says "half the faults are never detected" at 1,500 attempts a day; the sweep records 6 of 10. |
+| ~~Q9~~ | resolved | Fixed. PITCH now states 6 of 10 never detected and none of the 10 inside 15 minutes. |
 | Q10 | low | On an empty database the top bar renders the epoch as "1/1/1970". Not visible in the public demo. |
 | ~~Q11~~ | resolved | Spec left as specified. A document-level note records that it describes the original design and that 4.7 was superseded on `ui/board`. |
 
@@ -625,9 +625,63 @@ section 4.1's empty-state link are historical for the same reason.
 
 ### One new item, not acted on
 
-**Q12. `docs/04_FRONTEND_SPEC.md` section 8 lists "Dark mode, theming" as out of scope.** Severity:
+**Q12, resolved.** `docs/04_FRONTEND_SPEC.md` section 8 lists "Dark mode, theming" as out of scope. Severity:
 low. The whole console is now on a dark surface. This is the same class as Q11 and it is in the same
 document, but it was not part of the instruction and the note added above deliberately does not
 claim to be an exhaustive list of divergences. Flagged so the note can be extended if you want it to
 cover this too.
+
+---
+
+## Directed actions, second set
+
+Five items and one note extension, handled on instruction.
+
+**Q9, fixed.** `data/results/volume_sweep.json` at 1,500 attempts a day: 4 of 10 faults detected at
+all, so 6 of 10 never detected, and 0 of 10 inside fifteen minutes. `docs/PITCH.md` now states both
+numbers instead of "half". This was the only place in the submission where a stated limitation was
+softer than the data. The other documents were checked and were already exact: `docs/RESULTS.md` and
+`docs/BUILD_LOG.md` both carry "4 of 10 faults detected at all, 0 of 10 inside 15 sim minutes"
+verbatim, and neither `README.md` nor `docs/SUBMISSION.md` makes the claim at all.
+
+**Q6, fixed in two documents.** S3, agent minus B2 at-risk revenue paired per seed: behind on 1 of
+10 seeds, seed 1, on a mean of +5,840 and a paired standard deviation of 15,993. `docs/PITCH.md` and
+`README.md` both said "some seeds" in the same sentence and both now say "1 of the 10 seeds".
+`docs/AUDIT.md` was already precise. `docs/BUILD_LOG.md` keeps the original wording because that
+entry records the decision as it was made.
+
+**Q2, fixed by labelling rather than by changing the database.** `data/salvage.db` is not committed;
+a fresh clone builds its own, so pointing the demo at a different database would not have travelled.
+The durable fix is that the page stops mislabelling it. `isPlannerFailureReason` in `lib/health.ts`
+is now the single test, beside `plannerErrorOf` which answers the same question for an incident from
+the `decide.plan` entry, and Escalations uses it: a planner failure gets a red card, a "planner
+error" badge, the failure text, and the same sentence the Overview uses, "No action was chosen. The
+executor escalated because planning failed, which is not an agent deciding a human should take this
+one." A considered handover is unchanged, still amber. Verified against the database that has the
+miss.
+
+**Q1, fixed.** A recovered figure of zero now renders in the muted tier on Incidents and on Incident
+detail, measured as `rgb(127, 136, 148)`, which is `--fg-3`. A positive figure is still green. Green
+is a claim that money came back, and zero is not that claim.
+
+**AUDIT F6, marked historical.** The claim "neither breaker branch fires anywhere in the 200-run
+sweep" now says which sweep it means and that it was not re-checked. It could not be: no artifact
+records a breaker event, so verifying it against the 250-run sweep means re-running the sweep, which
+would regenerate measured artifacts. The document's own header says it is an audit of the repository
+as submitted, so dating the claim is consistent with what it is. Left untouched beside it: F6's other
+half, "Code: pause yes, escalate no", was fixed in `salvage/execute/scheduler.py` after the audit,
+and saying so in the audit would strengthen the project's position, which is not a correction.
+
+**Q12, note extended.** The divergence note in `docs/04_FRONTEND_SPEC.md` now also covers section
+8's "Dark mode, theming" out-of-scope line, recording that the console was later rebuilt dark on the
+same branch, that it was a palette and surface change only, and that section 7's contrast
+requirement is still met and was measured. Both note paragraphs are additive: 19 lines added, 0
+removed, across the two edits.
+
+### Checks
+
+496 tests pass, `ruff check` and `ruff format --check` clean, TypeScript clean, the web build
+succeeds. One en dash survives a scan of the edited files, `web/src/lib/health.ts` line 93. It is
+pre-existing, it is not in prose, and it is the neutral glyph in the deviation column beside the up
+and down arrows, so changing it would change what a data column renders.
 

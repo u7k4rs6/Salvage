@@ -104,7 +104,16 @@ export default function IncidentsPage() {
                       <StatusBadge status={incident.status} />
                     </td>
                     <td className="cell-pad num text-right">{rupees(incident.at_risk_amount)}</td>
-                    <td className="cell-pad num text-right text-[color:var(--ok)]">
+                    {/* Green says money came back. Zero says none did, so it is not green: a
+                        recovered figure of 0.00 in the success colour reads as good news about a
+                        number that is not good news. */}
+                    <td
+                      className={`cell-pad num text-right ${
+                        incident.recovered_amount > 0
+                          ? "text-[color:var(--ok)]"
+                          : "text-[color:var(--fg-3)]"
+                      }`}
+                    >
                       {rupees(incident.recovered_amount)}
                     </td>
                     <td className="cell-pad num text-right">{count(incident.actions)}</td>

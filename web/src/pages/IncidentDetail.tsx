@@ -401,7 +401,13 @@ export default function IncidentDetailPage() {
                 </div>
                 <div>
                   <div className="text-xs text-[color:var(--fg-2)]">recovered</div>
-                  <div className="num text-sm font-semibold text-[color:var(--ok)]">
+                  <div
+                    className={`num text-sm font-semibold ${
+                      data.incident.recovered_amount > 0
+                        ? "text-[color:var(--ok)]"
+                        : "text-[color:var(--fg-3)]"
+                    }`}
+                  >
                     {rupees(data.incident.recovered_amount)}
                   </div>
                   <div className="text-[10px] text-[color:var(--fg-3)]">whole incident, all cases</div>

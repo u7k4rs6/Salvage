@@ -69,7 +69,7 @@ Over the at-risk order set, mean of 10 seeds, revenue in rupees against messages
 On S1 the agent recovers 26 percent more than the best blunt baseline from 32 percent of its
 messages, and on S2 it recovers 29 percent more from 31 percent of its messages. **S3 is not a win
 and should not be read as one:** the difference is 5,840 rupees on a paired standard deviation of
-15,993 across ten seeds, the agent loses some seeds outright, and its message count is 86 percent
+15,993 across ten seeds, the agent loses 1 of the 10 seeds outright, and its message count is 86 percent
 of B2's rather than a third. Call it a tie reached with slightly fewer contacts.
 
 **The baselines beat the agent on whole-run revenue on every scenario, by 29 to 44 percent.** On S1
@@ -149,9 +149,10 @@ eleven attempts in a 15-minute window. The detector will not evaluate any segmen
 The fault happens, the payments fail, and there is nothing to test.
 
 So the 15-minute promise is a promise about the evening peak. Overnight, at this merchant size,
-this detector does not fire. The same wall shows up in volume: at 1,500 attempts a day, half the
-faults are never detected at all, and the boundary where a single-instrument fault becomes reliably
-detectable inside 15 minutes sits somewhere between 5,000 and 12,000 attempts a day.
+this detector does not fire. The same wall shows up in volume: at 1,500 attempts a day, 6 of
+10 faults are never detected at all and none of the 10 inside 15 minutes, and the boundary where a
+single-instrument fault becomes reliably detectable inside 15 minutes sits somewhere between 5,000
+and 12,000 attempts a day.
 
 Nothing was tuned against that result. The thresholds were frozen before the off-peak variant
 existed. It is in the pitch rather than in an appendix because it is the most useful thing the

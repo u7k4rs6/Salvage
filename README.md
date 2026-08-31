@@ -151,7 +151,7 @@ Recovered revenue in rupees over the at-risk order set against messages sent, me
 
 The agent wins S1 by 26 percent on 32 percent of B2's messages, and S2 by 29 percent on 31 percent
 of its messages. **S3 is a tie, not a win:** 5,840 rupees on a paired standard deviation of 15,993
-across ten seeds, with the agent losing some seeds outright, and 86 percent of B2's message count
+across ten seeds, with the agent losing 1 of the 10 seeds outright, and 86 percent of B2's message count
 rather than a third. **It loses S4 outright**, and that row is the one worth reading: the cause is
 a merchant misconfiguration, so it contacts nobody and escalates, recovering exactly what doing
 nothing recovers while both baselines message around two hundred customers about something none of

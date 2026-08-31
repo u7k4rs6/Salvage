@@ -15,6 +15,12 @@ buttons, the live event log and the summary card specified in 4.7 therefore do n
 the same reason. `docs/BUILD_LOG.md` carries the reasoning and `README.md` describes the page as it
 now is.
 
+Section 8 lists "Dark mode, theming" as out of scope. The console was later rebuilt on a dark
+surface, on the same branch, so that line records what was scoped rather than what shipped. It was
+a palette and surface change only: no layout, no component structure and no page's copy or numbers
+moved with it, and the contrast requirement in section 7 is still met and was measured rather than
+assumed.
+
 ## 1. Stack and constraints
 
 - Vite, React 18, TypeScript, Tailwind. React Router for pages. No state library; server state via a small `useApi` hook with SWR-style refetch and an SSE subscription for live updates.

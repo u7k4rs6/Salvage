@@ -118,6 +118,18 @@ export function plannerErrorOf(
   return rationale && rationale.startsWith("planner failed") ? rationale : null;
 }
 
+/**
+ * Whether an escalation's own `reason` is a planner failure rather than a decision.
+ *
+ * `plannerErrorOf` above answers the same question for an incident, from the `decide.plan` entry.
+ * An escalation carries only the reason string, and `_escalate` is called with the planner's error
+ * verbatim when planning fails, so the prefix is the whole test. Both pages use one of these two so
+ * they cannot disagree about what counts as a failure.
+ */
+export function isPlannerFailureReason(reason: string | null | undefined): boolean {
+  return typeof reason === "string" && reason.startsWith("planner failed");
+}
+
 /** A baseline policy hangs its cases on a synthetic incident the detector never opened. */
 export function realIncidents(incidents: IncidentSummary[]): IncidentSummary[] {
   return incidents.filter((incident) => !incident.id.endsWith("_baseline"));
