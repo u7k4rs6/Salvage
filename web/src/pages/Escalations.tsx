@@ -84,8 +84,10 @@ function Card({
         <span className="num text-[length:var(--fs-small)] text-[color:var(--fg-2)]">{timestamp(escalation.created_at)}</span>
       </div>
 
+      {/* The inner block carries no tint of its own: the card around it is already tinted, and two
+          layers of the same wash at nine percent put the red text below AA on its own background. */}
       {plannerFailed ? (
-        <div className="mt-2 border border-[color:var(--crit)] border-l-2 bg-[color:var(--crit-bg)] px-3 py-2">
+        <div className="mt-2 border border-[color:var(--crit)] border-l-2 bg-[color:var(--panel)] px-3 py-2">
           <div className="flex flex-wrap items-baseline gap-x-3">
             <span className="text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.08em] text-[color:var(--crit)]">
               Planner error

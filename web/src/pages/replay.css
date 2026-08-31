@@ -212,10 +212,12 @@
 }
 .rp .gate {
   display: grid;
-  grid-template-columns: 1.5rem 15rem minmax(0, 1fr);
+  /* The mark column was 1.5rem, which fitted "pass" at the old size and collided with the rule
+     name at this one. Sized to the word, and the rule gets room to sit on one line. */
+  grid-template-columns: 3rem minmax(0, 17rem) minmax(0, 1fr);
   align-items: baseline;
-  gap: var(--s2);
-  padding: 7px var(--s3);
+  gap: var(--s3);
+  padding: 9px var(--s3);
   border-top: 1px solid var(--line);
 }
 .rp .gate:first-child {
@@ -246,17 +248,33 @@
   color: var(--fg);
 }
 
-/* The verdict banner above the ladder. One line, large, and it names the rule. */
+/*
+ * The verdict. This is the signature moment of the whole product.
+ *
+ * Everything else on this page is telemetry. This is the one frame that says the agent was asked
+ * to do something to a customer and would not, and named the rule that stopped it. It is what the
+ * video pauses on and it is the argument the project is making, so it does not look like another
+ * panel with a coloured border.
+ *
+ * It is built as a stamp: a heavy rule down the left, the outcome set in the display face at a
+ * size nothing else on the page uses, and the deciding rule directly beneath it in monospace,
+ * because the rule is a machine-readable identity and should look like one. The gates that passed
+ * recede below; the one that decided it is the only thing at full contrast.
+ */
 .rp .verdict {
-  border: 1px solid var(--line-2);
-  border-left-width: 3px;
+  position: relative;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-2);
   border-radius: 2px;
   background: var(--panel);
-  padding: var(--s3);
+  padding: var(--s4) var(--s4) var(--s3);
+  overflow: hidden;
 }
 .rp .verdict-refused {
   border-left-color: var(--crit);
-  background: rgba(248, 81, 73, 0.06);
+  background:
+    linear-gradient(100deg, var(--crit-bg) 0%, transparent 62%),
+    var(--panel);
 }
 .rp .verdict-executed {
   border-left-color: var(--ok);
@@ -265,14 +283,35 @@
 .rp .verdict-queued {
   border-left-color: var(--warn);
 }
+
+/* The outcome word, at the one size nothing else uses. */
+.rp .verdict-outcome {
+  font-family: var(--font-display);
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* The rule that decided it. Monospace, because it is an identifier and not a phrase. */
 .rp .verdict-rule {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: var(--fs-h3);
+  font-size: var(--fs-lead);
   font-weight: 500;
   line-height: var(--lh-tight);
-  letter-spacing: -0.01em;
   word-break: break-word;
+  margin-top: var(--s1);
+}
+
+/* The sentence the policy engine wrote when it made the call. */
+.rp .verdict-detail {
+  margin-top: var(--s2);
+  font-size: var(--fs-body);
+  line-height: var(--lh-normal);
+  color: var(--fg-2);
+  max-width: var(--measure);
 }
 
 /* -- confidence scale ----------------------------------------------------- */
@@ -356,7 +395,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .rp .gate {
-    grid-template-columns: 1.5rem minmax(0, 1fr);
+    grid-template-columns: 3rem minmax(0, 1fr);
   }
   .rp .gate-detail {
     grid-column: 2;

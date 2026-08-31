@@ -143,28 +143,37 @@ export function Gates({ state, meta }: { state: ReplayState; meta: RecordingMeta
           <>
             <div className={`verdict verdict-${action.status}${isCurrent ? " held" : ""}`}>
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                <span className={`chip ${STATUS_SEVERITY[action.status] ?? "info"}`}>
-                  <span className="dot" aria-hidden="true" />
-                  {STATUS_WORD[action.status] ?? action.status}
-                </span>
-                <span className="note mono">
+                <span className="lbl">{action.type}</span>
+                <span className="tert">
                   {timeOnly(action.ts)}
                   {action.seq !== null ? ` · seq ${action.seq}` : ""}
                 </span>
               </div>
-              <div className="mono mid mt-2 text-[length:var(--fs-small)]">{action.type}</div>
-              <div className="lbl mt-3">
-                {action.decided ? "Decided by" : "Every gate passed"}
-              </div>
+
+              {/* The outcome, then the rule that produced it. Two lines, and they are the two
+                  things worth reading from the back of a room. */}
               <div
-                className={`verdict-rule mt-1 ${action.decided ? "crit" : "ok"}`}
+                className={`verdict-outcome mt-3 ${
+                  action.status === "refused"
+                    ? "crit"
+                    : action.status === "executed"
+                      ? "ok"
+                      : "warn"
+                }`}
               >
+                {STATUS_WORD[action.status] ?? action.status}
+              </div>
+              <div className={`verdict-rule ${action.decided ? "" : "dim"}`}>
                 {action.decided ? action.decided.rule : "no rule refused it"}
               </div>
-              {action.decided && <p className="txt mt-2">{action.decided.detail}</p>}
-              {action.caseId && (
-                <div className="note mono mt-3">{action.caseId}</div>
-              )}
+              {action.decided && <p className="verdict-detail">{action.decided.detail}</p>}
+
+              <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="tert">
+                  {action.gates.length} rule{action.gates.length === 1 ? "" : "s"} checked
+                </span>
+                {action.caseId && <span className="tert">{action.caseId}</span>}
+              </div>
             </div>
 
             <div className="ladder mt-3">

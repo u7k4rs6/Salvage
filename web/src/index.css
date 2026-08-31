@@ -27,19 +27,52 @@
      so the old value failed on roughly four hundred elements. */
   --fg-3: #7f8894;
 
-  /* Semantic. Red is scarce. */
-  --ok: #3fb950;
-  --warn: #d29922;
-  --crit: #f85149;
-  --info: #58a6ff;
+  /*
+   * The signal set.
+   *
+   * These were #3fb950, #d29922, #f85149 and #58a6ff, which are GitHub Primer's dark theme values
+   * exactly. Four borrowed hexes is the most legible way a product says nobody chose its colours.
+   *
+   * Chosen instead for one job each, at a common lightness so they read as one instrument rather
+   * than four stickers, and spaced around the wheel so no two are confusable at a glance:
+   *
+   *   crit  is the loudest thing on any screen, because it means an incident or a refusal, and a
+   *         refusal is the beat this whole product exists to show. Slightly hotter and cleaner
+   *         than the borrowed red so it wins against amber in peripheral vision.
+   *   warn  is gold rather than mustard: degraded, or waiting on a person.
+   *   ok    leans teal rather than the yellow-green it was, so it cannot be mistaken for warn.
+   *   info  is a signal cyan, not a blue. It is the identity colour and it is the one that makes
+   *         the surface read as instrumentation rather than as a code host's default theme.
+   */
+  --ok: #35bd83;
+  --warn: #e0a231;
+  /* Lightened from #f0524d, which measured 4.44 where a red element sits on a red-tinted card:
+     the two washes stack and the text lands just under AA. Chasing each nesting case is a game
+     without an end, so the token itself clears AA on a doubled tint, at 5.06. */
+  --crit: #f4655f;
+  --info: #3fbdd4;
 
   /* Tinted grounds. The light build wrote bg-red-50, bg-amber-50 and bg-green-50; on this ground
      the same job is done by the semantic colour at low alpha, named here so no page invents one. */
-  --crit-bg: rgba(248, 81, 73, 0.08);
-  --warn-bg: rgba(210, 153, 34, 0.08);
-  --ok-bg: rgba(63, 185, 80, 0.08);
-  --info-bg: rgba(88, 166, 255, 0.08);
+  --crit-bg: rgba(240, 82, 77, 0.09);
+  --warn-bg: rgba(224, 162, 49, 0.09);
+  --ok-bg: rgba(53, 189, 131, 0.09);
+  --info-bg: rgba(63, 189, 212, 0.09);
 
+  /*
+   * Three faces, three jobs. Four were being downloaded and two were used.
+   *
+   * display  Archivo, a grotesque with tight, confident caps. It carries the figures that are
+   *          meant to be read across a room and the one headline on each page. It was already in
+   *          the font request and rendering nowhere.
+   * ui       IBM Plex Sans for prose. Humanist and a little idiosyncratic, which is the point:
+   *          it is the one part of the interface addressed to a person rather than to an operator.
+   * mono     IBM Plex Mono for every number, id, hash and segment key.
+   *
+   * Inter was in the request and is now gone. It is the single most defaulted typeface on the
+   * web and it was not being used for anything.
+   */
+  --font-display: Archivo, "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
@@ -156,12 +189,12 @@
     max-width: 92rem;
   }
   .intro-title {
-    font-family: var(--font-mono);
+    font-family: var(--font-display);
     font-size: var(--fs-caption);
-    font-weight: 600;
-    letter-spacing: 0.12em;
+    font-weight: 700;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--fg-2);
+    color: var(--info);
   }
   .intro-what {
     margin-top: 8px;
