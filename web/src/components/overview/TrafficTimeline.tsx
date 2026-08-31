@@ -151,26 +151,26 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
         {/* The axis gutter sits outside the plot, so a band positioned as a percentage of the
             plot is not shifted by the width of a label. */}
         <div className="relative w-10 shrink-0" aria-hidden="true">
-          <span className="mono absolute right-2 text-[11px] dim" style={{ top: -4 }}>
+          <span className="mono absolute right-2 text-[length:var(--fs-caption)] dim" style={{ top: -4 }}>
             {percent(1, 0)}
           </span>
           <span
-            className="mono absolute right-2 text-[11px] dim"
+            className="mono absolute right-2 text-[length:var(--fs-caption)] dim"
             style={{ top: RATE_H / 2 - 5 }}
           >
             {percent(rateFloor + rateSpan / 2, 0)}
           </span>
-          <span className="mono absolute right-2 text-[11px] dim" style={{ top: RATE_H - 10 }}>
+          <span className="mono absolute right-2 text-[length:var(--fs-caption)] dim" style={{ top: RATE_H - 10 }}>
             {percent(rateFloor, 0)}
           </span>
           <span
-            className="mono absolute right-2 text-[11px] dim"
+            className="mono absolute right-2 text-[length:var(--fs-caption)] dim"
             style={{ top: RATE_H + 10 }}
           >
             {count(maxAttempts)}
           </span>
           <span
-            className="mono absolute right-2 text-[11px] dim"
+            className="mono absolute right-2 text-[length:var(--fs-caption)] dim"
             style={{ top: RATE_H + VOL_H + 2 }}
           >
             0
@@ -282,7 +282,7 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
             .map(({ bucket, index }) => (
               <span
                 key={bucket.t}
-                className="mono absolute top-0 text-[11.5px]"
+                className="mono absolute top-0 text-[length:var(--fs-caption)]"
                 style={{
                   left: `${((index * step + step / 2) / W) * 100}%`,
                   color: "var(--fg-3)",
@@ -302,23 +302,23 @@ export function TrafficTimeline({ data, run }: { data: Overview; run: RunHeader 
               top: 0,
             }}
           >
-            <div className="mono text-[12.5px]" style={{ color: "var(--fg)" }}>
+            <div className="mono text-[length:var(--fs-caption)]" style={{ color: "var(--fg)" }}>
               {timeOnly(active.t)}
             </div>
             <dl className="mt-1.5 space-y-0.5">
               <div className="flex justify-between gap-4">
                 <dt className="note">success</dt>
-                <dd className="mono text-[12.5px]">
+                <dd className="mono text-[length:var(--fs-caption)]">
                   {active.rate === null ? "-" : percent(active.rate)}
                 </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="note">attempts</dt>
-                <dd className="mono text-[12.5px]">{count(active.attempts)}</dd>
+                <dd className="mono text-[length:var(--fs-caption)]">{count(active.attempts)}</dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="note">failures</dt>
-                <dd className="mono warn text-[12.5px]">{count(active.failures)}</dd>
+                <dd className="mono warn text-[length:var(--fs-caption)]">{count(active.failures)}</dd>
               </div>
             </dl>
           </div>

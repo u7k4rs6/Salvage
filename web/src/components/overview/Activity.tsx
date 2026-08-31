@@ -50,7 +50,7 @@ export function Activity({ page, clock }: { page: LedgerPage; clock: string }) {
                   className="dot self-center"
                   style={{ background: stage?.colour ?? "var(--fg-3)" }}
                 />
-                <span className="mono text-[13px]">{entry.kind}</span>
+                <span className="mono text-[length:var(--fs-small)]">{entry.kind}</span>
                 {stage && <span className="lbl">{stage.stage}</span>}
                 <span className="mono note truncate">{entry.ref_id}</span>
               </div>

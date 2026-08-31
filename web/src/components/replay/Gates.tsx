@@ -63,28 +63,28 @@ export function Gates({ state, meta }: { state: ReplayState; meta: RecordingMeta
             <div className="divide mt-3">
               {state.plan.plan.actions.map((planned, index) => (
                 <div key={`${planned.type}-${index}`} className="flex items-baseline gap-3 py-2">
-                  <span className="mono text-[13.5px]">{planned.type}</span>
+                  <span className="mono text-[length:var(--fs-small)]">{planned.type}</span>
                   <span className="note mono">{planned.scope}</span>
                 </div>
               ))}
             </div>
             <div className="kv mt-4">
               <span className="lbl">Affected orders</span>
-              <span className="mono mid text-[13px]">
+              <span className="mono mid text-[length:var(--fs-small)]">
                 {count(state.plan.eligibility.affected_orders)}
               </span>
               <span className="lbl">Consented</span>
-              <span className="mono mid text-[13px]">
+              <span className="mono mid text-[length:var(--fs-small)]">
                 {count(state.plan.eligibility.consented)}
               </span>
               <span className="lbl">With an alternate</span>
-              <span className="mono mid text-[13px]">
+              <span className="mono mid text-[length:var(--fs-small)]">
                 {count(state.plan.eligibility.consented_with_alternate)}
               </span>
               <span className="lbl">Opted out</span>
-              <span className="mono mid text-[13px]">{count(state.plan.eligibility.opted_out)}</span>
+              <span className="mono mid text-[length:var(--fs-small)]">{count(state.plan.eligibility.opted_out)}</span>
               <span className="lbl">Hard declined</span>
-              <span className="mono mid text-[13px]">
+              <span className="mono mid text-[length:var(--fs-small)]">
                 {count(state.plan.eligibility.hard_declined)}
               </span>
             </div>
@@ -122,7 +122,7 @@ export function Gates({ state, meta }: { state: ReplayState; meta: RecordingMeta
               {state.refusalsByRule.map((entry) => (
                 <div key={entry.rule} className="flex items-baseline gap-3 px-4 py-2.5">
                   <span className="fig-md crit">{count(entry.count)}</span>
-                  <span className="mono text-[13px]">{entry.rule}</span>
+                  <span className="mono text-[length:var(--fs-small)]">{entry.rule}</span>
                 </div>
               ))}
             </div>
@@ -152,7 +152,7 @@ export function Gates({ state, meta }: { state: ReplayState; meta: RecordingMeta
                   {action.seq !== null ? ` · seq ${action.seq}` : ""}
                 </span>
               </div>
-              <div className="mono mid mt-2 text-[14px]">{action.type}</div>
+              <div className="mono mid mt-2 text-[length:var(--fs-small)]">{action.type}</div>
               <div className="lbl mt-3">
                 {action.decided ? "Decided by" : "Every gate passed"}
               </div>

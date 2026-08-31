@@ -31,7 +31,7 @@
   align-items: center;
   gap: 6px;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -40,7 +40,7 @@
   border: 1px solid var(--line-2);
   border-radius: 2px;
   padding: 5px 10px;
-  line-height: 1.4;
+  line-height: var(--lh-normal);
   white-space: nowrap;
   transition: background-color 120ms linear, color 120ms linear;
 }
@@ -65,14 +65,14 @@
 }
 .rp .seg > button {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--fg-3);
   background: var(--panel-2);
   padding: 5px 10px;
   border-left: 1px solid var(--line-2);
-  line-height: 1.4;
+  line-height: var(--lh-normal);
   transition: background-color 120ms linear, color 120ms linear;
 }
 .rp .seg > button:first-child {
@@ -88,7 +88,7 @@
 
 .rp select.field {
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: var(--fs-caption);
   color: var(--fg);
   background: var(--panel-2);
   border: 1px solid var(--line-2);
@@ -227,18 +227,18 @@
 }
 .rp .gate-mark {
   font-family: var(--font-mono);
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: var(--fs-small);
+  line-height: var(--lh-normal);
 }
 .rp .gate-rule {
   font-family: var(--font-mono);
-  font-size: 13.5px;
+  font-size: var(--fs-small);
   color: var(--fg-2);
   word-break: break-word;
 }
 .rp .gate-detail {
-  font-size: 13.5px;
-  line-height: 1.5;
+  font-size: var(--fs-small);
+  line-height: var(--lh-normal);
   color: var(--fg-2);
 }
 .rp .gate-failed .gate-rule,
@@ -268,9 +268,9 @@
 .rp .verdict-rule {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 23px;
+  font-size: var(--fs-h3);
   font-weight: 500;
-  line-height: 1.2;
+  line-height: var(--lh-tight);
   letter-spacing: -0.01em;
   word-break: break-word;
 }
@@ -324,8 +324,8 @@
 .rp .tert {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  font-size: 11.5px;
-  line-height: 1.5;
+  font-size: var(--fs-caption);
+  line-height: var(--lh-normal);
   color: var(--fg-3);
 }
 
@@ -382,18 +382,18 @@
   max-width: 46rem;
 }
 .rp .entry-title {
-  font-size: 32px;
-  line-height: 1.25;
+  font-size: var(--fs-h2);
+  line-height: var(--lh-tight);
   font-weight: 500;
   letter-spacing: -0.015em;
   color: var(--fg);
-  max-width: 34rem;
+  max-width: 22ch;
 }
 .rp .entry-body {
-  font-size: 16px;
-  line-height: 1.7;
+  font-size: var(--fs-body);
+  line-height: var(--lh-relaxed);
   color: var(--fg-2);
-  max-width: 42rem;
+  max-width: var(--measure);
 }
 .rp .entry-strong {
   color: var(--fg);
@@ -404,7 +404,7 @@
   align-items: center;
   gap: 8px;
   font-family: var(--font-mono);
-  font-size: 13.5px;
+  font-size: var(--fs-small);
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -425,8 +425,8 @@
  * the run is playing, because for a visitor who reads nothing else it is the whole explanation.
  */
 .rp .narration {
-  font-size: 17px;
-  line-height: 1.55;
+  font-size: var(--fs-lead);
+  line-height: var(--lh-relaxed);
   color: var(--fg);
-  max-width: 62rem;
+  max-width: var(--measure);
 }

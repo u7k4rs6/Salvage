@@ -22,8 +22,12 @@ export function Panel({
       {(title || right) && (
         <header className="flex items-start justify-between gap-4 border-b border-[color:var(--line)] px-4 py-2">
           <div>
-            {title && <h2 className="text-sm font-semibold text-[color:var(--fg)]">{title}</h2>}
-            {subtitle && <p className="mt-0.5 text-[13px] text-[color:var(--fg-2)]">{subtitle}</p>}
+            {title && <h2 className="text-[length:var(--fs-small)] font-semibold text-[color:var(--fg)]">{title}</h2>}
+            {subtitle && (
+              <p className="mt-1 max-w-[var(--measure)] text-[length:var(--fs-small)] leading-[var(--lh-normal)] text-[color:var(--fg-2)]">
+                {subtitle}
+              </p>
+            )}
           </div>
           {right && <div className="shrink-0">{right}</div>}
         </header>
@@ -46,7 +50,7 @@ const TONES: Record<Tone, string> = {
 export function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
   return (
     <span
-      className={`inline-block whitespace-nowrap rounded border px-1.5 py-0.5 text-[12.5px] font-medium ${TONES[tone]}`}
+      className={`inline-block whitespace-nowrap rounded border px-1.5 py-0.5 text-[length:var(--fs-caption)] font-medium ${TONES[tone]}`}
     >
       {children}
     </span>
@@ -87,9 +91,9 @@ export function Stat({
           : "text-[color:var(--fg)]";
   return (
     <div className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-4 py-3">
-      <div className="text-[13px] uppercase tracking-wide text-[color:var(--fg-2)]">{label}</div>
-      <div className={`num mt-1 text-2xl font-semibold ${colour}`}>{value}</div>
-      {hint && <div className="mt-0.5 text-[13px] text-[color:var(--fg-2)]">{hint}</div>}
+      <div className="text-[length:var(--fs-small)] uppercase tracking-wide text-[color:var(--fg-2)]">{label}</div>
+      <div className={`num mt-1 text-[length:var(--fs-h3)] font-semibold ${colour}`}>{value}</div>
+      {hint && <div className="mt-0.5 text-[length:var(--fs-small)] text-[color:var(--fg-2)]">{hint}</div>}
     </div>
   );
 }
@@ -105,14 +109,14 @@ export function Table({
 }) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse text-table">
+      <table className="w-full border-collapse text-[length:var(--fs-small)]">
         <thead>
           <tr className="border-b border-[color:var(--line-2)] text-left text-[color:var(--fg-2)]">
             {columns.map((column, index) => (
               <th
                 key={column}
                 scope="col"
-                className={`cell-pad text-[13px] font-medium uppercase tracking-wide ${
+                className={`cell-pad text-[length:var(--fs-small)] font-medium uppercase tracking-wide ${
                   align[index] === "right" ? "text-right" : ""
                 }`}
               >
@@ -141,7 +145,7 @@ export function Loading({ rows = 4, label = "Loading" }: { rows?: number; label?
 export function Empty({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="py-8 text-center">
-      <p className="text-sm text-[color:var(--fg-2)]">{children}</p>
+      <p className="text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">{children}</p>
       {action && <div className="mt-2">{action}</div>}
     </div>
   );
@@ -149,14 +153,14 @@ export function Empty({ children, action }: { children: ReactNode; action?: Reac
 
 export function ErrorPanel({ error, retry }: { error: unknown; retry?: () => void }) {
   return (
-    <div role="alert" className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-4 py-3 text-sm text-[color:var(--crit)]">
+    <div role="alert" className="border border-[color:var(--crit)] bg-[color:var(--crit-bg)] px-4 py-3 text-[length:var(--fs-small)] text-[color:var(--crit)]">
       <div className="font-medium">Request failed</div>
-      <div className="num mt-1 break-words text-[13px]">{describe(error)}</div>
+      <div className="num mt-1 break-words text-[length:var(--fs-small)]">{describe(error)}</div>
       {retry && (
         <button
           type="button"
           onClick={retry}
-          className="mt-2 border border-[color:var(--crit)] bg-[color:var(--panel)] px-2 py-1 text-[13px] hover:bg-[color:var(--crit-bg)]"
+          className="mt-2 border border-[color:var(--crit)] bg-[color:var(--panel)] px-2 py-1 text-[length:var(--fs-small)] hover:bg-[color:var(--crit-bg)]"
         >
           Try again
         </button>
@@ -197,7 +201,7 @@ export function Disclosure({
 }) {
   return (
     <details className={`group ${className}`}>
-      <summary className="cursor-pointer select-none text-[13px] text-[color:var(--info)] hover:text-[color:var(--fg)]">
+      <summary className="cursor-pointer select-none text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]">
         {summary}
       </summary>
       <div className="mt-2">{children}</div>
@@ -207,7 +211,7 @@ export function Disclosure({
 
 export function Code({ children }: { children: ReactNode }) {
   return (
-    <pre className="num max-h-96 overflow-auto whitespace-pre-wrap break-words border border-[color:var(--line)] bg-[color:var(--panel-2)] p-3 text-[13px] text-[color:var(--fg)]">
+    <pre className="num max-h-96 overflow-auto whitespace-pre-wrap break-words border border-[color:var(--line)] bg-[color:var(--panel-2)] p-3 text-[length:var(--fs-small)] text-[color:var(--fg)]">
       {children}
     </pre>
   );
@@ -261,13 +265,13 @@ export function ConfirmButton({
             setError(null);
             setOpen(true);
           }}
-          className={`border px-2 py-1 text-[13px] disabled:cursor-not-allowed disabled:opacity-50 ${colour}`}
+          className={`border px-2 py-1 text-[length:var(--fs-small)] disabled:cursor-not-allowed disabled:opacity-50 ${colour}`}
         >
 
           {label}
         </button>
         {disabled && disabledReason && (
-          <span className="ml-2 text-[13px] text-[color:var(--fg-2)]">{disabledReason}</span>
+          <span className="ml-2 text-[length:var(--fs-small)] text-[color:var(--fg-2)]">{disabledReason}</span>
         )}
       </span>
     );
@@ -275,18 +279,18 @@ export function ConfirmButton({
 
   return (
     <div className="border border-[color:var(--line-2)] bg-[color:var(--panel-2)] p-3">
-      <p className="text-[13px] text-[color:var(--fg)]">{prompt}</p>
+      <p className="text-[length:var(--fs-small)] text-[color:var(--fg)] max-w-[var(--measure)]">{prompt}</p>
       {requireNote && (
         <input
           autoFocus
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder={notePlaceholder}
-          className="mt-2 w-full border border-[color:var(--line-2)] px-2 py-1 text-[13px]"
+          className="mt-2 w-full border border-[color:var(--line-2)] px-2 py-1 text-[length:var(--fs-small)]"
         />
       )}
       {error !== null && (
-        <div className="mt-2 text-[13px] text-[color:var(--crit)]" role="alert">
+        <div className="mt-2 text-[length:var(--fs-small)] text-[color:var(--crit)]" role="alert">
           {describe(error)}
         </div>
       )}
@@ -308,14 +312,14 @@ export function ConfirmButton({
               setBusy(false);
             }
           }}
-          className={`border px-2 py-1 text-[13px] disabled:opacity-50 ${colour}`}
+          className={`border px-2 py-1 text-[length:var(--fs-small)] disabled:opacity-50 ${colour}`}
         >
           {busy ? "Working" : (confirmLabel ?? "Confirm")}
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[13px] hover:bg-[color:var(--panel-3)]"
+          className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[length:var(--fs-small)] hover:bg-[color:var(--panel-3)]"
         >
           Cancel
         </button>

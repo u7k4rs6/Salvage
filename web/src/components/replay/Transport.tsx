@@ -156,14 +156,14 @@ export function Transport({
         </span>
         {frame && (
           <span className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="mono mid text-[14px]">{frame.kind}</span>
-            <span className="mono dim truncate text-[13px]">{frame.refId}</span>
+            <span className="mono mid text-[length:var(--fs-small)]">{frame.kind}</span>
+            <span className="mono dim truncate text-[length:var(--fs-small)]">{frame.refId}</span>
           </span>
         )}
         {replay.faults.length > 0 && (
           <span className="flex items-baseline gap-2">
             <span className="lbl">Since fault</span>
-            <span className="mono mid text-[13.5px]">
+            <span className="mono mid text-[length:var(--fs-small)]">
               {transport.ts >= replay.faults[0].start
                 ? elapsed(replay.faults[0].start, Math.round(transport.ts))
                 : "not started"}

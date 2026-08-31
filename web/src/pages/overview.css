@@ -32,8 +32,8 @@
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-ui);
-  font-size: 14.5px;
-  line-height: 1.55;
+  font-size: var(--fs-small);
+  line-height: var(--lh-relaxed);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -50,26 +50,28 @@
    signal that something is a label rather than a sentence. */
 .ov .lbl {
   font-family: var(--font-mono);
-  font-size: 11.5px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--fg-3);
-  line-height: 1.4;
+  line-height: var(--lh-normal);
 }
 .ov .lbl-2 {
   color: var(--fg-2);
 }
 
 .ov .note {
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: var(--fs-caption);
+  line-height: var(--lh-normal);
   color: var(--fg-3);
+  max-width: var(--measure);
 }
 .ov .txt {
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: var(--fs-body);
+  line-height: var(--lh-relaxed);
   color: var(--fg-2);
+  max-width: var(--measure);
 }
 
 /* Figures. Restrained: telemetry, not a marketing statistic. */
@@ -77,24 +79,24 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-  font-size: 48px;
-  line-height: 1.05;
+  font-size: var(--fs-display);
+  line-height: var(--lh-tight);
   letter-spacing: -0.02em;
 }
 .ov .fig-lg {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-  font-size: 24px;
-  line-height: 1.15;
+  font-size: var(--fs-h3);
+  line-height: var(--lh-tight);
   letter-spacing: -0.01em;
 }
 .ov .fig-md {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-  font-size: 16.5px;
-  line-height: 1.2;
+  font-size: var(--fs-body);
+  line-height: var(--lh-tight);
 }
 
 .ov .ok { color: var(--ok); }
@@ -128,7 +130,7 @@
 }
 .ov .section-title {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--fs-caption);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -150,14 +152,14 @@
   align-items: center;
   gap: 5px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--fs-caption);
   font-weight: 500;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   padding: 2px 6px;
   border: 1px solid currentColor;
   border-radius: 2px;
-  line-height: 1.5;
+  line-height: var(--lh-normal);
   white-space: nowrap;
 }
 .ov .chip-flat {

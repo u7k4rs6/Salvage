@@ -34,7 +34,7 @@ export function Tail({ frames, currentOrd }: { frames: Frame[]; currentOrd: numb
         >
           <span className="note mono">{timeOnly(frame.ts)}</span>
           <span className="note mono">{frame.seq === null ? "table" : `seq ${frame.seq}`}</span>
-          <span className={`mono text-[13px] ${KIND_SEVERITY(frame.kind)}`}>{frame.kind}</span>
+          <span className={`mono text-[length:var(--fs-small)] ${KIND_SEVERITY(frame.kind)}`}>{frame.kind}</span>
           <span className="note mono truncate" title={frame.refId}>
             {frame.refId}
           </span>

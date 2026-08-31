@@ -40,10 +40,10 @@ function Readout({
   const dark = tone === "crit" ? "bar-crit" : tone === "warn" ? "bar-warn" : tone === "ok" ? "bar-ok" : "";
   return (
     <span className="flex items-baseline gap-1.5">
-      <span className="bar-label text-[11px] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
+      <span className="bar-label text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
         {label}
       </span>
-      <span className={`num bar-value text-[12.5px] font-medium ${light} ${dark}`}>{children}</span>
+      <span className={`num bar-value text-[length:var(--fs-caption)] font-medium ${light} ${dark}`}>{children}</span>
     </span>
   );
 }
@@ -72,11 +72,11 @@ export function TopBar() {
 function DemoBar() {
   return (
     <header className="chrome-ui flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-[color:var(--line)] px-4 py-[7px]">
-      <span className="text-[13.5px] font-semibold tracking-[0.02em]">SALVAGE</span>
-      <span className="text-[12.5px] text-[color:var(--fg-2)]">
+      <span className="text-[length:var(--fs-small)] font-semibold tracking-[0.02em]">SALVAGE</span>
+      <span className="text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">
         Payment failure recovery for Indian merchants on Razorpay
       </span>
-      <span className="ml-auto text-[12.5px] text-[color:var(--fg-3)]">
+      <span className="ml-auto text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
         A recorded run, replayed. Nothing here is live.
       </span>
     </header>
@@ -105,8 +105,8 @@ function LiveBar() {
     >
       {/* Identity. The product name is a label in the corner, not a headline. */}
       <span className="flex items-baseline gap-2">
-        <span className="text-[13.5px] font-semibold tracking-[0.02em]">SALVAGE</span>
-        <span className="num bar-label text-[11px] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
+        <span className="text-[length:var(--fs-small)] font-semibold tracking-[0.02em]">SALVAGE</span>
+        <span className="num bar-label text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
           {env} &middot; sim
         </span>
       </span>
@@ -137,21 +137,21 @@ function LiveBar() {
       {killed && (
         <>
           <Separator />
-          <span className="bar-crit text-[12.5px] font-semibold text-[color:var(--crit)]">
+          <span className="bar-crit text-[length:var(--fs-caption)] font-semibold text-[color:var(--crit)]">
             Outbound actions suspended
           </span>
         </>
       )}
 
       <div className="ml-auto flex items-center gap-3">
-        <label className="bar-label flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
+        <label className="bar-label flex items-center gap-2 text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.1em] text-[color:var(--fg-3)]">
           token
           <input
             type="password"
             value={token ?? ""}
             onChange={(event) => setToken(event.target.value || null)}
             placeholder="SALVAGE_DASHBOARD_TOKEN"
-            className="num w-44 border border-[color:var(--line-2)] px-2 py-[3px] text-[12.5px]"
+            className="num w-44 border border-[color:var(--line-2)] px-2 py-[3px] text-[length:var(--fs-caption)]"
           />
         </label>
 
@@ -180,7 +180,7 @@ function LiveBar() {
       </div>
 
       {error !== null && (
-        <div className="bar-crit w-full text-[13px] text-[color:var(--crit)]" role="alert">
+        <div className="bar-crit w-full text-[length:var(--fs-small)] text-[color:var(--crit)]" role="alert">
           {describe(error)}
         </div>
       )}

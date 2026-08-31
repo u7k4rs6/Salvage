@@ -53,7 +53,7 @@ function IncidentRow({
             {run.scenario}
           </span>
         )}
-        <h3 className="text-[15px] font-medium tracking-[-0.01em]">
+        <h3 className="text-[length:var(--fs-body)] font-medium tracking-[-0.01em]">
           {causeLabel(incident.root_cause).toUpperCase()}
         </h3>
         <span className="mono note truncate">{incident.segment_key}</span>
@@ -66,7 +66,7 @@ function IncidentRow({
       <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-6">
         <Field label="Opened">
           <span className="mono">{timeOnly(incident.opened_at)}</span>{" "}
-          <span className="dim mono text-[13px]">{elapsed(incident.opened_at, now)}</span>
+          <span className="dim mono text-[length:var(--fs-small)]">{elapsed(incident.opened_at, now)}</span>
         </Field>
         <Field label="Exposure">
           <span className="mono">&#8377;{rupees(incident.at_risk_amount)}</span>
@@ -75,17 +75,17 @@ function IncidentRow({
           {segment ? (
             <span className="mono">
               <span className="crit">{percent(segment.rate)}</span>{" "}
-              <span className="dim text-[13px]">
+              <span className="dim text-[length:var(--fs-small)]">
                 {count(segment.failures)}/{count(segment.attempts)} failed
               </span>
             </span>
           ) : (
-            <span className="dim mono text-[13px]">below floor this window</span>
+            <span className="dim mono text-[length:var(--fs-small)]">below floor this window</span>
           )}
         </Field>
         <Field label="Cases">
           <span className="mono">{count(incident.cases)}</span>{" "}
-          <span className="dim mono text-[13px]">
+          <span className="dim mono text-[length:var(--fs-small)]">
             {count(incident.actions)} action{incident.actions === 1 ? "" : "s"}
           </span>
         </Field>
@@ -96,7 +96,7 @@ function IncidentRow({
         </Field>
         <Field label="Time to detect">
           {detectedIn === null ? (
-            <span className="dim mono text-[13px]">-</span>
+            <span className="dim mono text-[length:var(--fs-small)]">-</span>
           ) : (
             <span className="mono">{duration(detectedIn)}</span>
           )}
@@ -107,7 +107,7 @@ function IncidentRow({
         <div className="alert mt-4" role="alert">
           <div className="flex flex-wrap items-baseline gap-x-3">
             <span className="lbl crit">Planner error</span>
-            <span className="mono text-[13px]">{plannerError}</span>
+            <span className="mono text-[length:var(--fs-small)]">{plannerError}</span>
           </div>
           <p className="note mt-1.5">
             No action was chosen. The executor escalated because planning failed, which is not an

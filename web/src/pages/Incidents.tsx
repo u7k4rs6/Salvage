@@ -43,7 +43,7 @@ export default function IncidentsPage() {
       title="Incidents"
       subtitle="Every incident the detector opened, newest first."
       right={
-        <label className="text-[13px] text-[color:var(--fg-2)]">
+        <label className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
           status{" "}
           <select
             value={status}
@@ -51,7 +51,7 @@ export default function IncidentsPage() {
               setStatus(event.target.value);
               setOffset(0);
             }}
-            className="border border-[color:var(--line-2)] px-2 py-1 text-[13px]"
+            className="border border-[color:var(--line-2)] px-2 py-1 text-[length:var(--fs-small)]"
           >
             {STATUSES.map((value) => (
               <option key={value} value={value}>
@@ -97,7 +97,7 @@ export default function IncidentsPage() {
               >
                 {data.incidents.map((incident) => (
                   <tr key={incident.id} className="border-b border-[color:var(--line)] hover:bg-[color:var(--panel-2)]">
-                    <td className="cell-pad num whitespace-nowrap text-[13px]">
+                    <td className="cell-pad num whitespace-nowrap text-[length:var(--fs-small)]">
                       <Link
                         to={`/incidents/${incident.id}`}
                         className="text-[color:var(--info)] hover:text-[color:var(--fg)]"
@@ -139,7 +139,7 @@ export default function IncidentsPage() {
                   </tr>
                 ))}
               </Table>
-              <div className="mt-3 flex items-center gap-3 text-[13px] text-[color:var(--fg-2)]">
+              <div className="mt-3 flex items-center gap-3 text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
                 <span className="num">
                   {offset + 1} to {Math.min(offset + data.limit, data.total)} of {data.total}
                 </span>

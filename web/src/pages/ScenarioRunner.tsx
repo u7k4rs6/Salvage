@@ -256,27 +256,27 @@ function Runner({
             {state.incident ? (
               <div className="kv">
                 <span className="lbl">Segment</span>
-                <span className="mono mid text-[13px]">{state.incident.segmentKey}</span>
+                <span className="mono mid text-[length:var(--fs-small)]">{state.incident.segmentKey}</span>
                 <span className="lbl">Affected scope</span>
-                <span className="mono mid text-[13px]">
+                <span className="mono mid text-[length:var(--fs-small)]">
                   {state.incident.scope.join(", ") || "-"}
                 </span>
                 <span className="lbl">Opened</span>
-                <span className="mono mid text-[13px]">
+                <span className="mono mid text-[length:var(--fs-small)]">
                   {timestamp(state.incident.openedAt)}
                 </span>
                 <span className="lbl">Detection latency</span>
-                <span className="mono mid text-[13px]">
+                <span className="mono mid text-[length:var(--fs-small)]">
                   {detectSeconds === null
                     ? "no recorded fault to measure from"
                     : `${Math.round(detectSeconds / 60)} sim minutes after the fault started`}
                 </span>
                 <span className="lbl">At risk when opened</span>
-                <span className="mono mid text-[13px]">
+                <span className="mono mid text-[length:var(--fs-small)]">
                   {rupeesShort(state.incident.atRisk)}
                 </span>
                 <span className="lbl">Closed</span>
-                <span className="mono mid text-[13px]">
+                <span className="mono mid text-[length:var(--fs-small)]">
                   {state.incident.closedAt === null
                     ? "still open"
                     : timestamp(state.incident.closedAt)}
@@ -352,18 +352,18 @@ function Runner({
       <Section title="Provenance" tight>
         <div className="kv">
           <span className="lbl">Run</span>
-          <span className="mono mid text-[13px]">{meta.run_id}</span>
+          <span className="mono mid text-[length:var(--fs-small)]">{meta.run_id}</span>
           <span className="lbl">Captured from</span>
-          <span className="mono mid text-[13px]">
+          <span className="mono mid text-[length:var(--fs-small)]">
             salvage agent run --scenario {meta.scenario} --seed {meta.seed} --policy {meta.policy}{" "}
             --provider {meta.provider}
           </span>
           <span className="lbl">Params hash</span>
-          <span className="mono mid text-[13px]">{meta.params_hash.slice(0, 16)}</span>
+          <span className="mono mid text-[length:var(--fs-small)]">{meta.params_hash.slice(0, 16)}</span>
           <span className="lbl">Source revision</span>
-          <span className="mono mid text-[13px]">{meta.git_rev || "not recorded"}</span>
+          <span className="mono mid text-[length:var(--fs-small)]">{meta.git_rev || "not recorded"}</span>
           <span className="lbl">Observed window</span>
-          <span className="mono mid text-[13px]">
+          <span className="mono mid text-[length:var(--fs-small)]">
             {timestamp(replay.start)} to {timestamp(replay.end)}, {elapsed(replay.start, replay.end)}{" "}
             of sim time
           </span>

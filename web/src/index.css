@@ -43,6 +43,41 @@
   --font-ui: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
+  /*
+   * The type scale. Seven steps on a 1.25 ratio from a 16px body, and nothing between them.
+   *
+   * There were fifteen sizes in use before this: 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5,
+   * 16.5, 17, 18, 24, 48. Eleven of them sat within seven pixels of each other, which is not a
+   * hierarchy, it is drift. Most of it came from raising every size by one step by hand rather
+   * than moving anything onto a scale.
+   *
+   * Three steps do the everyday work. `caption` labels and dense table meta, `small` the data
+   * rows, `body` every sentence meant to be read. The rest are accents and each has exactly one
+   * job. A console is a data-dense view, so the caption and small tiers stay below the 16px body
+   * minimum on purpose; prose does not.
+   */
+  --fs-caption: 12px;
+  --fs-small: 14px;
+  --fs-body: 16px;
+  --fs-lead: 20px;
+  --fs-h3: 25px;
+  --fs-h2: 31px;
+  --fs-display: 44px;
+
+  /* Three line heights, not the ten that were in use. Tight for figures, normal for interface
+     text, relaxed for anything somebody reads a paragraph of. */
+  --lh-tight: 1.2;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+
+  /* Letter spacing. Uppercase labels need it, body never does, large figures want it negative. */
+  --ls-tight: -0.02em;
+  --ls-wide: 0.08em;
+
+  /* Prose measure. Sentences were running to 146 characters, roughly double what anyone reads
+     comfortably, because they inherited the width of a full-bleed console panel. */
+  --measure: 54ch;
+
   /* 8px grid. */
   --s1: 4px;
   --s2: 8px;
@@ -65,14 +100,19 @@
   body {
     background: var(--bg);
     color: var(--fg);
+    font-size: var(--fs-body);
+    line-height: var(--lh-normal);
     /* Native controls: a select, a scrollbar and a date picker are drawn by the browser, not by
        this stylesheet, and they were still being drawn light. */
     color-scheme: dark;
   }
   /* Every number, id and hash is monospace with tabular figures, per spec section 6. */
+  /* One monospace across the app. This carried its own stack, so two different mono faces were
+     rendering side by side, 434 elements in one and 396 in the other. */
   .num {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero" 1;
   }
   :focus-visible {
     outline: 1px solid var(--info);
@@ -111,59 +151,65 @@
     border-left: 2px solid var(--info);
     border-radius: 3px;
     background: var(--panel);
-    padding: 14px 18px;
-    margin-bottom: 16px;
-    max-width: 78rem;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    max-width: 92rem;
   }
   .intro-title {
     font-family: var(--font-mono);
-    font-size: 12px;
+    font-size: var(--fs-caption);
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--fg-2);
   }
   .intro-what {
-    margin-top: 6px;
-    font-size: 15.5px;
-    line-height: 1.55;
+    margin-top: 8px;
+    font-size: var(--fs-lead);
+    line-height: var(--lh-relaxed);
     color: var(--fg);
-    max-width: 62rem;
+    max-width: var(--measure);
   }
   .intro-use {
-    margin-top: 6px;
-    font-size: 14px;
-    line-height: 1.55;
+    margin-top: 8px;
+    font-size: var(--fs-body);
+    line-height: var(--lh-relaxed);
     color: var(--fg-2);
-    max-width: 62rem;
+    max-width: var(--measure);
   }
+  /*
+   * Two columns where there is room. One column made the block six hundred pixels tall with the
+   * right half of it empty, which is a lot of page to spend before any data. Each column is wide
+   * enough that the definition still sits inside a readable measure.
+   */
   .intro-shows {
-    margin-top: 12px;
+    margin-top: 16px;
     display: grid;
-    gap: 5px 18px;
+    grid-template-columns: repeat(auto-fit, minmax(27rem, 1fr));
+    gap: 10px 32px;
   }
   .intro-row {
     display: grid;
-    grid-template-columns: 13rem minmax(0, 1fr);
-    gap: 18px;
+    grid-template-columns: 10.5rem minmax(0, 1fr);
+    gap: 16px;
     align-items: baseline;
   }
   .intro-term {
     font-family: var(--font-mono);
-    font-size: 12.5px;
+    font-size: var(--fs-caption);
     color: var(--fg);
   }
   .intro-def {
-    font-size: 13.5px;
-    line-height: 1.5;
+    font-size: var(--fs-body);
+    line-height: var(--lh-normal);
     color: var(--fg-2);
   }
   .intro-caveat {
     margin-top: 12px;
     border-top: 1px solid var(--line);
     padding-top: 10px;
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: var(--fs-small);
+    line-height: var(--lh-normal);
     color: var(--fg-3);
     max-width: 62rem;
   }

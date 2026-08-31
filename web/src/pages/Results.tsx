@@ -25,9 +25,12 @@ interface RunList {
 function Notes({ notes }: { notes: string[] }) {
   if (notes.length === 0) return null;
   return (
-    <div className="border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[13px] text-[color:var(--warn)]">
+    <div className="border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[length:var(--fs-small)] text-[color:var(--warn)]">
       {notes.map((note, index) => (
-        <p key={index} className={index > 0 ? "mt-1" : ""}>
+        <p
+          key={index}
+          className={`max-w-[var(--measure)] leading-[var(--lh-normal)] ${index > 0 ? "mt-2" : ""}`}
+        >
           {note}
         </p>
       ))}
@@ -55,10 +58,10 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
               return (
                 <td key={policy} className="cell-pad num text-right">
                   <div className="font-medium">{rupees(row.at_risk_recovered_amount)}</div>
-                  <div className="text-[12.5px] text-[color:var(--fg-2)]">
+                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">
                     {count(row.at_risk_messages, 0)} msg
                   </div>
-                  <div className="text-[12.5px] text-[color:var(--fg-3)]">
+                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
                     rate {percent(row.at_risk_recovery_rate, 1)}
                   </div>
                 </td>
@@ -85,7 +88,7 @@ function WholeRunTable({ run }: { run: ResultsRun }) {
             return (
               <td key={policy} className="cell-pad num text-right">
                 <div>{rupees(row.recovered_amount)}</div>
-                <div className="text-[12.5px] text-[color:var(--fg-3)]">
+                <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
                   sd {rupeesShort(row.recovered_std)} / {count(row.messages, 0)} msg /{" "}
                   {count(row.opt_outs, 0)} opt-out
                 </div>
@@ -148,7 +151,7 @@ function SecondaryTable({ run }: { run: ResultsRun }) {
 function CaptureNotice({ runId }: { runId: string | null }) {
   if (FULL_CONSOLE) return null;
   return (
-    <p className="mb-3 border-l-2 border-[color:var(--line-2)] pl-3 text-[13px] text-[color:var(--fg-2)]">
+    <p className="mb-3 border-l-2 border-[color:var(--line-2)] pl-3 text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
       These figures are a captured snapshot of a real evaluation run
       {runId ? (
         <>
@@ -201,12 +204,12 @@ export default function ResultsPage() {
             <Panel
               title="Results"
               right={
-                <label className="text-[13px] text-[color:var(--fg-2)]">
+                <label className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
                   run{" "}
                   <select
                     value={runId ?? ""}
                     onChange={(event) => setSelected(event.target.value)}
-                    className="num border border-[color:var(--line-2)] px-2 py-1 text-[13px]"
+                    className="num border border-[color:var(--line-2)] px-2 py-1 text-[length:var(--fs-small)]"
                   >
                     {list.runs.map((item) => (
                       <option key={item.run_id} value={item.run_id}>
@@ -252,7 +255,7 @@ export default function ResultsPage() {
 
             <Panel title="Secondary metrics">
               <SecondaryTable run={data} />
-              <div className="mt-3 flex flex-wrap gap-3 text-[13px]">
+              <div className="mt-3 flex flex-wrap gap-3 text-[length:var(--fs-small)]">
                 <span>
                   worlds{" "}
                   <span className="num">
@@ -292,7 +295,7 @@ export default function ResultsPage() {
                 {(data.diagnosis.misses ?? []).length > 0 && (
                   <ul className="mt-2 space-y-0.5">
                     {data.diagnosis.misses.map((miss: string, index: number) => (
-                      <li key={index} className="num text-[12.5px] text-[color:var(--fg-2)]">
+                      <li key={index} className="num text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">
                         {miss}
                       </li>
                     ))}
@@ -334,10 +337,10 @@ export default function ResultsPage() {
                 </div>
                 {data.sensitivity.adversarial && (
                   <div className="mt-3">
-                    <h3 className="text-[13px] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+                    <h3 className="text-[length:var(--fs-small)] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
                       Adversarial set
                     </h3>
-                    <p className="mt-1 text-[13px] text-[color:var(--fg-2)]">
+                    <p className="mt-1 text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
                       Organic retry probability raised to 0.60 everywhere and every response
                       multiplier set to 1.0. Customers recover on their own; the agent has no
                       advantage here, by design.
@@ -369,25 +372,25 @@ export default function ResultsPage() {
                 title="Fault injection"
                 subtitle="Every injected fault, and whether the agent refused it and wrote the refusal down."
               >
-                <div className="grid grid-cols-2 gap-3 text-[13px] lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 text-[length:var(--fs-small)] lg:grid-cols-4">
                   <div>
                     <div className="text-[color:var(--fg-2)]">attempts</div>
-                    <div className="num text-lg">{data.fault_injection.attempts}</div>
+                    <div className="num text-[length:var(--fs-lead)]">{data.fault_injection.attempts}</div>
                   </div>
                   <div>
                     <div className="text-[color:var(--fg-2)]">refused</div>
-                    <div className="num text-lg text-[color:var(--ok)]">
+                    <div className="num text-[length:var(--fs-lead)] text-[color:var(--ok)]">
                       {data.fault_injection.refused}
                     </div>
                   </div>
                   <div>
                     <div className="text-[color:var(--fg-2)]">ledgered</div>
-                    <div className="num text-lg">{data.fault_injection.ledgered}</div>
+                    <div className="num text-[length:var(--fs-lead)]">{data.fault_injection.ledgered}</div>
                   </div>
                   <div>
                     <div className="text-[color:var(--fg-2)]">unrefused</div>
                     <div
-                      className={`num text-lg ${
+                      className={`num text-[length:var(--fs-lead)] ${
                         (data.fault_injection.unrefused ?? []).length === 0
                           ? "text-[color:var(--ok)]"
                           : "text-[color:var(--crit)]"

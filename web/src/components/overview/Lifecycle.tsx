@@ -105,7 +105,7 @@ function Box({ stage }: { stage: Stage }) {
         <span className={`lbl ${stage.status === "idle" ? "" : "lbl-2"}`}>{stage.key}</span>
       </div>
       <div
-        className={`mono mt-1.5 max-w-[9rem] truncate text-[12.5px] ${
+        className={`mono mt-1.5 max-w-[9rem] truncate text-[length:var(--fs-caption)] ${
           stage.status === "idle" ? "dim" : "mid"
         }`}
         title={stage.detail}

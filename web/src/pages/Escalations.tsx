@@ -75,36 +75,36 @@ function Card({
         </Badge>
         <Link
           to={`/incidents/${escalation.incident_id}`}
-          className="num text-sm text-[color:var(--info)] hover:text-[color:var(--fg)]"
+          className="num text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]"
         >
           {escalation.incident
             ? segmentLabel(escalation.incident.segment_key)
             : escalation.incident_id}
         </Link>
-        <span className="num text-[13px] text-[color:var(--fg-2)]">{timestamp(escalation.created_at)}</span>
+        <span className="num text-[length:var(--fs-small)] text-[color:var(--fg-2)]">{timestamp(escalation.created_at)}</span>
       </div>
 
       {plannerFailed ? (
         <div className="mt-2 border border-[color:var(--crit)] border-l-2 bg-[color:var(--crit-bg)] px-3 py-2">
           <div className="flex flex-wrap items-baseline gap-x-3">
-            <span className="text-[11.5px] font-medium uppercase tracking-[0.08em] text-[color:var(--crit)]">
+            <span className="text-[length:var(--fs-caption)] font-medium uppercase tracking-[0.08em] text-[color:var(--crit)]">
               Planner error
             </span>
-            <span className="num text-[13px] text-[color:var(--fg)]">{escalation.reason}</span>
+            <span className="num text-[length:var(--fs-small)] text-[color:var(--fg)]">{escalation.reason}</span>
           </div>
-          <p className="mt-1.5 text-[13px] text-[color:var(--fg-2)]">
+          <p className="mt-1.5 max-w-[var(--measure)] text-[length:var(--fs-small)] leading-[var(--lh-normal)] text-[color:var(--fg-2)]">
             No action was chosen. The executor escalated because planning failed, which is not an
             agent deciding a human should take this one.
           </p>
         </div>
       ) : (
-        <p className="mt-1 text-[13px] text-[color:var(--fg-2)]">
+        <p className="mt-1 text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
           {REASONS[escalation.reason] ?? "Escalated for a reason the console does not have text for."}
         </p>
       )}
 
       {escalation.incident && (
-        <div className="mt-2 grid gap-2 text-[13px] sm:grid-cols-3">
+        <div className="mt-2 grid gap-2 text-[length:var(--fs-small)] sm:grid-cols-3">
           <div>
             <span className="text-[color:var(--fg-2)]">cause </span>
             <span className="num">{causeLabel(escalation.incident.root_cause)}</span>
@@ -125,7 +125,7 @@ function Card({
       )}
 
       {Object.keys(escalation.proposed_action ?? {}).length > 0 && (
-        <div className="num mt-2 text-[13px] text-[color:var(--fg)]">
+        <div className="num mt-2 text-[length:var(--fs-small)] text-[color:var(--fg)]">
           proposed {String(escalation.proposed_action.type ?? "action")}{" "}
           <span className="text-[color:var(--fg-3)]">{JSON.stringify(escalation.proposed_action)}</span>
         </div>
@@ -136,7 +136,7 @@ function Card({
       </Disclosure>
 
       {decided ? (
-        <div className="mt-2 text-[13px]">
+        <div className="mt-2 text-[length:var(--fs-small)]">
           <Badge tone={escalation.decision === "approve" ? "green" : "neutral"}>
             {escalation.decision}
           </Badge>{" "}
@@ -238,7 +238,7 @@ export default function EscalationsPage() {
               <Empty>No decisions yet.</Empty>
             ) : (
               <details>
-                <summary className="cursor-pointer text-[13px] text-[color:var(--info)] hover:text-[color:var(--fg)]">
+                <summary className="cursor-pointer text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]">
                   {data.escalations.length} decided
                 </summary>
                 <div className="mt-2 space-y-2">

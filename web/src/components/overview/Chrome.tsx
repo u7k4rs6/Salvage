@@ -100,7 +100,7 @@ export function Methodology({ label, children }: { label: string; children: Reac
       <summary className="lbl focus-ring cursor-pointer list-none hover:text-[color:var(--fg-2)]">
         {label}
       </summary>
-      <div className="note mt-2 max-w-3xl border-l border-[color:var(--line)] pl-3">{children}</div>
+      <div className="note mt-2 max-w-[var(--measure)] border-l border-[color:var(--line)] pl-3">{children}</div>
     </details>
   );
 }

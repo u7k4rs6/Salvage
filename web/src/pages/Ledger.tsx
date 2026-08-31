@@ -63,21 +63,21 @@ export default function LedgerPageView() {
                   setVerifyError(cause);
                 }
               }}
-              className="border border-[color:var(--info)] bg-[color:var(--info-bg)] px-2 py-1 text-[13px] text-[color:var(--info)] hover:bg-[color:var(--info-bg)]"
+              className="border border-[color:var(--info)] bg-[color:var(--info-bg)] px-2 py-1 text-[length:var(--fs-small)] text-[color:var(--info)] hover:bg-[color:var(--info-bg)]"
             >
               Verify chain
             </button>
             <a
               href="/api/ledger/export"
               download="salvage-ledger.jsonl"
-              className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[13px] hover:bg-[color:var(--panel-3)]"
+              className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[length:var(--fs-small)] hover:bg-[color:var(--panel-3)]"
             >
               Export JSONL
             </a>
           </div>
         }
       >
-        <p className="max-w-3xl text-[13px] text-[color:var(--fg-2)]">
+        <p className="max-w-[var(--measure)] text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
           {state.data?.proves ??
             "This chain proves the record has not been altered after it was written. It does not prove the process wrote the truth."}
         </p>
@@ -91,7 +91,7 @@ export default function LedgerPageView() {
         {verify && (
           <div
             role="status"
-            className={`mt-3 border px-3 py-2 text-sm ${
+            className={`mt-3 border px-3 py-2 text-[length:var(--fs-small)] ${
               verify.ok
                 ? "border-[color:var(--ok)] bg-[color:var(--ok-bg)] text-[color:var(--ok)]"
                 : "border-[color:var(--crit)] bg-[color:var(--crit-bg)] text-[color:var(--crit)]"
@@ -100,7 +100,7 @@ export default function LedgerPageView() {
             {/* The server's message already opens with the verdict, so the banner shows it
                 once rather than prefixing a second copy of the same word. */}
             <span className="num font-medium">{verify.message}</span>
-            <div className="num mt-1 text-[12.5px] opacity-80">
+            <div className="num mt-1 text-[length:var(--fs-caption)] opacity-80">
               genesis {shortHash(verify.genesis_hash)}
             </div>
           </div>
@@ -108,7 +108,7 @@ export default function LedgerPageView() {
       </Panel>
 
       <Panel title="Entries">
-        <div className="mb-3 flex flex-wrap items-end gap-3 text-[13px]">
+        <div className="mb-3 flex flex-wrap items-end gap-3 text-[length:var(--fs-small)]">
           <label className="flex flex-col gap-1">
             kind
             <select
@@ -170,33 +170,33 @@ export default function LedgerPageView() {
                 >
                   {data.entries.map((entry) => (
                     <tr key={entry.seq} className="border-b border-[color:var(--line)] align-top">
-                      <td className="cell-pad num text-right text-[13px]">{entry.seq}</td>
-                      <td className="cell-pad num whitespace-nowrap text-[13px]">
+                      <td className="cell-pad num text-right text-[length:var(--fs-small)]">{entry.seq}</td>
+                      <td className="cell-pad num whitespace-nowrap text-[length:var(--fs-small)]">
                         {timestamp(entry.ts)}
                       </td>
                       <td className="cell-pad">
                         <Badge>{entry.kind}</Badge>
                       </td>
-                      <td className="cell-pad num text-[13px] text-[color:var(--fg-2)]">
+                      <td className="cell-pad num text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
                         {entry.ref_type}
                         <div className="text-[color:var(--fg-3)]">{entry.ref_id}</div>
                       </td>
-                      <td className="cell-pad text-[13px]">
+                      <td className="cell-pad text-[length:var(--fs-small)]">
                         {summarise(entry)}
                         <Disclosure summary="payload" className="mt-1">
                           <Code>{JSON.stringify(entry.payload, null, 2)}</Code>
-                          <div className="num mt-1 text-[12.5px] text-[color:var(--fg-3)]">
+                          <div className="num mt-1 text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
                             previous {shortHash(entry.prev_hash)}
                           </div>
                         </Disclosure>
                       </td>
-                      <td className="cell-pad num text-[13px] text-[color:var(--fg-2)]">
+                      <td className="cell-pad num text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
                         {shortHash(entry.hash)}
                       </td>
                     </tr>
                   ))}
                 </Table>
-                <div className="mt-3 flex items-center gap-3 text-[13px] text-[color:var(--fg-2)]">
+                <div className="mt-3 flex items-center gap-3 text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
                   <span className="num">{data.total} entries</span>
                   <button
                     type="button"

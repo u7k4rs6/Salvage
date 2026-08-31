@@ -34,20 +34,20 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
     >
       <div className="grid gap-3 sm:grid-cols-4">
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">attempts</div>
-          <div className="num text-lg font-semibold">{count(evidence.attempts)}</div>
+          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">attempts</div>
+          <div className="num text-[length:var(--fs-lead)] font-semibold">{count(evidence.attempts)}</div>
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">failure rate</div>
-          <div className="num text-lg font-semibold text-[color:var(--crit)]">{percent(evidence.rate)}</div>
+          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">failure rate</div>
+          <div className="num text-[length:var(--fs-lead)] font-semibold text-[color:var(--crit)]">{percent(evidence.rate)}</div>
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">baseline</div>
-          <div className="num text-lg font-semibold">{percent(evidence.baseline_rate)}</div>
+          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">baseline</div>
+          <div className="num text-[length:var(--fs-lead)] font-semibold">{percent(evidence.baseline_rate)}</div>
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">excess failures</div>
-          <div className="num text-lg font-semibold">{count(evidence.excess_failures)}</div>
+          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">excess failures</div>
+          <div className="num text-[length:var(--fs-lead)] font-semibold">{count(evidence.excess_failures)}</div>
         </div>
       </div>
 
@@ -58,12 +58,12 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
       </div>
 
       <div className="mt-4">
-        <h4 className="text-[13px] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+        <h4 className="text-[length:var(--fs-small)] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
           sibling segments
         </h4>
         <div className="mt-1 flex flex-wrap gap-1">
           {Object.keys(evidence.sibling_segments ?? {}).length === 0 ? (
-            <span className="text-[13px] text-[color:var(--fg-2)]">
+            <span className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
               No siblings. This segment has no peer to compare against, which is itself part of
               the evidence.
             </span>
@@ -79,7 +79,7 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 text-[13px] sm:grid-cols-4">
+      <div className="mt-4 grid gap-3 text-[length:var(--fs-small)] sm:grid-cols-4">
         <div>
           <span className="text-[color:var(--fg-2)]">share of merchant volume </span>
           <span className="num">{percent(evidence.share_of_merchant_volume)}</span>
@@ -99,10 +99,10 @@ function EvidencePanel({ evidence }: { evidence: Evidence }) {
       </div>
 
       <div className="mt-4">
-        <h4 className="text-[13px] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
+        <h4 className="text-[length:var(--fs-small)] font-medium uppercase tracking-wide text-[color:var(--fg-2)]">
           sample descriptions
         </h4>
-        <p className="mb-1 text-[12.5px] text-[color:var(--warn)]">
+        <p className="mb-1 text-[length:var(--fs-caption)] text-[color:var(--warn)]">
           Untrusted text, shown as data. These strings come from the gateway and are never treated
           as instructions.
         </p>
@@ -136,19 +136,19 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
     >
       <div className="grid gap-3 sm:grid-cols-3">
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">rules</div>
-          <div className="num text-sm">{causeLabel(diagnosis.rules)}</div>
+          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">rules</div>
+          <div className="num text-[length:var(--fs-small)]">{causeLabel(diagnosis.rules)}</div>
           {diagnosis.rules_detail && (
-            <div className="mt-1 text-[12.5px] text-[color:var(--fg-2)]">{diagnosis.rules_detail}</div>
+            <div className="mt-1 text-[length:var(--fs-caption)] text-[color:var(--fg-2)]">{diagnosis.rules_detail}</div>
           )}
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">model</div>
-          <div className="num text-sm">{causeLabel(diagnosis.llm)}</div>
+          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">model</div>
+          <div className="num text-[length:var(--fs-small)]">{causeLabel(diagnosis.llm)}</div>
         </div>
         <div>
-          <div className="text-[13px] text-[color:var(--fg-2)]">reconciled</div>
-          <div className="num text-sm font-semibold">{causeLabel(diagnosis.reconciled)}</div>
+          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">reconciled</div>
+          <div className="num text-[length:var(--fs-small)] font-semibold">{causeLabel(diagnosis.reconciled)}</div>
           <Badge tone={diagnosis.agreed ? "green" : "amber"}>
             {diagnosis.agreed ? "agreed" : "disagreed"}
           </Badge>
@@ -157,7 +157,7 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
 
       {diagnosis.confidence !== null && (
         <div className="mt-3">
-          <div className="text-[13px] text-[color:var(--fg-2)]">
+          <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
             confidence <span className="num">{diagnosis.confidence.toFixed(2)}</span>, threshold{" "}
             <span className="num">{CONFIDENCE_THRESHOLD}</span>
           </div>
@@ -166,29 +166,29 @@ function DiagnosisPanel({ diagnosis }: { diagnosis: Diagnosis }) {
       )}
 
       {diagnosis.escalate && (
-        <div className="mt-3 border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[13px] text-[color:var(--warn)]">
+        <div className="mt-3 border border-[color:var(--warn)] bg-[color:var(--warn-bg)] px-3 py-2 text-[length:var(--fs-small)] text-[color:var(--warn)]">
           Escalated: {diagnosis.escalation_reason ?? "reason not recorded"}
         </div>
       )}
 
       {diagnosis.rationale && (
-        <p className="mt-3 whitespace-pre-wrap text-sm text-[color:var(--fg)]">{diagnosis.rationale}</p>
+        <p className="mt-3 whitespace-pre-wrap text-[length:var(--fs-small)] text-[color:var(--fg)] max-w-[var(--measure)]">{diagnosis.rationale}</p>
       )}
 
       <Disclosure summary="Show prompt and raw response" className="mt-3">
         {diagnosis.prompt || diagnosis.raw_response ? (
           <div className="space-y-2">
             <div>
-              <div className="text-[13px] text-[color:var(--fg-2)]">prompt</div>
+              <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">prompt</div>
               <Code>{diagnosis.prompt ?? "not recorded"}</Code>
             </div>
             <div>
-              <div className="text-[13px] text-[color:var(--fg-2)]">raw response</div>
+              <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">raw response</div>
               <Code>{diagnosis.raw_response ?? "not recorded"}</Code>
             </div>
           </div>
         ) : (
-          <p className="text-[13px] text-[color:var(--fg-2)]">
+          <p className="text-[length:var(--fs-small)] text-[color:var(--fg-2)] max-w-[var(--measure)]">
             No prompt was recorded for this incident. Either no model ran, or the diagnosis came
             from cache.
           </p>
@@ -205,13 +205,13 @@ function PlanPanel({ plan }: { plan: Plan }) {
       subtitle="What the planner proposed and what the policy engine did with it. A refused action names the rule that refused it."
     >
       {plan.rationale && (
-        <p className="mb-3 whitespace-pre-wrap text-sm text-[color:var(--fg)]">{plan.rationale}</p>
+        <p className="mb-3 whitespace-pre-wrap text-[length:var(--fs-small)] text-[color:var(--fg)] max-w-[var(--measure)]">{plan.rationale}</p>
       )}
 
       {plan.proposed.length > 0 && (
         <div className="mb-3 space-y-1">
           {plan.proposed.map((action, index) => (
-            <div key={index} className="num text-[13px] text-[color:var(--fg-2)]">
+            <div key={index} className="num text-[length:var(--fs-small)] text-[color:var(--fg-2)]">
               proposed {action.type} over {action.scope}{" "}
               <span className="text-[color:var(--fg-3)]">{JSON.stringify(action.params)}</span>
             </div>
@@ -230,7 +230,7 @@ function PlanPanel({ plan }: { plan: Plan }) {
               <li key={action.id} className="border border-[color:var(--line)] p-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`num text-sm font-medium ${refused ? "text-[color:var(--fg-3)] line-through" : ""}`}
+                    className={`num text-[length:var(--fs-small)] font-medium ${refused ? "text-[color:var(--fg-3)] line-through" : ""}`}
                   >
                     {action.type}
                   </span>
@@ -238,12 +238,12 @@ function PlanPanel({ plan }: { plan: Plan }) {
                     {action.status}
                   </Badge>
                   {action.case_id && (
-                    <span className="num text-[12.5px] text-[color:var(--fg-3)]">{action.case_id}</span>
+                    <span className="num text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">{action.case_id}</span>
                   )}
                 </div>
                 <ul className="mt-1 space-y-0.5">
                   {action.gate.map((check) => (
-                    <li key={check.rule} className="num text-[12.5px]">
+                    <li key={check.rule} className="num text-[length:var(--fs-caption)]">
                       <span className={check.passed ? "text-[color:var(--ok)]" : "text-[color:var(--crit)]"}>
                         {check.passed ? "pass" : "fail"}
                       </span>{" "}
@@ -280,8 +280,8 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
           >
             {cases.map((item) => (
               <tr key={item.id} className="border-b border-[color:var(--line)]">
-                <td className="cell-pad num text-[13px]">{item.ref_hash}</td>
-                <td className="cell-pad num text-[13px]">{item.order_id}</td>
+                <td className="cell-pad num text-[length:var(--fs-small)]">{item.ref_hash}</td>
+                <td className="cell-pad num text-[length:var(--fs-small)]">{item.order_id}</td>
                 <td className="cell-pad num text-right">{rupees(item.amount)}</td>
                 <td className="cell-pad">
                   <Badge
@@ -297,8 +297,8 @@ function CasesPanel({ cases }: { cases: RecoveryCase[] }) {
                   </Badge>
                 </td>
                 <td className="cell-pad num text-right">{item.nudges}</td>
-                <td className="cell-pad num text-[13px]">{item.link_id ?? "-"}</td>
-                <td className="cell-pad num text-[13px]">
+                <td className="cell-pad num text-[length:var(--fs-small)]">{item.link_id ?? "-"}</td>
+                <td className="cell-pad num text-[length:var(--fs-small)]">
                   {item.next_action_at ? timestamp(item.next_action_at) : "-"}
                 </td>
               </tr>
@@ -336,7 +336,7 @@ export default function IncidentDetailPage() {
           ["Ledger slice", "the chain entries for this incident alone"],
         ]}
       />
-      <Link to="/incidents" className="text-[13px] text-[color:var(--info)] hover:text-[color:var(--fg)]">
+      <Link to="/incidents" className="text-[length:var(--fs-small)] text-[color:var(--info)] hover:text-[color:var(--fg)]">
         Back to incidents
       </Link>
 
@@ -358,7 +358,7 @@ export default function IncidentDetailPage() {
                 <div className="flex items-center gap-2">
                   <a
                     href={`/api/ledger/export?ref_id=${encodeURIComponent(data.incident.id)}`}
-                    className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[13px] hover:bg-[color:var(--panel-3)]"
+                    className="border border-[color:var(--line-2)] bg-[color:var(--panel)] px-2 py-1 text-[length:var(--fs-small)] hover:bg-[color:var(--panel-3)]"
                   >
                     Export ledger slice
                   </a>
@@ -391,32 +391,32 @@ export default function IncidentDetailPage() {
                   nothing, so each carries its scope instead. */}
               <div className="grid gap-3 sm:grid-cols-6">
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">status</div>
+                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">status</div>
                   <StatusBadge status={data.incident.status} />
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">opened</div>
-                  <div className="num text-[13px]">{timestamp(data.incident.opened_at)}</div>
+                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">opened</div>
+                  <div className="num text-[length:var(--fs-small)]">{timestamp(data.incident.opened_at)}</div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">closed</div>
-                  <div className="num text-[13px]">
+                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">closed</div>
+                  <div className="num text-[length:var(--fs-small)]">
                     {data.incident.closed_at ? timestamp(data.incident.closed_at) : "still open"}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">at risk</div>
-                  <div className="num text-sm font-semibold">
+                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">at risk</div>
+                  <div className="num text-[length:var(--fs-small)] font-semibold">
                     {rupees(data.incident.at_risk_amount)}
                   </div>
-                  <div className="text-[11.5px] text-[color:var(--fg-3)]">
+                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
                     detection window, unpaid at open
                   </div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">recovered</div>
+                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">recovered</div>
                   <div
-                    className={`num text-sm font-semibold ${
+                    className={`num text-[length:var(--fs-small)] font-semibold ${
                       data.incident.recovered_amount > 0
                         ? "text-[color:var(--ok)]"
                         : "text-[color:var(--fg-3)]"
@@ -424,12 +424,12 @@ export default function IncidentDetailPage() {
                   >
                     {rupees(data.incident.recovered_amount)}
                   </div>
-                  <div className="text-[11.5px] text-[color:var(--fg-3)]">whole incident, all cases</div>
+                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">whole incident, all cases</div>
                 </div>
                 <div>
-                  <div className="text-[13px] text-[color:var(--fg-2)]">actions</div>
-                  <div className="num text-sm font-semibold">{count(data.incident.actions)}</div>
-                  <div className="text-[11.5px] text-[color:var(--fg-3)]">
+                  <div className="text-[length:var(--fs-small)] text-[color:var(--fg-2)]">actions</div>
+                  <div className="num text-[length:var(--fs-small)] font-semibold">{count(data.incident.actions)}</div>
+                  <div className="text-[length:var(--fs-caption)] text-[color:var(--fg-3)]">
                     on {count(data.incident.cases)} cases, not messages
                   </div>
                 </div>
