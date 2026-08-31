@@ -59,11 +59,13 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
     // The two identifying columns are narrow because their content is: a scenario id and a count
     // of at most four digits. The five arms are the comparison, so they take the rest in equal
     // shares and every boundary between them falls at the same interval.
-    // Both sized to hold their own longest word, "SCENARIO" and "ORDERS". The five arms keep
-    // 1.56 each either way, so the comparison columns are untouched.
-    { key: "scenario", label: "Scenario", align: "text", flex: 1.1 },
-    { key: "at_risk", label: "At-risk orders", align: "num", flex: 1.1 },
-    ...policies.map((policy) => ({ key: policy, label: policy, align: "num" as const, flex: 1.56 })),
+    // The two identifying columns hold a scenario id and a four digit count whatever else is on the
+    // page, so they take a width rather than a share: with a share they grew to 374px each on the
+    // single policy runs, where "S0" sat in the middle of a third of the table. Only the arms are
+    // elastic, because only they vary in number, and they split what is left in equal parts.
+    { key: "scenario", label: "Scenario", align: "text", width: "7rem" },
+    { key: "at_risk", label: "At-risk orders", align: "num", width: "10rem" },
+    ...policies.map((policy) => ({ key: policy, label: policy, align: "num" as const, flex: 1 })),
   ];
 
   return (
@@ -105,8 +107,8 @@ function WholeRunTable({ run }: { run: ResultsRun }) {
   const find = (scenario: string, policy: string) =>
     run.aggregates.find((row) => row.scenario === scenario && row.policy === policy);
   const columns: Column[] = [
-    { key: "scenario", label: "Scenario", align: "text", flex: 1 },
-    ...run.policies.map((policy) => ({ key: policy, label: policy, align: "num" as const, flex: 1.8 })),
+    { key: "scenario", label: "Scenario", align: "text", width: "7rem" },
+    ...run.policies.map((policy) => ({ key: policy, label: policy, align: "num" as const, flex: 1 })),
   ];
   return (
     <Table columns={columns} minWidth="80rem">

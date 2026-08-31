@@ -150,11 +150,21 @@ const ALIGN_CLASS: Record<ColumnAlign, string> = {
  * off by hand-computed percentages that quietly stop summing to a hundred.
  */
 function widthsFor(columns: Column[]): (string | undefined)[] {
-  const total = columns.reduce((sum, c) => sum + (c.width ? 0 : (c.flex ?? 0)), 0);
-  if (total <= 0) return columns.map((c) => c.width);
-  return columns.map((c) =>
-    c.width ? c.width : c.flex ? `${((c.flex / total) * 100).toFixed(4)}%` : undefined,
-  );
+  const fixed = columns.filter((c) => c.width).map((c) => c.width as string);
+  const flexTotal = columns.reduce((sum, c) => sum + (c.width ? 0 : (c.flex ?? 0)), 0);
+  if (flexTotal <= 0) return columns.map((c) => c.width);
+  // A fixed column's width has to come off the top before the shares are worked out. Splitting the
+  // whole 100% between the flexible columns and then adding the fixed ones on top overflows the
+  // table by exactly the fixed widths.
+  const reserved = fixed.length ? ` - (${fixed.join(" + ")})` : "";
+  return columns.map((c) => {
+    if (c.width) return c.width;
+    if (!c.flex) return undefined;
+    const share = c.flex / flexTotal;
+    return fixed.length
+      ? `calc((100%${reserved}) * ${share.toFixed(6)})`
+      : `${(share * 100).toFixed(4)}%`;
+  });
 }
 
 export function Table({
