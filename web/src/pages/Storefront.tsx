@@ -167,27 +167,22 @@ export default function StorefrontPage() {
                   <div className="notice-label">
                     Checkout is switched off, not broken
                   </div>
-                  {/* Two pieces of information, what is missing and how to supply it, so they
-                      read as two columns of the alert rather than as two long lines down its
-                      left edge. */}
-                  <div className="prose-cols mt-2">
-                    <p className="notice-body">
-                      {data.reason} Checkout is disabled rather than opened
-                      against a key that is not there, so the Buy buttons below
-                      do nothing on purpose.
-                    </p>
-                    <p className="notice-body">
-                      To turn it on, put a Razorpay{" "}
-                      <span className="num">test</span> key pair in{" "}
-                      <span className="num">.env</span> as{" "}
-                      <span className="num">RAZORPAY_KEY_ID</span> and{" "}
-                      <span className="num">RAZORPAY_KEY_SECRET</span>, then
-                      restart the API. Startup refuses any key that does not
-                      begin with <span className="num">rzp_test_</span>, so a
-                      live key cannot be used here. Everything else on this
-                      page, and every other page, works without it.
-                    </p>
-                  </div>
+                  <p className="notice-body">
+                    {data.reason} Checkout is disabled rather than opened
+                    against a key that is not there, so the Buy buttons below do
+                    nothing on purpose.
+                  </p>
+                  <p className="notice-body">
+                    To turn it on, put a Razorpay{" "}
+                    <span className="num">test</span> key pair in{" "}
+                    <span className="num">.env</span> as{" "}
+                    <span className="num">RAZORPAY_KEY_ID</span> and{" "}
+                    <span className="num">RAZORPAY_KEY_SECRET</span>, then
+                    restart the API. Startup refuses any key that does not begin
+                    with <span className="num">rzp_test_</span>, so a live key
+                    cannot be used here. Everything else on this page, and every
+                    other page, works without it.
+                  </p>
                 </div>
               )}
               <div className="grid gap-3 sm:grid-cols-3">

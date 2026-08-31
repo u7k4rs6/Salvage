@@ -34,17 +34,14 @@ export function PageIntro({
   return (
     <header className="page-head">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0">
           <h1 className="page-title">{title}</h1>
-          {/* What the page is and what to do with it are two separate sentences, so they sit as
-              two columns rather than as two stacked blocks each ending two thirds of the way
-              across the header. */}
-          <div className="prose-cols mt-2">
-            <p className="page-sub">{what}</p>
-            {use && (
-              <p className="page-sub text-[color:var(--text-muted)]">{use}</p>
-            )}
-          </div>
+          {/* One block of copy, read top to bottom. Both sentences describe the same page, so they
+              stack. The space beside them is the measure doing its job, not a gap to fill. */}
+          <p className="page-sub">{what}</p>
+          {use && (
+            <p className="page-sub text-[color:var(--text-muted)]">{use}</p>
+          )}
         </div>
         {right && <div className="shrink-0">{right}</div>}
       </div>
