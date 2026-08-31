@@ -25,14 +25,18 @@ const REF_TYPES = ["", "sim_run", "incident", "case", "action", "escalation", "w
  * reads down the left. A long payload summary is never centred.
  */
 const LEDGER_COLUMNS: Column[] = [
-  { key: "seq", label: "Seq", align: "num", flex: 0.5 },
+  // 0.5 left 19px of content, and the word "SEQ" needs 22, so the header overflowed its own cell
+  // and stopped sitting over the numbers beneath it. A column has to fit its own label.
+  { key: "seq", label: "Seq", align: "num", flex: 0.7 },
   // Sized so a full timestamp and the longest kind each sit on one line at the table's floor.
   { key: "time", label: "Time", align: "text", flex: 1.9 },
   { key: "kind", label: "Kind", align: "text", flex: 2.1 },
-  { key: "ref", label: "Reference", align: "text", flex: 2.3 },
+  { key: "ref", label: "Reference", align: "text", flex: 2.1 },
   // The summary absorbs the width the others do not need.
-  { key: "summary", label: "Summary", align: "text", flex: 2 },
-  { key: "hash", label: "Hash", align: "text", flex: 1.2 },
+  { key: "summary", label: "Summary", align: "text", flex: 1.9 },
+  // Twelve characters of mono need about 94px, and 1.2 gave it 90 at the table's floor, so every
+  // hash in the table broke after its eleventh character. A hash is one token or it is nothing.
+  { key: "hash", label: "Hash", align: "text", flex: 1.3 },
 ];
 
 export default function LedgerPageView() {

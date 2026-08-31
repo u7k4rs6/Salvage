@@ -59,8 +59,10 @@ function AtRiskTable({ run }: { run: ResultsRun }) {
     // The two identifying columns are narrow because their content is: a scenario id and a count
     // of at most four digits. The five arms are the comparison, so they take the rest in equal
     // shares and every boundary between them falls at the same interval.
-    { key: "scenario", label: "Scenario", align: "text", flex: 0.9 },
-    { key: "at_risk", label: "At-risk orders", align: "num", flex: 1.3 },
+    // Both sized to hold their own longest word, "SCENARIO" and "ORDERS". The five arms keep
+    // 1.56 each either way, so the comparison columns are untouched.
+    { key: "scenario", label: "Scenario", align: "text", flex: 1.1 },
+    { key: "at_risk", label: "At-risk orders", align: "num", flex: 1.1 },
     ...policies.map((policy) => ({ key: policy, label: policy, align: "num" as const, flex: 1.56 })),
   ];
 

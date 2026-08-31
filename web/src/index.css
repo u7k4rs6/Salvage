@@ -741,8 +741,15 @@
      * header ink sat over the column beside it while the cell box stayed put: the header was the
      * one thing on the page not laid out by the column definition. Two lines in a head cell is
      * correct; a label hanging outside its column is not.
+     *
+     * It breaks at spaces only. The cells inherit `overflow-wrap: anywhere` because a body cell
+     * holds identifiers with no spaces in them, a forty character incident id or a hash, which
+     * have to break somewhere. A header is words, and breaking inside one gives "SCENARI / O".
      */
     white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
   }
   .dt tbody tr + tr td {
     border-top: 1px solid var(--border);

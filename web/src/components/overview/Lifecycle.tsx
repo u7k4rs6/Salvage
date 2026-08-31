@@ -128,12 +128,12 @@ export function Lifecycle({ data }: { data: IncidentDetail }) {
 
   return (
     <div>
-      <div className="flex items-stretch overflow-x-auto pb-1">
+      <div className="flex items-start overflow-x-auto pb-1">
         {spine.map((stage, index) => (
-          <div key={stage.key} className="flex items-stretch">
+          <div key={stage.key} className="flex items-start">
             <Box stage={stage} />
             {index < spine.length - 1 && (
-              <div className="flex items-center px-1.5">
+              <div className="flex h-12 items-center px-1.5">
                 <div className={`connector ${stage.status === "done" ? "connector-done" : ""}`} />
               </div>
             )}
@@ -142,26 +142,26 @@ export function Lifecycle({ data }: { data: IncidentDetail }) {
 
         {/* The fork. Two branches out of GATE, on two rows, so neither reads as continuing into
             the other. */}
-        <div className="flex items-center px-1.5">
+        <div className="flex h-12 items-center px-1.5">
           <div className={`connector ${spine[3].status === "done" ? "connector-done" : ""}`} />
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-stretch">
             <Box stage={execute} />
-            <div className="flex items-center px-1.5">
+            <div className="flex h-12 items-center px-1.5">
               <div className={`connector ${execute.status === "done" ? "connector-done" : ""}`} />
             </div>
             <Box stage={recover} />
           </div>
           <div className="flex items-stretch">
             <Box stage={escalate} />
-            <div className="flex items-center px-1.5">
+            <div className="flex h-12 items-center px-1.5">
               <div
                 className="terminal-stop"
                 style={{ opacity: escalate.status === "idle" ? 0.3 : 1 }}
               />
             </div>
-            <div className="flex items-center">
+            <div className="flex h-12 items-center">
               <span className={`lbl ${escalate.status === "idle" ? "" : "warn"}`}>terminal</span>
             </div>
           </div>
