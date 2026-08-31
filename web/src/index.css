@@ -338,10 +338,18 @@
     font-family: var(--font-ui);
     display: flex;
     align-items: center;
-    gap: var(--space-5);
-    height: 44px;
+    /*
+     * A minimum, not a height. The bar holds two controls that change size: the kill switch swaps
+     * its 32px button for a 95px confirmation, and the error row is full width. Against a fixed
+     * 44px both overflowed a centred row, and the confirmation lost its first line off the top of
+     * the window. 44px is still exactly what the bar measures at rest, because the tallest thing
+     * in it is a 32px control inside 6px of padding.
+     */
+    min-height: 44px;
     flex: none;
-    padding: 0 var(--page-pad-x);
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-5);
+    padding: 6px var(--page-pad-x);
     border-bottom: 1px solid var(--border);
     background: var(--bg);
   }
