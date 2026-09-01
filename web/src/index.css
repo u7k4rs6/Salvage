@@ -32,6 +32,12 @@
   --surface: #101216;
   --surface-raised: #15181d;
   --surface-hover: #1b1f25;
+  /*
+   * One step above every panel on the page, for the commentary mark alone. A mark drawn on any of
+   * the surfaces above it reads as one more panel among the panels it is annotating, which is the
+   * one thing it must not look like.
+   */
+  --surface-float: #222731;
 
   --border: #23272e;
   --border-strong: #31363f;

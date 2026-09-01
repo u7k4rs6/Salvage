@@ -520,17 +520,27 @@
 
 .rp-coach {
   position: fixed;
+  top: -9999px;
+  left: -9999px;
   width: 19rem;
   max-width: calc(100vw - 2 * var(--space-4));
   padding: var(--space-3) var(--space-4);
-  background: var(--surface-raised);
+  /*
+   * Lighter than any panel, and lifted off them. The shadow and the surface do the work of saying
+   * this is over the page rather than part of it; the accent edge says which kind of thing it is.
+   * The accent is the interactive one on purpose: red, amber and green all carry state meaning on
+   * this page, and a mark is not a state.
+   */
+  background: var(--surface-float);
   border: 1px solid var(--border-strong);
-  border-left: 2px solid var(--accent);
+  border-left: 3px solid var(--accent);
   border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   opacity: 0;
   transition: opacity 200ms ease;
 }
-.rp-coach.is-on {
+/* Both, and checked every frame: faded in, and standing clear of the region it points at. */
+.rp-coach.is-on.is-clear {
   opacity: 1;
 }
 
@@ -552,12 +562,14 @@
 /* The leader: one hairline from the mark to the edge of the region it is about. */
 .rp-coach-leader {
   position: fixed;
+  top: -9999px;
+  left: -9999px;
   height: 1px;
   background: var(--accent);
   opacity: 0;
   transition: opacity 200ms ease;
 }
-.rp-coach-leader.is-on {
+.rp-coach-leader.is-on.is-clear {
   opacity: 0.55;
 }
 
