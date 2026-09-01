@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 510" width="1200" height="510" role="img" aria-label="Operating envelope">
+<defs>
+  <linearGradient id="fire" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#E01F26"/>
+    <stop offset="38%"  stop-color="#F2621A"/>
+    <stop offset="72%"  stop-color="#FF8A1F"/>
+    <stop offset="100%" stop-color="#FFB020"/>
+  </linearGradient>
+  <linearGradient id="fireV" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#FFB020"/>
+    <stop offset="100%" stop-color="#E01F26"/>
+  </linearGradient>
+  <linearGradient id="dim" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#3A2A24"/>
+    <stop offset="100%" stop-color="#4A382C"/>
+  </linearGradient>
+  <radialGradient id="bloom" cx="50%" cy="30%" r="70%">
+    <stop offset="0%"   stop-color="#F2621A" stop-opacity="0.13"/>
+    <stop offset="60%"  stop-color="#E01F26" stop-opacity="0.04"/>
+    <stop offset="100%" stop-color="#050505" stop-opacity="0"/>
+  </radialGradient>
+  <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+    <path d="M44 0H0V44" fill="none" stroke="#12100E" stroke-width="1"/>
+  </pattern>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="3.2" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="softglow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="1.6" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+<style>
+    .bg    { fill: #050505; }
+    .grid  { fill: url(#grid); opacity: .55; }
+    .ttl   { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 700;
+             letter-spacing: 6px; fill: url(#fire); }
+    .hd    { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+             font-size: 10px; letter-spacing: 3px; fill: #FF8A1F; }
+    .note  { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 12.5px; fill: #7A6A5C; }
+    .warm  { fill: #E8A99F; }
+    .gold  { fill: #FFB020; }
+    .mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .panel { fill: #0C0A09; stroke: #241C17; stroke-width: 1; }
+    .hair  { stroke: #1A1512; stroke-width: 1; }
+    .dash  { stroke: #4A382C; stroke-width: 1.2; stroke-dasharray: 5 6; fill: none; }
+
+    .curve { fill: none; stroke: url(#fire); stroke-width: 2.4; filter: url(#softglow);
+             stroke-dasharray: 1500; stroke-dashoffset: 1500;
+             animation: draw 2.3s ease-out .3s forwards; }
+    @keyframes draw { to { stroke-dashoffset: 0; } }
+    .f1 { opacity: 0; animation: f .5s ease-out 2.4s forwards; }
+    .f2 { opacity: 0; animation: f .5s ease-out 2.9s forwards; }
+    .f3 { opacity: 0; animation: f .5s ease-out 3.4s forwards; }
+    .f4 { opacity: 0; animation: f .5s ease-out 3.9s forwards; }
+    @keyframes f { to { opacity: 1; } }
+    .fb { opacity: 0; animation: fb .6s ease-out 2.4s forwards; }
+    @keyframes fb { to { opacity: .2; } }
+    .sp { opacity: 0; animation: f .5s ease-out forwards; }
+    .ax { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; fill: #5F5348; }
+    .ann{ font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 12.5px; fill: #C4B4A5; }
+    .vn { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; fill: #A99584; }
+</style></defs>
+<rect class="bg" width="1200" height="510"/>
+<rect class="grid" width="1200" height="510"/>
+<rect width="1200" height="510" fill="url(#bloom)"/>
+<text class="hd" x="60" y="42">THE OPERATING ENVELOPE &#183; WHERE IT STOPS WORKING</text>
+<text class="note" x="60" y="68">Attempts per 15 minute window on the failing segment, across one simulated day at 12,000 attempts a day.</text>
+
+<rect class="fb" x="100" y="248" width="372" height="58" fill="#E01F26"/>
+<line class="hair" x1="100" y1="306" x2="1100" y2="306"/>
+<line class="f1" x1="100" y1="248" x2="1100" y2="248" stroke="#7A6A5C" stroke-width="1" stroke-dasharray="5 5"/>
+<text class="ax f1" x="100" y="240" fill="#8A7263">20 ATTEMPTS &#183; THE DETECTOR FLOOR</text>
+
+<text class="ax" x="100" y="324">00:00</text>
+<text class="ax" x="317" y="324">05:00</text>
+<text class="ax" x="534" y="324">10:00</text>
+<text class="ax" x="752" y="324">15:00</text>
+<text class="ax" x="969" y="324">20:00</text>
+
+<path class="curve" d="M100,272 L143,286 L187,295 L230,300 L274,300 L317,297 L361,289 L404,275 L448,257 L491,243 L535,232 L578,223 L622,215 L665,220 L709,226 L752,220 L796,209 L839,192 L883,169 L926,140 L970,120 L1013,129 L1056,169 L1100,226"/>
+
+<g class="f2">
+  <line x1="252" y1="298" x2="252" y2="200" stroke="#E01F26" stroke-width="1.4" stroke-dasharray="4 4"/>
+  <circle cx="252" cy="298" r="5" fill="#E01F26" filter="url(#glow)"/>
+  <text class="ann" x="252" y="188" text-anchor="middle" fill="#E8A99F">same fault, 03:30</text>
+  <text class="mono" x="252" y="164" text-anchor="middle" font-size="20" font-weight="700" fill="#E01F26">0 of 20 detected</text>
+  <text class="note" x="252" y="144" text-anchor="middle" fill="#6B5C50">no segment reaches the floor, so there is nothing to test</text>
+</g>
+
+<g class="f3">
+  <line x1="964" y1="124" x2="964" y2="98" stroke="#FFB020" stroke-width="1.4" stroke-dasharray="4 4"/>
+  <circle cx="964" cy="124" r="5" fill="#FFB020" filter="url(#glow)"/>
+  <text class="ann gold" x="1100" y="92" text-anchor="end">same fault, 19:52 &#183; detected in 7 minutes</text>
+</g>
+
+<line class="hair" x1="60" y1="358" x2="1140" y2="358"/>
+<text class="hd f4" x="60" y="384">VOLUME SWEEP &#183; SAME FAULT, THREE MERCHANT SIZES, 5 SEEDS EACH</text>
+
+<g class="f4">
+  <text class="vn" x="60" y="416">1,500 / day</text>
+  <rect x="252" y="404" width="120" height="15" rx="2" fill="#7E1C16"/>
+  <text class="note warm" x="392" y="416">4 of 10 faults detected at all, 0 of 10 inside 15 minutes</text>
+
+  <text class="vn" x="60" y="446">5,000 / day</text>
+  <rect x="252" y="434" width="300" height="15" rx="2" fill="#B0561B"/>
+  <text class="note" x="572" y="446" fill="#7A6A5C">detected, but the key falls back to a coarser segment and latency stretches</text>
+
+  <text class="vn" x="60" y="476">12,000 / day</text>
+  <rect x="252" y="464" width="700" height="15" rx="2" fill="url(#fire)"/>
+  <text class="note gold" x="972" y="476">5 of 5 &#183; 5 to 10 minutes</text>
+</g>
+<text class="note f4" x="60" y="502" fill="#5F5348">At 193 attempts a window a segment needs 10.4 percent of merchant traffic to clear the floor. That one ratio explains the trough, the volume boundary and the coarse-key fallback.</text>
+</svg>

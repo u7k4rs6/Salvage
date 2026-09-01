@@ -1,319 +1,283 @@
-# Salvage
+<p align="center">
+  <img src="docs/assets/hero.svg" alt="Salvage: a card BIN degrades and the detector opens an incident seven minutes in" width="100%">
+</p>
 
-Salvage is an AI agent for merchants on Razorpay that notices when payments start failing in
-clusters, works out why, and wins the money back inside hard limits. It is the Track 03 entry for
-the Razorpay AI Buildathon 2026.
+<p align="center">
+  <a href="https://salvage-alpha.vercel.app"><b>Live demo</b></a>
+  &nbsp;&#183;&nbsp;
+  <a href="docs/RESULTS.md">Results</a>
+  &nbsp;&#183;&nbsp;
+  <a href="docs/WHAT_BROKE.md">What broke</a>
+  &nbsp;&#183;&nbsp;
+  <a href="docs/AUDIT.md">Audit</a>
+  &nbsp;&#183;&nbsp;
+  <a href="docs/02_TECHNICAL_ARCHITECTURE.md">Architecture</a>
+</p>
 
-The merchant it is built for is a large D2C brand: about 12,000 payment attempts a day across
-about 8,000 customers. That size is deliberate and it is a constraint, not a boast. A detector
-that has to call a single failing UPI handle inside 15 minutes needs enough attempts on that
-handle in a 15-minute window to tell a real drop from noise, and a smaller merchant does not
-supply them. Traffic volume is a simulator parameter rather than a constant, and the results
-include a sweep over it, so the numbers say where this approach stops working instead of pretending
-it always does.
+<p align="center">
+  <img src="https://img.shields.io/badge/tests-496%20passing-FF8A1F?style=flat-square&labelColor=16120E">
+  <img src="https://img.shields.io/badge/runs-250-FFC24B?style=flat-square&labelColor=16120E">
+  <img src="https://img.shields.io/badge/policy%20violations-0-FFC24B?style=flat-square&labelColor=16120E">
+  <img src="https://img.shields.io/badge/injections%20refused-45%2F45-FFC24B?style=flat-square&labelColor=16120E">
+  <img src="https://img.shields.io/badge/license-MIT-8A7E70?style=flat-square&labelColor=16120E">
+</p>
 
-The loop: a deterministic detector opens an incident when a payment segment degrades, an
-LLM-assisted diagnosis cross-checked by rules names the cause, a policy engine validates every
-proposed action against an allowlisted menu, and an append-only hash-chained ledger records all of
-it. The agent can create Razorpay Payment Links and set checkout display hints. It cannot do
-anything else with money.
+---
 
-## Run the demo
+A payment gateway does not usually fail all at once. It fails in a corner. One UPI handle starts
+declining, or one card BIN range, or one bank's netbanking, and the merchant's overall success rate
+moves two points, which nobody notices for an hour. In that hour a large store loses a few hundred
+orders, and the customers behind them have already closed the tab.
 
-Two processes, both on loopback. Backend first:
+The recovery that happens today is undifferentiated: send everyone who failed a payment link, a few
+hours later, and hope. It works, partly, because a second chance to pay is worth something no matter
+why the first one failed. But it is a blunt instrument aimed with no information. It messages
+customers whose rail is still broken, it messages customers about faults they cannot do anything
+about, and it treats a thousand messages a day as free.
 
-```
-uv sync --all-extras
-cp .env.example .env
+Salvage detects the failing segment, works out why, chooses the smallest safe intervention, recovers
+only where recovery is justified, and escalates when it is not.
+
+---
+
+## The loop
+
+<img src="docs/assets/loop.svg" alt="Detect, diagnose, plan, gate, execute, recover, with escalate as a terminal branch" width="100%">
+
+Escalate is not a step on the way to recovery. It is where a case ends when the agent decides a human
+should take it, and the system is built so nothing can run from there.
+
+---
+
+## Detection
+
+Deterministic, no model. Success rates are tracked per segment on 15 minute sliding windows against
+each segment's own baseline, across a hierarchy from the merchant down to a single UPI handle or card
+BIN. An incident opens when four conditions hold in two consecutive windows: at least 20 attempts, an
+absolute excess of 15 points over baseline, a binomial p-value under 0.001 with a Bonferroni
+correction, and persistence.
+
+Attribution walks to the coarsest key that explains the failures, so a gateway-wide fault produces one
+incident rather than twenty.
+
+The thresholds were frozen after calibration on a single seed and never touched again. Every number
+below was measured against seeds the thresholds had never seen.
+
+---
+
+## Diagnosis
+
+<img src="docs/assets/diagnosis.svg" alt="Rules and model verdicts, cross checked, with the confidence gate" width="100%">
+
+The evidence packet contains counts, rates, error distributions and five sample error strings. No
+names, no contacts, no per-customer amounts. It is built to be safe to publish, and a test enforces
+that.
+
+The model proposes. It has no tools, its output is a JSON object validated against a schema, and it
+cannot call Razorpay, the database or the message channel.
+
+---
+
+## The gate
+
+<img src="docs/assets/gate.svg" alt="The gate ladder, evaluated in order until one rule refuses" width="100%">
+
+Every action is checked before it happens, not after, and every rule's verdict is written to the
+ledger with the sentence the engine produced when it made the call.
+
+The bounds are in code, and none of them depend on the model behaving:
+
+| Bound | Rule |
+|---|---|
+| One open link per order | cancelled if the order is paid any other way |
+| Two nudges per customer per incident | three per rolling seven days across incidents |
+| Consent required | opt-out honoured immediately and permanently |
+| Quiet hours 21:00 to 09:00 IST | sends are queued, not cancelled |
+| Never nudge into a still-failing rail | converts to defer instead |
+| Hard declines | no retry, no link |
+| 72 hour order TTL | then abandoned |
+| Circuit breaker | pauses and escalates |
+| Kill switch | one environment variable, detection keeps running |
+
+The action schema has no amount field. `SEND_RECOVERY_LINK` carries a case id, and the executor reads
+the order amount from the database, so there is no code path anywhere that takes an amount from model
+output.
+
+---
+
+## Results
+
+<img src="docs/assets/results.svg" alt="Recovered revenue and messages per scenario, agent versus the strongest baseline" width="100%">
+
+Five scenarios, ten seeds, five policy arms, 250 runs. Every arm faces byte-identical worlds for a
+given seed, proven by a stream digest, and the at-risk order set is identical across arms by
+construction.
+
+| Scenario | At-risk orders | Agent | Echo | B0 none | B1 immediate | B2 timed |
+|---|---|---|---|---|---|---|
+| S0 no fault | 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| S1 issuer outage | 262 | **2,21,154 / 83** | 2,37,221 / 131 | 93,947 / 0 | 1,47,797 / 165 | 1,75,050 / 261 |
+| S2 card BIN auth | 153 | **1,20,065 / 44** | 1,13,983 / 29 | 50,095 / 0 | 79,263 / 88 | 93,255 / 140 |
+| S3 gateway | 551 | 4,78,668 / 422 | 4,63,403 / 379 | 3,01,760 / 0 | 4,20,743 / 312 | 4,72,828 / 492 |
+| S4 merchant config | 300 | 90,128 / 0 | 90,128 / 0 | 90,128 / 0 | 1,57,696 / 178 | 1,65,041 / 272 |
+
+Rupees recovered / messages sent, mean of 10 seeds, at-risk order set.
+
+**The thesis is not that the agent recovers more money.** Across the whole day the agent recovers 29 to 44
+percent less than the best baseline, which gets there by messaging roughly a thousand customers whose
+failures have nothing to do with any incident. This simulator charges almost nothing for a message beyond a 2.6
+percent chance of an opt-out, which flatters the baselines rather than the agent.
+
+The thesis is that Salvage recovers the revenue actually attributable to an incident without spraying
+recovery attempts across the merchant's entire customer base. On S1 that is 26 percent more money from
+32 percent of the contacts. On S4 it is nothing at all, on purpose.
+
+The S1 and S2 margins rest on a steer conversion constant that was swept from 0.25 to 0.65 with the
+agent included. The margin narrows by about three quarters across that range and never closes.
+
+---
+
+## Where it stops working
+
+<img src="docs/assets/envelope.svg" alt="The operating envelope: overnight blindness and the volume floor" width="100%">
+
+The most useful thing this project found is the boundary of its own competence. Nothing was tuned
+against these results; the thresholds were frozen before the off-peak variant existed.
+
+---
+
+## The ledger
+
+<img src="docs/assets/ledger.svg" alt="Hash chained ledger entries, verified offline" width="100%">
+
+There is no update or delete path against the ledger table anywhere in the codebase, and a test greps
+the source to keep it that way. A property test mutates a random byte of a random entry and asserts
+verification fails.
+
+---
+
+## Honest findings
+
+Three results cut against the project and are reported here rather than in an appendix.
+
+**The language model did not detectably contribute to recovery on this workload.** An arm whose model
+is replaced by a stub repeating the rules classifier performs the same: signs disagree across
+scenarios, no scenario clears a paired t, and the four sum to roughly minus five thousand rupees. Every
+incident the rules get wrong they get wrong by answering `unknown`, and unknown escalates either way.
+The gate works in one direction only: being confidently wrong is caught and costs nothing, being right
+beyond the threshold buys nothing at 41 incidents. Two honest reasons it could differ elsewhere: the
+rules classifier was written against these exact five scenarios, and 41 incidents cannot resolve a small
+effect.
+
+**S3 is a tie, not a win.** 5,840 rupees on a paired standard deviation of 15,993, and the agent is
+behind on 1 of the 10 seeds. On a merchant-wide gateway fault every method is degraded, so there is
+nothing to steer toward and cause-awareness has little to act on.
+
+**Two of the five scenarios key on fields production payloads may not carry.** S2 keys on `card_bin6`
+and S1 on `upi_handle`, and neither is guaranteed by the payloads Razorpay documents. It affects no
+number here, because the simulator emits both and every arm faces the same payloads, but the segment
+keys would need re-deriving against real traffic first, and that work is not done.
+
+---
+
+## What is not measured
+
+No Razorpay account was created and **no live API call was made**. All Razorpay interaction is
+exercised against contract tests built from documented request and response shapes, and webhook
+signature verification is proven against a known secret. That proves the client builds correct requests
+and parses documented responses. It does not prove behaviour against the live service, including
+undocumented fields, rate limiting and real error responses.
+
+`scripts/e2e_real_link.py` is written, refuses to run without credentials, and has not been run.
+
+---
+
+## What broke
+
+Most of what broke in this build produced a number rather than a crash, and the test suite was green
+through almost all of it.
+
+- A no-action baseline that was measuring itself, because organic recovery was computed after the agent ran.
+- Policies that could see the future, testing `orders.status == 'paid'` over a completed simulation, and so declining to act on exactly the customers about to pay anyway.
+- Baselines handed the agent's steering for free, because the channel named an alternate method for every policy.
+- Rail state read from the detector's incidents, so a baseline's outcome depended on the agent's detector.
+- A validator that rejected well-formed model output for a superficial reason. On the misconfiguration scenario the model diagnosed correctly and planned an escalation but wrote its reasoning in the wrong field; the validator threw the action away, the plan came back empty, and a completed 200 run sweep reported the resulting silence as principled restraint.
+
+The full list, ordered by cost, is in [docs/WHAT_BROKE.md](docs/WHAT_BROKE.md). An independent adversarial
+audit of the repository is in [docs/AUDIT.md](docs/AUDIT.md), including the findings that went against
+the project.
+
+---
+
+## Running it
+
+System Python 3.14 is externally managed, so the project pins a uv-managed interpreter.
+
+```bash
+uv python install 3.12
+uv venv --python 3.12 && source .venv/bin/activate
+uv sync
+cp .env.example .env          # optional: Razorpay test keys, Gemini key
+
 uv run salvage db migrate
-SALVAGE_DASHBOARD_TOKEN=demo-token uv run salvage serve
-```
-
-Then the console, in a second terminal:
-
-```
-cd web
-npm install
-npm run dev
-```
-
-Open `http://127.0.0.1:5173` and paste `demo-token` into the token box in the top bar. That token
-is needed only for the routes that change something: the kill switch, and approving or rejecting an
-escalation. Everything else reads.
-
-Scenario Runner needs neither the token nor the backend. It replays a recording committed to
-`web/src/board/fixtures/`, because `POST /api/sim/run` simulates, detects, diagnoses, acts and
-settles in one uninterruptible call and there is nothing to watch while it does. To run a scenario
-for real, use the CLI below and then read the result on the other pages.
-
-The token lives in React state and is never written to `localStorage`, so a page reload asks for it
-again. Read routes are open on loopback; every mutating route requires the bearer token. The API
-binds to 127.0.0.1 and CORS is limited to the Vite dev and preview origins.
-
-The whole demo also runs without a browser:
-
-```
-uv run salvage agent run --scenario S1 --seed 1 --policy B1
+uv run salvage sim run --scenario S1 --seed 1
+uv run salvage detect calibrate --seeds 0..4
+uv run salvage agent run --scenario S2 --seed 1 --provider fixture
+uv run salvage eval run --scenarios S0,S1,S2,S3,S4 --seeds 0..9
 uv run salvage ledger verify
+uv run salvage serve                       # 127.0.0.1:8000
 ```
 
-## The console
-
-Seven pages, in the build order of `docs/04_FRONTEND_SPEC.md` section 9.
-
-- **Overview** merchant-wide success rate, the segment heatmap with the merchant row pinned at the
-  top, open incidents and today's recovery.
-- **Incidents** the list, filtered by state.
-- **Incident detail** the evidence packet the diagnosis saw, the rules and model verdicts side by
-  side, the action timeline, and a ledger slice for that incident alone.
-- **Escalations** the queue, with an approve or reject decision that requires a written note.
-- **Ledger** browse, verify the chain, and export JSONL that the offline verifier reads.
-- **Results** the sweep tables, served from the same JSON that produced `docs/RESULTS.md`.
-- **Storefront** a checkout page that shows what a customer sees when the agent sets a display
-  hint. It says plainly when it cannot take a real order because no Razorpay key is configured.
-- **Scenario Runner** a recorded run, replayed from its own ledger at a speed you choose.
-  `POST /api/sim/run` simulates, detects, diagnoses, acts and settles in one uninterruptible call,
-  so there is no moment at which the running system holds a partial world and nothing to watch
-  while it works. The page replays a recording committed to `web/src/board/fixtures/` instead.
-  Every frame is recorded data: the position of the playhead is the only state, every panel is a
-  function of it, and where the run did not record something the page shows nothing rather than a
-  guess.
-
-## The public demo
-
-Two of those pages need no backend: the Scenario Runner reads a committed recording, and Results
-reads a committed artifact. Those two are what a production build ships. The other five all read a
-live FastAPI process, and five error panels are a worse first impression than five absent pages, so
-a production build leaves them out. There is nothing to configure at deploy time and no environment
-variable the deployed page reads.
-
-```
-cd web
-npm ci
-npm run build          # writes web/dist, including 404.html for hosts without a rewrite rule
-npx vite preview       # serves it on 127.0.0.1:4173 with the rewrite in place
+```bash
+cd web && npm install && npm run dev        # 127.0.0.1:5173
 ```
 
-Deploying to Vercel, from the repository root. `web/vercel.json` carries the build command, the
-output directory and the rewrite that makes a deep link like `/runner` work on a hard refresh:
+A production build ships only the two pages that need no backend, the Scenario Runner and Results,
+because the other five read a live FastAPI process and five error panels are a worse first impression
+than five absent pages. Deploying to Vercel, from the repository root:
 
-```
-npx vercel --cwd web            # preview deployment, prints the URL
+```bash
+npx vercel --cwd web            # preview, prints the URL
 npx vercel --prod --cwd web     # production
 ```
 
-Deploying to Vercel from the dashboard instead, by connecting the repository. Leave Root Directory
-at the repository root and import it; the root `vercel.json` sends the build into `web/`:
+Importing the repository from the Vercel dashboard instead needs nothing configured: the root
+`vercel.json` sends the build into `web/`, and `.vercelignore` keeps the Python project out of the
+upload so Vercel does not find `pyproject.toml` and try to build a FastAPI app.
 
-| Setting | Value | Where it comes from |
-| --- | --- | --- |
-| Root Directory | repository root | leave it alone |
-| Framework preset | Other | `"framework": null` in `vercel.json` |
-| Install command | `cd web && npm ci` | `vercel.json` |
-| Build command | `cd web && npm run build` | `vercel.json` |
-| Output directory | `web/dist` | `vercel.json` |
-| Environment variables | none | a production build reads none |
+The test suite runs with no network and no credentials:
 
-Leave the environment variables empty. Setting `VITE_SALVAGE_FULL=1` there would ship the five
-pages that need a backend, and on Vercel there is no backend for them to reach.
-
-This repository is a Python project with a frontend inside it, and Vercel inspects the whole tree
-before it reads any of that. Finding `pyproject.toml` it detects a FastAPI app and fails asking for
-an entrypoint, before the frontend build is ever attempted. `.vercelignore` keeps the backend out
-of the upload, so there is nothing to misdetect and the upload is the size of the frontend rather
-than the repository. Setting Root Directory to `web` instead of importing at the root also works,
-and then `web/vercel.json` is the file in charge.
-
-Deploying to GitHub Pages. Pages has no rewrite rule, so the build copies `index.html` to
-`404.html` and Pages serves that for any unknown path, which does the same job. A project site
-lives under a repository subpath, so the build needs to know it:
-
-```
-cd web
-VITE_BASE=/salvage/ npm run build
-npx gh-pages -d dist
+```bash
+SALVAGE_LLM_PROVIDER=fixture uv run pytest -q
 ```
 
-To build the full console instead, for a deployment that will sit in front of a running backend:
+---
+
+## Layout
 
 ```
-VITE_SALVAGE_FULL=1 npm run build
+salvage/
+  detect/      segments, sliding windows, incident open and close
+  diagnose/    evidence packet, rules classifier, model, reconciliation
+  decide/      action menu, planner, policy engine
+  execute/     Razorpay client, per-order state machine, channel, scheduler
+  sim/         merchant fixture, traffic, faults, response model, params.yaml
+  eval/        baselines, metrics, sweeps, report
+  llm/         provider abstraction, cache, fixtures
+  ledger.py    append only, hash chained
+web/           Vite, React, TypeScript, the console and the replay
+docs/          PRD, architecture, security, frontend spec, results, audit, what broke
 ```
 
-Bundle, measured on the last build: 30 kB of JavaScript and 8 kB of CSS, both gzipped, before any
-recording is fetched. The two recordings are static assets rather than bundled modules, so the
-1.5 MB one (129 kB gzipped) is fetched when the Scenario Runner opens and the other only if you
-switch to it. Recharts is 151 kB gzipped and is split into its own chunk that only Results pulls
-in, so a visitor who never opens Results never downloads it.
+Four design documents were written before any code and are submitted as written, with their own
+divergences recorded rather than retrofitted:
+[PRD](docs/01_PRD.md) &#183;
+[Architecture](docs/02_TECHNICAL_ARCHITECTURE.md) &#183;
+[Security and access](docs/03_SECURITY_AND_ACCESS.md) &#183;
+[Frontend spec](docs/04_FRONTEND_SPEC.md)
 
-## Status
+---
 
-M1 to M5 are built: migrations and repository layer, hash-chained ledger with an offline verifier
-and a commitment to the event stream, simulator with scenarios S0 to S4 and organic customer
-retries, webhook ingest with signature verification, detector with frozen calibrated thresholds,
-evidence packets, a rules classifier, an LLM provider layer, the allowlisted action menu and policy
-engine, the per-order state machine and executor, the simulated channel, three baselines, a fault
-injection suite, the evaluation sweep that writes `docs/RESULTS.md`, the dashboard API, the console
-above, and the escalation-to-fix sweep.
-
-**The agent arm is measured.** Its diagnosis fixtures were recorded blind from Gemini: the recorder
-builds each evidence packet through the same call the agent makes, which cannot reach the
-ground-truth tables, hands the model a type carrying the prompt and its hash and nothing else, and
-refuses any prompt in which a scenario id, a seed or a cause name appears. `docs/RESULTS.md` reads
-its provenance line out of the fixture files rather than asserting it.
-
-Recovered revenue in rupees over the at-risk order set against messages sent, mean of 10 seeds:
-
-| scenario | agent | B0 | B1 | B2 |
-|---|---|---|---|---|
-| S1 issuer outage | **2,21,154 / 83 msg** | 93,947 / 0 msg | 1,47,797 / 164 msg | 1,75,050 / 261 msg |
-| S2 BIN auth failure | **1,20,065 / 44 msg** | 50,095 / 0 msg | 79,263 / 88 msg | 93,255 / 140 msg |
-| S3 gateway degradation | **4,78,668 / 422 msg** | 3,01,760 / 0 msg | 4,20,743 / 312 msg | 4,72,828 / 492 msg |
-| S4 merchant misconfiguration | 90,128 / 0 msg | 90,128 / 0 msg | 1,57,696 / 178 msg | 1,65,041 / 272 msg |
-
-The agent wins S1 by 26 percent on 32 percent of B2's messages, and S2 by 29 percent on 31 percent
-of its messages. **S3 is a tie, not a win:** 5,840 rupees on a paired standard deviation of 15,993
-across ten seeds, with the agent losing 1 of the 10 seeds outright, and 86 percent of B2's message count
-rather than a third. **It loses S4 outright**, and that row is the one worth reading: the cause is
-a merchant misconfiguration, so it contacts nobody and escalates, recovering exactly what doing
-nothing recovers while both baselines message around two hundred customers about something none of
-them can fix.
-
-**Scoped to the whole day rather than to the at-risk set, the baselines beat the agent on every
-scenario by 29 to 44 percent** (section 2 of the results). They win by messaging a thousand
-customers a day, most of whose failures have nothing to do with an incident. Both readings are
-true; which one matters depends on what a message costs, and this simulator charges almost nothing
-for one.
-
-That is restraint measured against no benefit, because an escalation used to reach a human and
-change nothing in the world. `escalation_fix_minutes` now models the repair as a swept parameter,
-and `docs/RESULTS.md` section 11 reports the curve rather than picking a value off it: at every
-response time from 15 minutes to two hours the agent lands between 2,67,435 and 2,77,080 rupees
-against B2's 1,83,115, sending nothing. Past the fault's own 180 minute duration a fix is worth
-exactly nothing, because the world has already recovered on its own. Only an arm that escalates can
-be repaired, which is an asymmetry the results state plainly rather than assume in the agent's
-favour.
-
-Diagnosis accuracy over 41 incidents: rules-only 0.902, model 0.976, reconciled 0.976. **On this
-workload the language model did not detectably contribute to recovery.** The `echo` arm is the
-agent with its model replaced by a stub repeating the rules verdict, everything else identical;
-paired across ten seeds it recovers 16,066 rupees more on S1, 6,081 less on S2, 15,266 less on S3
-and the same on S4. The signs disagree, no scenario clears a paired t, and the four sum to roughly
-minus five thousand rupees. The residual is a confound rather than a result: the reconciled cause
-is identical in the 37 of 41 incidents the rules get right, and what differs is the confidence
-number in the planner's prompt, 0.70 against 0.95. Two honest reasons it could differ elsewhere:
-the rules classifier was written against these exact scenarios, and 41 incidents cannot resolve a
-small effect. The gate still earns its place in one direction: a model returning a confident wrong
-cause recovers exactly what doing nothing recovers.
-
-The steer conversion probability, the constant the S1 and S2 margins mostly rest on, is swept from
-0.25 to 0.65 in section 9. The win survives the whole range and narrows by about three quarters at
-the bottom of it.
-
-**Two of the five scenarios key on payload fields that may not be present in production Razorpay
-payloads.** S2 detects on `card_bin6` and S1 on `upi_handle`, and those are the primary segment
-keys for those scenarios. Razorpay's documented payment entity carries no `iin` on the card object,
-only a `token_iin` that is null in the published sample and names a network token rather than the
-card, so `card_bin` is None from a documented payload. The webhook docs publish no payment.failed
-sample for UPI at all and warn twice that `vpa` may be absent on a UPI failure, which is exactly
-the event S1 depends on.
-
-This affects no number above: the simulator emits both fields, the detector reads them, and every
-arm faces the same payloads. What it means is that the segment keys would have to be re-derived
-against real traffic before this ran in production, and that work has not been done. The fallback
-would be the coarser keys the payload does carry, card network, card issuer and the method itself,
-which enlarge the denominator and dilute the excess across healthy siblings, so by the operating
-envelope it means later detection or none. It is not solved.
-
-Zero policy violations across all 250 runs, and 45 fault injection attempts all refused.
-
-## Documents
-
-- `docs/01_PRD.md` product requirements, scenarios, metrics, milestones
-- `docs/02_TECHNICAL_ARCHITECTURE.md` components, data model, detector, simulator, tooling
-- `docs/03_SECURITY_AND_ACCESS.md` threat model, secrets, webhook security, ledger integrity
-- `docs/04_FRONTEND_SPEC.md` dashboard specification
-- `docs/RESULTS.md` the sweep, with the two limitations stated before the first table
-- `docs/results_by_run.csv` one row per run, so any table above can be recomputed
-- `docs/WHAT_BROKE.md` the defects worth reading about, measurement bugs first
-- `docs/PITCH.md` the three-minute version
-- `docs/BUILD_LOG.md` dated build log: decisions, thresholds, what broke and what fixed it
-
-## Setup
-
-System Python is 3.14 and externally managed, so the project pins a uv-managed 3.12 interpreter and
-never uses bare `pip`.
-
-```
-uv python install 3.12
-uv venv --python 3.12
-uv sync --all-extras
-cp .env.example .env          # fill RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET
-```
-
-Startup refuses to run if `RAZORPAY_KEY_ID` does not start with `rzp_test_`. Live keys are never
-used in this project.
-
-## Commands
-
-```
-uv run salvage db migrate
-uv run salvage sim run --scenario S1 --seed 1
-uv run salvage sim run --scenario S1 --seed 1 --variant offpeak
-uv run salvage sim verify-stream
-uv run salvage sim organic --seeds 0..4
-uv run salvage detect calibrate --seeds 5..9
-uv run salvage diagnose accuracy --seeds 0..9 --provider none
-uv run salvage eval run --scenarios S0,S1,S2,S3,S4 --seeds 0..9 --policies agent,B0,B1,B2
-uv run salvage eval volume --scenarios S1,S2 --seeds 0..4
-uv run salvage eval sensitivity --seeds 0..4 --adversarial
-uv run salvage eval report
-uv run salvage e2e verify
-uv run salvage agent run --scenario S1 --seed 1 --policy B1
-uv run salvage agent run --scenario S1 --seed 1 --policy B1 --kill-switch
-uv run salvage demo reset
-uv run salvage demo kill-switch on
-uv run salvage ledger verify
-uv run salvage ledger export --out data/ledger.jsonl
-uv run salvage webhooks record --out data/webhooks
-uv run salvage webhooks replay data/webhooks     # SALVAGE_ENV=dev only
-uv run salvage serve
-uv run python scripts/verify_ledger.py data/ledger.jsonl
-uv run pytest -q
-uv run ruff check .
-```
-
-`salvage demo reset` empties every table and prints the database path before it does. It takes the
-global `--db` flag like every other command.
-
-## The kill switch
-
-`SALVAGE_KILL_SWITCH=1`, or the switch in the console top bar, suspends every outbound action. It
-is checked in the policy engine, so a suspended agent still detects, still diagnoses and still
-files escalations; it just stops calling out. On S1 seed 1 under B1 the same world produces 1,038
-messages with the switch off and zero with it on, and recovery falls to what customers manage on
-their own. `docs/BUILD_LOG.md` has the rehearsal, including the two defects the rehearsal found in
-the wiring around the switch.
-
-## A note on the LLM fixtures
-
-`salvage/llm/fixtures/` is empty. M2 shipped 46 fixtures written by the model being evaluated,
-with the scenario labels visible to its author; they were deleted in M3 and no number was ever
-taken from them. Refilling the directory blind is one command, and the isolation is enforced by
-the code path rather than by discipline:
-
-```
-export GEMINI_API_KEY=...
-uv run salvage diagnose record-fixtures --scenarios S1,S2,S3,S4 --seeds 0..9 --provider gemini
-```
-
-`salvage/llm/fixtures/README.md` explains what went wrong and what the recorder does about it.
-
-## Compliance note
-
-Salvage follows the spirit of consent, quiet hours and opt-out. It does not claim TRAI, RBI or PCI
-compliance. All customer channels are simulated; no real SMS, email or WhatsApp is ever sent.
-
-## Licence
-
-MIT, see `LICENSE`.
+<p align="center">
+  <sub>Salvage claims no TRAI, RBI or PCI compliance. It follows the spirit of consent, quiet hours and opt-out, and says so.</sub>
+</p>

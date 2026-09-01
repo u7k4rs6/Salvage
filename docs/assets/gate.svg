@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" width="1200" height="500" role="img" aria-label="The gate ladder">
+<defs>
+  <linearGradient id="fire" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#E01F26"/>
+    <stop offset="38%"  stop-color="#F2621A"/>
+    <stop offset="72%"  stop-color="#FF8A1F"/>
+    <stop offset="100%" stop-color="#FFB020"/>
+  </linearGradient>
+  <linearGradient id="fireV" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#FFB020"/>
+    <stop offset="100%" stop-color="#E01F26"/>
+  </linearGradient>
+  <linearGradient id="dim" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#3A2A24"/>
+    <stop offset="100%" stop-color="#4A382C"/>
+  </linearGradient>
+  <radialGradient id="bloom" cx="50%" cy="30%" r="70%">
+    <stop offset="0%"   stop-color="#F2621A" stop-opacity="0.13"/>
+    <stop offset="60%"  stop-color="#E01F26" stop-opacity="0.04"/>
+    <stop offset="100%" stop-color="#050505" stop-opacity="0"/>
+  </radialGradient>
+  <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+    <path d="M44 0H0V44" fill="none" stroke="#12100E" stroke-width="1"/>
+  </pattern>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="3.2" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="softglow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="1.6" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+<style>
+    .bg    { fill: #050505; }
+    .grid  { fill: url(#grid); opacity: .55; }
+    .ttl   { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 700;
+             letter-spacing: 6px; fill: url(#fire); }
+    .hd    { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+             font-size: 10px; letter-spacing: 3px; fill: #FF8A1F; }
+    .note  { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 12.5px; fill: #7A6A5C; }
+    .warm  { fill: #E8A99F; }
+    .gold  { fill: #FFB020; }
+    .mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .panel { fill: #0C0A09; stroke: #241C17; stroke-width: 1; }
+    .hair  { stroke: #1A1512; stroke-width: 1; }
+    .dash  { stroke: #4A382C; stroke-width: 1.2; stroke-dasharray: 5 6; fill: none; }
+
+    .row  { opacity: 0; animation: row .35s ease-out forwards; }
+    @keyframes row { to { opacity: 1; } }
+    .dim  { opacity: 0; animation: dim .45s ease-out 3.6s forwards; }
+    @keyframes dim { to { opacity: .28; } }
+    .band { opacity: 0; animation: band .45s ease-out 3.0s forwards; }
+    @keyframes band { to { opacity: 1; } }
+    .sp   { opacity: 0; animation: row .5s ease-out forwards; }
+    .rl   { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; fill: #C4B4A5; }
+    .det  { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 12px; fill: #6B5C50; }
+    .vp   { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 1px; fill: #C97A22; }
+    .vr   { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 1px; fill: #FF3B30; font-weight: 700; }
+</style></defs>
+<rect class="bg" width="1200" height="500"/>
+<rect class="grid" width="1200" height="500"/>
+<rect width="1200" height="500" fill="url(#bloom)"/>
+<text class="hd" x="60" y="42">GATE LADDER &#183; ONE SEND, EVALUATED IN ORDER</text>
+<text class="note" x="60" y="68">Nine rules, checked before the action, not after. The sentence beside each is the one the engine wrote when it made the call.</text>
+<rect class="band" x="60" y="330" width="1080" height="36" rx="2" fill="#2A0C0A"/>
+<rect class="band" x="60" y="330" width="3" height="36" fill="url(#fireV)"/>
+<g class="row" style="animation-delay:0.3s"><text class="vp" x="78" y="132">pass</text><text class="rl" x="164" y="132">matrix.action_allowed_for_cause</text><text class="det" x="530" y="132">SEND_RECOVERY_LINK is allowed for auth_failure_bin</text></g>
+<line class="hair" x1="60" y1="145" x2="1140" y2="145"/>
+<g class="row" style="animation-delay:0.68s"><text class="vp" x="78" y="166">pass</text><text class="rl" x="164" y="166">matrix.confidence_threshold</text><text class="det" x="530" y="166">confidence 0.95 against threshold 0.60</text></g>
+<line class="hair" x1="60" y1="179" x2="1140" y2="179"/>
+<g class="row" style="animation-delay:1.06s"><text class="vp" x="78" y="200">pass</text><text class="rl" x="164" y="200">case.order_unpaid</text><text class="det" x="530" y="200">order still unpaid, re-read before acting</text></g>
+<line class="hair" x1="60" y1="213" x2="1140" y2="213"/>
+<g class="row" style="animation-delay:1.44s"><text class="vp" x="78" y="234">pass</text><text class="rl" x="164" y="234">case.single_open_link</text><text class="det" x="530" y="234">no open link on this order</text></g>
+<line class="hair" x1="60" y1="247" x2="1140" y2="247"/>
+<g class="row" style="animation-delay:1.82s"><text class="vp" x="78" y="268">pass</text><text class="rl" x="164" y="268">case.not_terminal</text><text class="det" x="530" y="268">case state DETECTED</text></g>
+<line class="hair" x1="60" y1="281" x2="1140" y2="281"/>
+<g class="row" style="animation-delay:2.2s"><text class="vp" x="78" y="302">pass</text><text class="rl" x="164" y="302">case.no_hard_decline</text><text class="det" x="530" y="302">last attempt reason authentication_failed</text></g>
+<line class="hair" x1="60" y1="315" x2="1140" y2="315"/>
+<g class="row" style="animation-delay:2.75s">
+  <text class="vr" x="78" y="353">REFUSED</text>
+  <text class="rl" x="164" y="353" fill="#F5F0EA">customer.consent</text>
+  <text class="det" x="530" y="353" fill="#E8A99F">consent=False &#183; no other rule can override this</text>
+</g>
+<line class="hair" x1="60" y1="366" x2="1140" y2="366"/>
+<g class="sp" style="animation-delay:3.2s" transform="translate(1108,348) scale(0.55)"><path d="M0,-9 C1.2,-2.4 2.4,-1.2 9,0 C2.4,1.2 1.2,2.4 0,9 C-1.2,2.4 -2.4,1.2 -9,0 C-2.4,-1.2 -1.2,-2.4 0,-9 Z" fill="url(#fireV)" filter="url(#glow)"/></g>
+<g class="dim">
+  <text class="rl" x="164" y="387">customer.incident_cap</text>
+  <text class="det" x="530" y="387">not reached</text>
+  <line class="hair" x1="60" y1="400" x2="1140" y2="400"/>
+  <text class="rl" x="164" y="421">timing.not_quiet_hours</text>
+  <text class="det" x="530" y="421">not reached</text>
+  <line class="hair" x1="60" y1="434" x2="1140" y2="434"/>
+</g>
+<text class="note" x="60" y="464" fill="#8A7263">The ladder stops at the rule that refused it, because the policy engine stops there too.</text>
+<text class="note" x="60" y="484" fill="#5F5348">Across 250 runs and 45 injection attempts, no action ever got past a rule that said no.</text>
+</svg>

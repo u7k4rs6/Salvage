@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 310" width="1200" height="310" role="img" aria-label="The ledger">
+<defs>
+  <linearGradient id="fire" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#E01F26"/>
+    <stop offset="38%"  stop-color="#F2621A"/>
+    <stop offset="72%"  stop-color="#FF8A1F"/>
+    <stop offset="100%" stop-color="#FFB020"/>
+  </linearGradient>
+  <linearGradient id="fireV" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#FFB020"/>
+    <stop offset="100%" stop-color="#E01F26"/>
+  </linearGradient>
+  <linearGradient id="dim" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#3A2A24"/>
+    <stop offset="100%" stop-color="#4A382C"/>
+  </linearGradient>
+  <radialGradient id="bloom" cx="50%" cy="30%" r="70%">
+    <stop offset="0%"   stop-color="#F2621A" stop-opacity="0.13"/>
+    <stop offset="60%"  stop-color="#E01F26" stop-opacity="0.04"/>
+    <stop offset="100%" stop-color="#050505" stop-opacity="0"/>
+  </radialGradient>
+  <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+    <path d="M44 0H0V44" fill="none" stroke="#12100E" stroke-width="1"/>
+  </pattern>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="3.2" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="softglow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="1.6" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+<style>
+    .bg    { fill: #050505; }
+    .grid  { fill: url(#grid); opacity: .55; }
+    .ttl   { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 700;
+             letter-spacing: 6px; fill: url(#fire); }
+    .hd    { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+             font-size: 10px; letter-spacing: 3px; fill: #FF8A1F; }
+    .note  { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 12.5px; fill: #7A6A5C; }
+    .warm  { fill: #E8A99F; }
+    .gold  { fill: #FFB020; }
+    .mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .panel { fill: #0C0A09; stroke: #241C17; stroke-width: 1; }
+    .hair  { stroke: #1A1512; stroke-width: 1; }
+    .dash  { stroke: #4A382C; stroke-width: 1.2; stroke-dasharray: 5 6; fill: none; }
+
+    .in  { opacity: 0; animation: in .45s ease-out forwards; }
+    @keyframes in { to { opacity: 1; } }
+    .sp  { opacity: 0; animation: in .5s ease-out forwards; }
+    .ver { animation: ver 8s ease-in-out 2.6s infinite; opacity: 0; }
+    @keyframes ver {
+      0%   { transform: translateX(0);     opacity: 0; }
+      5%   { opacity: 1; }
+      28%  { transform: translateX(840px); opacity: 1; }
+      34%  { transform: translateX(840px); opacity: 0; }
+      100% { transform: translateX(840px); opacity: 0; }
+    }
+    .res { opacity: 0; animation: res 8s ease-out 2.6s infinite; }
+    @keyframes res { 0%,31% { opacity: 0; } 37%,88% { opacity: 1; } 100% { opacity: 0; } }
+    .seq { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10px; letter-spacing: 1.4px; fill: #5F5348; }
+    .knd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; fill: #C4B4A5; }
+    .hsh { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10.5px; fill: #C97A22; }
+</style></defs>
+<rect class="bg" width="1200" height="310"/>
+<rect class="grid" width="1200" height="310"/>
+<rect width="1200" height="310" fill="url(#bloom)"/>
+<text class="hd" x="60" y="42">THE LEDGER &#183; APPEND ONLY, HASH CHAINED</text>
+<text class="note" x="60" y="68">Every detection, diagnosis, gate verdict, action and outcome. Each entry commits to the one before it.</text>
+<path class="dash" d="M260 152 H290"/>
+<path class="dash" d="M470 152 H500"/>
+<path class="dash" d="M680 152 H710"/>
+<path class="dash" d="M890 152 H920"/>
+<g class="in" style="animation-delay:0.2s"><rect class="panel" x="80" y="106" width="180" height="92" rx="4"/><rect x="80" y="106" width="180" height="2" fill="url(#fire)" opacity=".7"/><text class="seq" x="98" y="132">SEQ 3</text><text class="knd" x="98" y="155">detect.incident.opened</text><text class="hsh" x="98" y="178">429db3b490</text></g>
+<g class="in" style="animation-delay:0.6s"><rect class="panel" x="290" y="106" width="180" height="92" rx="4"/><rect x="290" y="106" width="180" height="2" fill="url(#fire)" opacity=".7"/><text class="seq" x="308" y="132">SEQ 5</text><text class="knd" x="308" y="155">diagnose.reconciled</text><text class="hsh" x="308" y="178">1bd38088fc</text></g>
+<g class="in" style="animation-delay:1.0s"><rect class="panel" x="500" y="106" width="180" height="92" rx="4"/><rect x="500" y="106" width="180" height="2" fill="url(#fire)" opacity=".7"/><text class="seq" x="518" y="132">SEQ 6</text><text class="knd" x="518" y="155">decide.plan</text><text class="hsh" x="518" y="178">6b5d5d6710</text></g>
+<g class="in" style="animation-delay:1.4s"><rect class="panel" x="710" y="106" width="180" height="92" rx="4"/><rect x="710" y="106" width="180" height="2" fill="url(#fire)" opacity=".7"/><text class="seq" x="728" y="132">SEQ 151</text><text class="knd" x="728" y="155">action.executed</text><text class="hsh" x="728" y="178">45a1d5e58e</text></g>
+<g class="in" style="animation-delay:1.8s"><rect class="panel" x="920" y="106" width="180" height="92" rx="4"/><rect x="920" y="106" width="180" height="2" fill="url(#fire)" opacity=".7"/><text class="seq" x="938" y="132">HEAD</text><text class="knd" x="938" y="155">seq 508</text><text class="hsh" x="938" y="178">9bc5ac71bd95</text></g>
+<g class="sp" style="animation-delay:2.2s" transform="translate(1140,152) scale(0.5)"><path d="M0,-9 C1.2,-2.4 2.4,-1.2 9,0 C2.4,1.2 1.2,2.4 0,9 C-1.2,2.4 -2.4,1.2 -9,0 C-2.4,-1.2 -1.2,-2.4 0,-9 Z" fill="url(#fireV)" filter="url(#glow)"/></g><rect class="ver" x="80" y="102" width="180" height="100" rx="4" fill="none" stroke="url(#fire)" stroke-width="2" filter="url(#softglow)"/>
+<text class="mono gold res" x="80" y="240" font-size="14">chain intact &#183; 508 entries &#183; head 9bc5ac71bd95</text>
+<text class="note" x="80" y="266" fill="#7A6A5C">Verified by a twenty line script with no access to the database, against the exported file alone.</text>
+<text class="note" x="80" y="288" fill="#5F5348">What it proves: nothing was edited afterwards. What it does not prove: that the process wrote the truth. Both are stated on the page itself.</text>
+</svg>

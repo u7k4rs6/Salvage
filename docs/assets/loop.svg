@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" width="1200" height="340" role="img" aria-label="The loop">
+<defs>
+  <linearGradient id="fire" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#E01F26"/>
+    <stop offset="38%"  stop-color="#F2621A"/>
+    <stop offset="72%"  stop-color="#FF8A1F"/>
+    <stop offset="100%" stop-color="#FFB020"/>
+  </linearGradient>
+  <linearGradient id="fireV" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%"   stop-color="#FFB020"/>
+    <stop offset="100%" stop-color="#E01F26"/>
+  </linearGradient>
+  <linearGradient id="dim" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0%"   stop-color="#3A2A24"/>
+    <stop offset="100%" stop-color="#4A382C"/>
+  </linearGradient>
+  <radialGradient id="bloom" cx="50%" cy="30%" r="70%">
+    <stop offset="0%"   stop-color="#F2621A" stop-opacity="0.13"/>
+    <stop offset="60%"  stop-color="#E01F26" stop-opacity="0.04"/>
+    <stop offset="100%" stop-color="#050505" stop-opacity="0"/>
+  </radialGradient>
+  <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+    <path d="M44 0H0V44" fill="none" stroke="#12100E" stroke-width="1"/>
+  </pattern>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="3.2" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+  <filter id="softglow" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="1.6" result="b"/>
+    <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+<style>
+    .bg    { fill: #050505; }
+    .grid  { fill: url(#grid); opacity: .55; }
+    .ttl   { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-weight: 700;
+             letter-spacing: 6px; fill: url(#fire); }
+    .hd    { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+             font-size: 10px; letter-spacing: 3px; fill: #FF8A1F; }
+    .note  { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 12.5px; fill: #7A6A5C; }
+    .warm  { fill: #E8A99F; }
+    .gold  { fill: #FFB020; }
+    .mono  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .panel { fill: #0C0A09; stroke: #241C17; stroke-width: 1; }
+    .hair  { stroke: #1A1512; stroke-width: 1; }
+    .dash  { stroke: #4A382C; stroke-width: 1.2; stroke-dasharray: 5 6; fill: none; }
+
+    .in   { opacity: 0; animation: in .45s ease-out forwards; }
+    @keyframes in { to { opacity: 1; } }
+    .sp   { opacity: 0; animation: in .6s ease-out forwards; }
+    .lit  { animation: lit 9s linear infinite; }
+    @keyframes lit { 0%,4% { stroke: #241C17; } 9%,44% { stroke: #FF8A1F; } 58%,100% { stroke: #241C17; } }
+    .tok  { animation: tok 9s cubic-bezier(.5,0,.5,1) infinite; }
+    @keyframes tok {
+      0%   { transform: translateX(0);     opacity: 0; }
+      3%   { transform: translateX(0);     opacity: 1; }
+      12%  { transform: translateX(180px); } 21% { transform: translateX(180px); }
+      30%  { transform: translateX(360px); } 39% { transform: translateX(360px); }
+      48%  { transform: translateX(540px); } 57% { transform: translateX(540px); }
+      66%  { transform: translateX(720px); } 75% { transform: translateX(720px); }
+      84%  { transform: translateX(900px); opacity: 1; }
+      95%  { transform: translateX(900px); opacity: 1; }
+      100% { transform: translateX(900px); opacity: 0; }
+    }
+    .btok { animation: btok 9s cubic-bezier(.5,0,.5,1) infinite; opacity: 0; }
+    @keyframes btok {
+      0%,48% { transform: translate(540px,0); opacity: 0; }
+      52%    { transform: translate(540px,0); opacity: 1; }
+      61%    { transform: translate(540px,96px); opacity: 1; }
+      92%    { transform: translate(540px,96px); opacity: 1; }
+      100%   { transform: translate(540px,96px); opacity: 0; }
+    }
+    .stop { animation: stop 9s linear infinite; opacity: 0; }
+    @keyframes stop { 0%,61% { opacity: 0; } 67%,92% { opacity: 1; } 100% { opacity: 0; } }
+    .stg  { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11px; letter-spacing: 2px; }
+    .det  { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; font-size: 11.5px; fill: #6B5C50; }
+</style></defs>
+<rect class="bg" width="1200" height="340"/>
+<rect class="grid" width="1200" height="340"/>
+<rect width="1200" height="340" fill="url(#bloom)"/>
+<text class="hd" x="60" y="42">THE LOOP</text>
+<text class="note" x="60" y="68">One incident, from the first failed attempt to the money coming back. The model proposes. Deterministic code decides.</text>
+<path class="dash" d="M210 148 H240"/>
+<path class="dash" d="M390 148 H420"/>
+<path class="dash" d="M570 148 H600"/>
+<path class="dash" d="M750 148 H780"/>
+<path class="dash" d="M930 148 H960"/>
+<path class="dash" d="M675 179 V244"/>
+<rect class="panel lit" style="animation-delay:0s" x="60" y="117" width="150" height="62" rx="4"/>
+<text class="stg" x="76" y="141" fill="url(#fire)">DETECT</text>
+<text class="det" x="76" y="162">four conditions, two windows</text>
+<rect class="panel lit" style="animation-delay:0.72s" x="240" y="117" width="150" height="62" rx="4"/>
+<text class="stg" x="256" y="141" fill="url(#fire)">DIAGNOSE</text>
+<text class="det" x="256" y="162">rules and model, cross checked</text>
+<rect class="panel lit" style="animation-delay:1.44s" x="420" y="117" width="150" height="62" rx="4"/>
+<text class="stg" x="436" y="141" fill="url(#fire)">PLAN</text>
+<text class="det" x="436" y="162">five allowlisted actions</text>
+<rect class="panel lit" style="animation-delay:2.16s" x="600" y="117" width="150" height="62" rx="4"/>
+<text class="stg" x="616" y="141" fill="url(#fire)">GATE</text>
+<text class="det" x="616" y="162">every action, every time</text>
+<rect class="panel lit" style="animation-delay:2.88s" x="780" y="117" width="150" height="62" rx="4"/>
+<text class="stg" x="796" y="141" fill="url(#fire)">EXECUTE</text>
+<text class="det" x="796" y="162">link, steer, defer</text>
+<rect class="panel lit" style="animation-delay:3.6s" x="960" y="117" width="150" height="62" rx="4"/>
+<text class="stg" x="976" y="141" fill="url(#fire)">RECOVER</text>
+<text class="det" x="976" y="162">order paid, case closed</text>
+
+<rect class="panel" x="600" y="244" width="150" height="58" rx="4" stroke="#5A1B16"/>
+<text class="stg" x="616" y="268" fill="#E01F26">ESCALATE</text>
+<text class="det" x="616" y="288">a human takes it</text>
+<line class="stop" x1="762" y1="244" x2="762" y2="302" stroke="#E01F26" stroke-width="2.5"/>
+<text class="stg stop" x="778" y="269" fill="#E01F26">TERMINAL</text>
+<text class="det stop" x="778" y="288">nothing runs from here</text>
+
+<circle class="tok" cx="135" cy="148" r="5.5" fill="url(#fireV)" filter="url(#glow)"/>
+<circle class="btok" cx="135" cy="177" r="5.5" fill="#E01F26" filter="url(#glow)"/>
+<g class="sp" style="animation-delay:2.2s" transform="translate(675,148) scale(0.55)"><path d="M0,-9 C1.2,-2.4 2.4,-1.2 9,0 C2.4,1.2 1.2,2.4 0,9 C-1.2,2.4 -2.4,1.2 -9,0 C-2.4,-1.2 -1.2,-2.4 0,-9 Z" fill="url(#fireV)" filter="url(#glow)"/></g><text class="note" x="60" y="328" fill="#5F5348">The action schema has no amount field. The executor reads the order amount from the database, so the model cannot name a number that moves money.</text>
+</svg>
