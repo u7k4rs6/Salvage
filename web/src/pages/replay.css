@@ -330,47 +330,161 @@
   }
 }
 
-/* -- the entry screen ------------------------------------------------------
+/* -- the curtain -----------------------------------------------------------
  *
- * The one place on this page where the register is prose rather than telemetry, because it is
- * addressed to somebody who has not decided to read telemetry yet. Wider measure, larger type, and
- * the only serif-scale heading in the console. It is shown once and then never again.
+ * Not a screen. The replay is already behind this, already drawn and already moving, and the
+ * scrim only holds it back for as long as it takes to read one sentence. Full bleed, because a
+ * headline in a column beside an empty half is the layout this replaced.
  */
 
-.rp .entry {
-  /* Fills the row the app shell gives it, rather than guessing the top bar's height. */
-  min-height: 100%;
+.rp-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(10, 10, 11, 0.82);
   display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  /* Left aligned to the board's own gutter, not to the window, so the copy sits over the data it
+     is describing rather than over the nav rail. */
+  padding: 40vh var(--page-pad-x) var(--space-8) calc(var(--sidebar-w) + var(--page-pad-x));
+  opacity: 1;
+  transition: opacity 400ms ease;
+}
+/* The dissolve. One transition: the scrim goes, the copy lifts and goes with it. */
+.rp-curtain.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.rp-curtain.is-leaving .rp-curtain-copy {
+  opacity: 0;
+  transform: translateY(-12px);
+}
+.rp-curtain-copy {
+  max-width: 58rem;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 400ms ease,
+    transform 400ms ease;
+}
+
+.rp-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+/*
+ * The one place in the console set at display size. Everywhere else an oversized heading would be
+ * a marketing page pretending to be an operations console; here it is the only thing on the
+ * screen, and it has to carry the whole page on its own.
+ */
+.rp-headline {
+  margin-top: var(--space-4);
+  font-size: clamp(34px, 3.5vw, 56px);
+  /* Two lines. In `ch`, so the cap tracks the clamp rather than holding at one viewport width. */
+  max-width: 24ch;
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+}
+.rp-subline {
+  margin-top: var(--space-5);
+  font-size: 16px;
+  line-height: var(--lh-normal);
+  color: var(--text-secondary);
+}
+.rp-start {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-7);
+  height: 44px;
+  padding: 0 var(--space-6);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #0a0b0d;
+  font-family: var(--font-ui);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  transition: background-color 120ms linear;
+}
+.rp-start:hover {
+  background: var(--accent-hover);
+}
+.rp-start-glyph {
+  width: 11px;
+  height: 13px;
+  flex: none;
+}
+.rp-footnote {
+  margin-top: var(--space-4);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 860px) {
+  .rp-curtain {
+    padding-top: 28vh;
+  }
+}
+
+/* -- the backstory ---------------------------------------------------------
+ *
+ * The three paragraphs the curtain no longer carries. A disclosure in the driving furniture, so it
+ * is hidden with the rest of it when the page is being filmed.
+ */
+
+.rp-backstory {
+  min-width: 0;
+}
+.rp-backstory-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-meta);
+  color: var(--text-secondary);
+}
+.rp-backstory-summary::-webkit-details-marker {
+  display: none;
+}
+.rp-backstory-summary::before {
+  content: "?";
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  width: 15px;
+  height: 15px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-7) var(--page-pad-x);
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-muted);
 }
-.rp .entry-inner {
-  max-width: 46rem;
-}
-.rp .entry-title {
-  font-size: var(--fs-page-title);
-  line-height: var(--lh-tight);
-  font-weight: 500;
-  letter-spacing: -0.015em;
+.rp-backstory-summary:hover {
   color: var(--text-primary);
-  max-width: 22ch;
 }
-.rp .entry-body {
-  font-size: var(--fs-body);
+.rp-backstory-body {
+  margin-top: var(--space-4);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--border);
+  font-size: var(--fs-meta);
   line-height: var(--lh-relaxed);
   color: var(--text-secondary);
 }
-.rp .entry-strong {
+.rp-backstory-body p + p {
+  margin-top: var(--space-4);
+}
+.rp-backstory-strong {
   color: var(--text-primary);
   font-weight: 500;
-}
-/* The one control on a full-page state, so it is larger than a toolbar button. Same shape, same
-   radius, same family: a size variant of the primary button, not a different button. */
-.rp .entry-button {
-  height: 40px;
-  padding: 0 var(--space-6);
-  font-size: var(--fs-body);
 }
 
 

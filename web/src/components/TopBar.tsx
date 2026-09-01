@@ -62,7 +62,10 @@ function DemoBar() {
       <span className="text-[length:var(--fs-meta)] text-[color:var(--text-secondary)]">
         Payment failure recovery for Indian merchants on Razorpay
       </span>
-      <span className="ml-auto text-[length:var(--fs-meta)] text-[color:var(--text-muted)]">
+      {/* The jargon tier, not body copy. It is a standing caveat rather than something to read
+          once, so it takes the same mono micro treatment as every other machine-written fact in
+          the console instead of sitting at body weight in the corner. */}
+      <span className="ml-auto font-[family-name:var(--font-mono)] text-[length:var(--fs-micro)] text-[color:var(--text-muted)]">
         A recorded run, replayed. Nothing here is live.
       </span>
     </header>

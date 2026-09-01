@@ -5,6 +5,7 @@ import { PROVES, verifyChain, type VerifyResult } from "../../replay/verify";
 import { SCENARIOS, type ScenarioChoice } from "../../replay/load";
 import { shortHash, timestamp } from "../../lib/format";
 import { elapsed } from "../../lib/health";
+import { Backstory } from "./Backstory";
 
 /**
  * The transport: what is being replayed, where the head is, and the controls that move it.
@@ -53,6 +54,7 @@ export function Transport({
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {!presenting && (
           <>
+            <Backstory replay={replay} />
             <label className="flex items-center gap-2">
               <span className="lbl">Recording</span>
               <select

@@ -99,6 +99,20 @@ export default function ScenarioRunnerPage() {
   return <Runner key={choice.id} replay={replay} choice={choice} onChoose={setChoice} started={started} onStarted={setStarted} />;
 }
 
+/** The dissolve. One transition, matched by the `is-leaving` rule in replay.css. */
+const CURTAIN_FADE_MS = 400;
+/**
+ * The preview loop behind the scrim.
+ *
+ * The first ninety seconds of the recording, walked in real time over twelve seconds and then
+ * started again. It is the real recording rather than an animation, so the deviation bars behind
+ * the headline are the segment actually degrading; the visitor is watching the thing go wrong
+ * before they have decided to press anything.
+ */
+const PREVIEW_SIM_SECONDS = 90;
+const PREVIEW_REAL_MS = 12_000;
+const PREVIEW_TICK_MS = 200;
+
 function Runner({
   replay,
   choice,
@@ -117,9 +131,37 @@ function Runner({
   // things being filmed: the clock, the beat, the entry, the controls, and every panel. Nothing
   // it hides is data.
   const [presenting, setPresenting] = useState(false);
+  // True only for the length of the dissolve, so the scrim and the copy can fade together while
+  // the board underneath is already at frame zero.
+  const [leaving, setLeaving] = useState(false);
   const state = useMemo(() => stateAt(replay, transport.ord), [replay, transport.ord]);
   const stage = stageOf(state);
   const meta = replay.recording.meta;
+
+  /*
+   * The board is not still while the curtain is up.
+   *
+   * A ninety second slice of the recording, seeked in place on a timer and looped, so the health
+   * panel behind the scrim is moving the moment the page loads. It reads the same recording the
+   * run reads and drives the same cursor, which is why it needs no separate animation state and
+   * cannot drift from the data.
+   *
+   * It stops the moment the visitor presses, and it does not run while they are pressing: the
+   * dissolve has already seeked to frame zero and a tick landing after that would drag the head
+   * back into the preview.
+   */
+  const { seekTo } = transport;
+  useEffect(() => {
+    if (started || leaving) return;
+    const from = replay.start;
+    const to = Math.min(replay.end, from + PREVIEW_SIM_SECONDS);
+    const began = performance.now();
+    const id = window.setInterval(() => {
+      const through = ((performance.now() - began) % PREVIEW_REAL_MS) / PREVIEW_REAL_MS;
+      seekTo(from + (to - from) * through);
+    }, PREVIEW_TICK_MS);
+    return () => window.clearInterval(id);
+  }, [started, leaving, replay.start, replay.end, seekTo]);
 
   // Filming shortcuts. Space starts and stops, the arrows walk entries, the brackets jump between
   // beats, and R restarts. Kept off any element that takes text so nothing is stolen from a field.
@@ -176,22 +218,26 @@ function Runner({
     fault && state.incident ? state.incident.openedAt - fault.start : null;
   const narration = narrate(replay, state, transport.ts, transport.inGap !== null);
 
-  if (!started) {
-    return (
-      <div className="ov rp">
-        <Entry
-          replay={replay}
-          onStart={() => {
-            onStarted(true);
-            transport.play();
-          }}
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="ov rp">
+      {!started && (
+        <Entry
+          replay={replay}
+          leaving={leaving}
+          onStart={() => {
+            // One transition. The scrim and the copy go together over 400ms, and the board is
+            // already where it needs to be by the time they have gone: the loop stops and the head
+            // returns to frame zero on the press, not at the end of the fade.
+            setLeaving(true);
+            transport.seekTo(replay.start);
+            window.setTimeout(() => {
+              onStarted(true);
+              transport.play();
+            }, CURTAIN_FADE_MS);
+          }}
+        />
+      )}
+
       <Transport
         replay={replay}
         transport={transport}
@@ -202,8 +248,10 @@ function Runner({
       />
 
       {/* Hidden in presentation mode with the rest of the driving furniture: by the time this is
-          being filmed the explanation is in the voiceover, and the panels need the height. */}
-      {!presenting && (
+          being filmed the explanation is in the voiceover, and the panels need the height.
+          Hidden under the curtain too, where the headline is the title and the page's own heading
+          and prose would otherwise read through the scrim directly behind it. */}
+      {!presenting && started && (
       <div className="px-[var(--page-pad-x)] pt-[var(--space-4)]">
         <PageIntro
           title="Scenario Runner"
