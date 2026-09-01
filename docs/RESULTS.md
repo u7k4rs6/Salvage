@@ -9,16 +9,19 @@ numbers mean.
 **This document describes commit `e92a71c` and is not reproducible from branch `ui/board`.** That
 branch fixed a defect in `_open_cases` that the tables here were produced with, and the fix moves
 the planner prompt's eligibility counts, so the recorded planner fixtures are keyed on hashes that
-mostly no longer occur: four of twenty scenario and seed pairs still hit, and the rest fall back to
-`default_plan` and escalate. Section 3's agent link and steer columns are understated and its
-organic column inflated for the same reason. `docs/BUILD_LOG.md` under 2026-08-26 and 2026-08-31,
-and `docs/WHAT_BROKE.md` entry 14, carry the measurements. Regenerating these tables needs the
-planner fixtures re-recorded against a live model, which is a spend and a provenance decision that
-has not been made.
+mostly no longer occur: six of twenty scenario and seed pairs still hit, and the rest fall back to
+`default_plan` and escalate. Four of the six are what survived the change. S1 seed 0 and S3 seed 0
+were recorded against a live model on 1 September 2026, so that every fault scenario has one pair
+that completes for the demo; that changed no table in this document and is logged under that date
+in `docs/BUILD_LOG.md`. Section 3's agent link and steer columns are understated and its organic
+column inflated for the same reason. `docs/BUILD_LOG.md` under 2026-08-26, 2026-08-31 and
+2026-09-01, and `docs/WHAT_BROKE.md` entry 14, carry the measurements. Regenerating these tables
+needs the planner fixtures re-recorded against a live model for all twenty pairs, which is a spend
+and a provenance decision that has not been made.
 
 ## Where the agent's answers came from
 
-**The agent arm is measured, from fixtures recorded blind.** 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 81 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
+**The agent arm is measured, from fixtures recorded blind.** 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 83 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
 
 The recording is blind in the code path rather than by discipline. `prompts_for_recording` builds
 each evidence packet through `build_for_incident`, the same call the agent makes, which reads the
@@ -306,7 +309,7 @@ All 50 worlds identical across all 5 policy arms.
 
 ## 6. Diagnosis ablation
 
-Rules-only against a recorded model. 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 81 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
+Rules-only against a recorded model. 41 diagnosis fixture(s): 41 from gemini model `gemini-2.5-flash`. A further 83 planner fixture(s) sit alongside them and back no table here: the planner is not scored against ground truth anywhere in this document.
 
 The reconciled column is the one the agent acts on. A rules verdict and a model verdict that agree raise confidence, a disagreement lowers it, and anything below 0.6 escalates rather than acting. Reading the LLM column alone would credit the model for an answer the agent would not have used.
 

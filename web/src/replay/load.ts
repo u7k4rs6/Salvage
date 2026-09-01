@@ -1,4 +1,6 @@
+import s1Url from "../board/fixtures/s1_seed0.run.json?url";
 import s2Url from "../board/fixtures/s2_seed1.run.json?url";
+import s3Url from "../board/fixtures/s3_seed0.run.json?url";
 import s4Url from "../board/fixtures/s4_seed0.run.json?url";
 import { buildReplay, type Replay } from "./model";
 import type { Recording } from "./types";
@@ -7,13 +9,14 @@ import type { Recording } from "./types";
  * The recordings this page can replay.
  *
  * Imported as URLs and fetched, not imported as modules. A recording is one and a half megabytes
- * of JSON; bundling it would put it in the first paint of every page in the console and make the
- * type checker walk nineteen thousand array literals for nothing.
+ * of JSON, and S3's is four; bundling them would put every one in the first paint of every page
+ * in the console and make the type checker walk their array literals for nothing. Only the
+ * recording the visitor picks is fetched.
  *
- * Two of them, because between them they hold both terminal outcomes. S2 seed 1 runs the whole
- * arc through to recovery. S4 seed 0 diagnoses a merchant-side cause, which the action matrix
- * forbids contacting customers about, and stops at a human. There are only two because those are
- * the runs the recorded planner fixtures cover; the note in docs/BUILD_LOG.md says why.
+ * One per fault scenario. Each is a real agent run whose planner answer came from the recorded
+ * fixtures rather than a fallback, so every one reaches the executor with a model's plan: the
+ * four are the four faults, not four picks from a longer list. S0 has no fault and so has no run
+ * worth replaying.
  */
 
 export interface ScenarioChoice {
@@ -25,10 +28,22 @@ export interface ScenarioChoice {
 
 export const SCENARIOS: ScenarioChoice[] = [
   {
+    id: "s1_seed0",
+    url: s1Url,
+    label: "S1 seed 0, UPI handle outage",
+    blurb: "Steered first, messaged second. 74 recoveries needed no message, 12 did.",
+  },
+  {
     id: "s2_seed1",
     url: s2Url,
     label: "S2 seed 1, card BIN authorisation failures",
     blurb: "Detect, diagnose, plan, gate, act, recover, close.",
+  },
+  {
+    id: "s3_seed0",
+    url: s3Url,
+    label: "S3 seed 0, merchant-wide gateway degradation",
+    blurb: "Escalated to a human, held every send, then sent once the gateway recovered.",
   },
   {
     id: "s4_seed0",

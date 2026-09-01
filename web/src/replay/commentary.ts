@@ -151,11 +151,18 @@ export function markFor(replay: Replay, frame: Frame): Mark | null {
     const status = frame.kind.slice("execute.action.".length);
 
     if (status === "executed") {
+      // An escalation is the one action that clears no ladder, because the ladder guards contacting
+      // a customer and an escalation contacts a colleague. Saying "every gate passed" over an empty
+      // list is true only in the way that says nothing, and the S3 and S4 recordings both open on
+      // exactly that frame.
+      const gates = action.gates ?? [];
       return {
         ord: frame.ord,
         anchor: "gates",
         label: "Acted",
-        sentence: `Every gate passed, so ${action.type ?? "the action"} ran. This is the first thing the agent actually did.`,
+        sentence: gates.length
+          ? `All ${gates.length} gates passed, so ${action.type ?? "the action"} ran. This is the first thing the agent actually did.`
+          : `${action.type ?? "The action"} ran without a gate to clear: the ladder guards contacting a customer, and this one contacts a colleague. It is the first thing the agent actually did.`,
       };
     }
 

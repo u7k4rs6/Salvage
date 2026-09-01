@@ -2070,7 +2070,9 @@ produces `docs/RESULTS.md`. This entry records that branch `ui/board` no longer 
   | S4 seed 0, S4 seed 3 | planner fixture hits, model plan, and the plan is a single ESCALATE_HUMAN |
   | the other 16 | one miss each, `plan_incident` returns `default_plan`, the run escalates |
 
-  Four of twenty. S4's two are a genuine model escalation rather than a fallback: `planner_error`
+  Four of twenty. **Superseded on 2026-09-01**, which records the two fixtures that take it to six
+  and the two recordings they made possible. The measurement below stands as it was taken; the
+  count is the part that moved. S4's two are a genuine model escalation rather than a fallback: `planner_error`
   is null and the action matrix forbids customer contact for `merchant_config`, so the model has
   nothing else to propose. The sixteen misses are the fallback, and they are distinguishable from a
   real handover exactly as `plannerErrorOf` in the console distinguishes them, by the
@@ -2078,7 +2080,7 @@ produces `docs/RESULTS.md`. This entry records that branch `ui/board` no longer 
 
   What this means in practice: a run of this branch that is expected to send a link, evaluate a
   gate ladder or refuse anything has to be S2 seed 1 or S2 seed 2. Every other pair produces one
-  ESCALATE_HUMAN and stops. That is not a property of the scenarios; it is a property of which
+  ESCALATE_HUMAN and stops. S1 seed 0 and S3 seed 0 joined that list on 2026-09-01. That is not a property of the scenarios; it is a property of which
   prompt hashes survived the counts changing.
 
   It does not change a number in `docs/RESULTS.md`, which was produced at `e92a71c` where all 81
@@ -2274,3 +2276,106 @@ print(f"wrote {out} ({out.stat().st_size} bytes), {len(runs)} runs")
 PY
 ```
 
+
+## 2026-09-01, branch master: planner fixtures for S1 and S3, and two recordings
+
+- **The blind collector could not do this, and the reason is structural.** The instruction was to
+  record the missing planner fixtures "through the same blind collector used for the diagnosis
+  fixtures". That collector is `salvage diagnose record-fixtures`, and it cannot: `prompts_for_recording`
+  builds diagnosis prompts only, and `record_fixtures` is hardwired to the `LLMDiagnosis` schema.
+  The comment in `salvage/llm/provider.py` under the `record` provider already says why, and it is
+  the same reason today: a planner prompt cannot be enumerated in advance, because what the planner
+  is asked depends on what the diagnosis answered. So the supported path was used instead, the one
+  `salvage/llm/fixtures/README.md` documents: run the agent arm with the `record` provider, which
+  answers from fixtures where they exist and asks a live Gemini where they do not.
+
+  This is not a weaker guarantee, it is a different one. The diagnosis recorder has to be blind
+  because the diagnosis is the thing being scored. The planner is scored against nothing anywhere
+  in `docs/RESULTS.md`, and its prompt is built from what the agent's own diagnosis concluded.
+
+- **The prompts were collected and read before a single call was made.** One dry pass per pair with
+  `FixtureThenCollectProvider`, which writes the prompt it cannot answer and returns no answer, put
+  both planner prompts on disk with no network. Both were checked for `scenario`, `seed`,
+  `truth_cause` and `sim_truth` and carried none. The live call was then wrapped in the same check,
+  so a prompt carrying any of the four would have raised rather than been sent. The diagnosed cause
+  is in the prompt and is meant to be: it is the planner's input, not its answer.
+
+- **Two calls, two fixtures, both from `gemini-2.5-flash`.** Neither fell back to a smaller model,
+  which is what the pacing in the recorder exists to prevent.
+
+  | pair | diagnosed cause | plan the model returned |
+  |---|---|---|
+  | S1 seed 0 | `issuer_outage`, confidence 0.95 | STEER_METHOD, then SEND_RECOVERY_LINK |
+  | S3 seed 0 | `gateway_degradation`, confidence 0.90 | ESCALATE_HUMAN, then DEFER_UNTIL_RECOVERED |
+
+  S3's plan is the matrix being obeyed rather than the model being cautious. STEER_METHOD is not
+  allowed for `gateway_degradation`, SEND_RECOVERY_LINK is allowed only after the segment recovers,
+  and ESCALATE_HUMAN is required. The model had two moves and made both.
+
+- **Six of twenty, measured the same way as the four.** `agent run --provider fixture` over S1 to
+  S4, seeds 0 to 4, counting `FixtureProvider.misses`:
+
+  | pairs | result |
+  |---|---|
+  | S1 seed 0, S2 seed 1, S2 seed 2, S3 seed 0, S4 seed 0, S4 seed 3 | no miss, model plan, `planner_error` null |
+  | the other 14 | one miss each, `default_plan`, `planner_error` set |
+
+  Every fault scenario now has at least one pair that completes on a model plan. What did not
+  change: the other fourteen still fall back, because a fixture is keyed on one prompt hash and
+  each seed asks a different question.
+
+- **Two recordings, one per newly covered scenario.** Captured with the command in the 2026-08-31
+  entry, unchanged, `SCENARIO` and `SEED` being the only difference. Both carry
+  `fixture_misses: 0`, and all four chains verify from their own files:
+
+  | recording | ledger | what it shows | head hash |
+  |---|---|---|---|
+  | `s1_seed0.run.json` | 283 | 74 steer recoveries, 12 link payments, 2 refusals, 1 opt-out, no escalation | `b850d8ceec46` |
+  | `s3_seed0.run.json` | 1912 | escalation, 650 deferrals before close, then 535 sends and 112 payments after | `319692dc5a24` |
+
+  S1 seed 0 is the steering case the demo did not have: of the 86 recoveries in its chain, 74 came
+  from steering a shopper onto a working method with no message sent, and 12 from a message. S3 seed 0 is the deferral case: the agent
+  escalated, held every send while the gateway was down, and sent only once it recovered. That
+  ordering is a property of the recording and was checked rather than assumed. Before the incident
+  closed the only executed actions were 650 `DEFER_UNTIL_RECOVERED` and the one `ESCALATE_HUMAN`,
+  and zero sends.
+
+  The recordings are fetched by URL, not bundled, so S3's four megabytes load only if a visitor
+  picks S3.
+
+- **A gap between the two tiers on S1 seed 0, found while checking those counts and left alone.**
+  The chain holds 74 `execute.steer_recovered` entries. `recovery_routes` holds 71 steer rows, and
+  the three orders in the difference have no route row of any kind rather than a different one.
+  S2 seed 1 has 42 and 42 and no gap, so this is not how the two tiers normally relate.
+
+  Not chased, for two reasons. It is in `salvage/`, which this task was told to leave alone, and it
+  changes no reported number: `docs/RESULTS.md` counts recovered revenue in
+  `salvage/eval/metrics.py` over the fault-scheduled order set and never reads either of these
+  tables. What it does affect is the demo, where the case board and the ledger tier disagree by
+  three on one recording. Written down here at the resolution somebody would need to act on it,
+  which is the same thing the 2026-08-31 entry did for the fixture coverage.
+
+- **Two sentences that were false, found by adding the recordings.** Both were fixed rather than
+  worked around, because the rule for this layer is that every sentence is true of the recording it
+  plays over.
+
+  The commentary said "Every gate passed" over the first executed action. `ESCALATE_HUMAN` clears
+  no ladder, because the ladder guards contacting a customer and an escalation contacts a
+  colleague, so on S3 and S4 that sentence was true only in the way that says nothing. It now
+  counts the gates and says the other thing when there are none. S4's recording had carried this
+  since it was captured.
+
+  The entry headline's second line was the fixed string "It rerouted what it was allowed to
+  reroute, and refused the rest." S3 and S4 reroute nothing, because the matrix forbids
+  STEER_METHOD for both their causes. It is now read off the recording: steering, escalate and
+  hold, or escalate and send nothing.
+
+- **What did not change.** No sweep was re-run and no table in `docs/RESULTS.md` was regenerated.
+  Every number in that document still comes from `data/results/main.json`, which these fixtures do
+  not touch. Two counts in it did move, and both are read out of the fixture directory rather than
+  measured: the planner fixture count, 81 to 83, and the coverage caveat, four of twenty to six.
+  The diagnosis fixture count is still 41, so the ablation's evidence is exactly what it was.
+
+  `docs/JUDGE_REVIEW.md` still says four of twenty in rounds 1 and 7. That is deliberate. It states
+  at the top that prior rounds stay as written so a regression is visible as one, and rewording a
+  caveat there is queued for a human rather than done in place.
