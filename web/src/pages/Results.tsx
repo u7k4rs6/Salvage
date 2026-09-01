@@ -1,10 +1,13 @@
 import { useState } from "react";
 import {
   CartesianGrid,
+  LabelList,
   Legend,
   Line,
   LineChart,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip,
   XAxis,
   YAxis,
@@ -43,6 +46,185 @@ function Notes({ notes }: { notes: string[] }) {
           {note}
         </p>
       ))}
+    </div>
+  );
+}
+
+/**
+ * The trade, drawn: contacts along the bottom, recovered revenue up the side.
+ *
+ * The tables above say the same thing in numbers, but the shape of the trade only reads as a shape.
+ * An arm that sits up and to the left recovered more from fewer customers contacted, which is the
+ * whole claim; an arm that sits down and to the right paid for its revenue in messages.
+ *
+ * Means over ten seeds, from the same aggregates the tables read. There is no seed level scatter
+ * behind them because the API returns aggregates and not per seed rows, and measuring is out of
+ * scope here.
+ */
+
+const ARM_ORDER = ["agent", "echo", "B0", "B1", "B2"];
+
+/** One dot on the chart: a position, and every arm that landed on it. */
+interface PlottedPoint {
+  messages: number;
+  recovered: number;
+  label: string;
+}
+
+function mergeCoincident(points: ParetoPoint[]): PlottedPoint[] {
+  const byPosition = new Map<string, PlottedPoint>();
+  for (const point of points) {
+    const key = `${point.messages}|${point.recovered}`;
+    const found = byPosition.get(key);
+    if (found) found.label = `${found.label}, ${point.policy}`;
+    else byPosition.set(key, { messages: point.messages, recovered: point.recovered, label: point.policy });
+  }
+  return [...byPosition.values()];
+}
+
+interface ParetoPoint {
+  policy: string;
+  messages: number;
+  recovered: number;
+  /** Arms that recovered at least as much from no more contacts. Empty means it is on the frontier. */
+  dominatedBy: string[];
+}
+
+function paretoFor(run: ResultsRun, scenario: string): ParetoPoint[] {
+  const points = ARM_ORDER.flatMap((policy) => {
+    const row = run.aggregates.find((r) => r.scenario === scenario && r.policy === policy);
+    return row
+      ? [{ policy, messages: row.at_risk_messages, recovered: row.at_risk_recovered_amount }]
+      : [];
+  });
+  return points.map((point) => ({
+    ...point,
+    dominatedBy: points
+      .filter(
+        (other) =>
+          other.policy !== point.policy &&
+          other.messages <= point.messages &&
+          other.recovered >= point.recovered &&
+          (other.messages < point.messages || other.recovered > point.recovered),
+      )
+      .map((other) => other.policy),
+  }));
+}
+
+/**
+ * What this scenario actually shows, worked out from the points rather than asserted.
+ *
+ * The claim is that the agent sits toward the upper left. On two of these scenarios it does, on one
+ * it does not, and on one it sends nothing at all. Deriving the sentence means a rerun that moved
+ * the numbers would move the caption with them instead of leaving a stale claim on the page.
+ */
+/** "a", "a and b", "a, b and c". */
+function list(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+function paretoReading(points: ParetoPoint[]): string {
+  const agent = points.find((p) => p.policy === "agent");
+  if (!agent) return "";
+  if (points.every((p) => p.messages === 0 && p.recovered === 0)) {
+    return "No fault, so nothing was at risk and no arm sent anything. Every arm sits on the origin.";
+  }
+  if (agent.messages === 0) {
+    const spenders = points.filter((p) => p.messages > 0).map((p) => p.policy);
+    return `The agent sent nothing at all, so it sits on the left edge on what organic recovery alone returned. ${list(spenders)} recovered more by messaging. That is the trade, not a defect: the agent escalated instead of acting.`;
+  }
+
+  const parts: string[] = [];
+  const beaten = points.filter((p) => p.dominatedBy.includes("agent")).map((p) => p.policy);
+  if (beaten.length > 0) {
+    parts.push(
+      `Above and left of ${list(beaten)}: more recovered from fewer contacts.`,
+    );
+  } else {
+    parts.push("The agent is not above and left of any other arm here.");
+  }
+
+  // The honest counterweight. An arm that sent fewer contacts is to the agent's left whether or not
+  // it recovered more, and on the scenario where the claim is weakest there are two of them.
+  const leftOfAgent = points
+    .filter((p) => p.policy !== "agent" && p.messages < agent.messages && p.recovered < agent.recovered)
+    .map((p) => p.policy);
+  if (leftOfAgent.length > 0) {
+    parts.push(`${list(leftOfAgent)} sent fewer and recovered less.`);
+  }
+
+  if (agent.dominatedBy.length > 0) {
+    parts.push(`${list(agent.dominatedBy)} sits above and left of the agent in turn.`);
+  }
+  return parts.join(" ");
+}
+
+function ParetoPanel({ run }: { run: ResultsRun }) {
+  // S0 has no fault, so every arm sits on the origin and a chart of it would be one point.
+  const scenarios = run.scenarios.filter((scenario) =>
+    paretoFor(run, scenario).some((point) => point.messages > 0 || point.recovered > 0),
+  );
+  const flat = run.scenarios.filter((scenario) => !scenarios.includes(scenario));
+
+  return (
+    <div>
+      <div className="grid gap-x-8 gap-y-6 lg:grid-cols-2">
+        {scenarios.map((scenario) => {
+          const points = paretoFor(run, scenario);
+          const plotted = mergeCoincident(points);
+          return (
+            <div key={scenario}>
+              <h3 className="lbl">{scenario}</h3>
+              <div className="mt-2 h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart margin={{ top: 12, right: 28, bottom: 4, left: 4 }}>
+                    <CartesianGrid stroke="var(--border)" />
+                    <XAxis
+                      type="number"
+                      dataKey="messages"
+                      name="Actions"
+                      tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                      stroke="var(--text-muted)"
+                      tickFormatter={(value) => count(Number(value), 0)}
+                    />
+                    <YAxis
+                      type="number"
+                      dataKey="recovered"
+                      name="Recovered"
+                      tick={{ fontSize: 11, fill: "var(--text-muted)" }}
+                      stroke="var(--text-muted)"
+                      width={58}
+                      tickFormatter={(value) => rupeesShort(Number(value))}
+                    />
+                    <Tooltip
+                      cursor={{ stroke: "var(--border-strong)" }}
+                      contentStyle={{ fontSize: 12 }}
+                      formatter={(value, name) =>
+                        name === "Recovered" ? rupees(Number(value)) : count(Number(value), 0)
+                      }
+                    />
+                    <Scatter data={plotted} fill="var(--accent)">
+                      <LabelList
+                        dataKey="label"
+                        position="right"
+                        style={{ fontSize: 11, fill: "var(--text-secondary)" }}
+                      />
+                    </Scatter>
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="note mt-2">{paretoReading(points)}</p>
+            </div>
+          );
+        })}
+      </div>
+      {flat.length > 0 && (
+        <p className="note mt-5">
+          {flat.join(", ")} {flat.length === 1 ? "is" : "are"} not drawn: there is no fault, so
+          nothing was at risk, no arm sent anything, and every point would sit on the origin.
+        </p>
+      )}
     </div>
   );
 }
@@ -285,6 +467,15 @@ export default function ResultsPage() {
                 </Empty>
               )}
             </Panel>
+
+            {data.at_risk_measured && (
+              <Panel
+                title="Revenue against contacts"
+                subtitle="The same at-risk figures as the table above, plotted against each other: contacts along the bottom, recovered revenue up the side. An arm above and to the left recovered more from fewer customers contacted. Means over ten seeds, and means only, because the API returns per arm aggregates rather than per seed rows."
+              >
+                <ParetoPanel run={data} />
+              </Panel>
+            )}
 
             <Panel
               title="Secondary: whole-run totals"
