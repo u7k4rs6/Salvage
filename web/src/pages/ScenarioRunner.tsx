@@ -12,6 +12,7 @@ import { Cases } from "../components/replay/Cases";
 import { Tail } from "../components/replay/Tail";
 import { Entry } from "../components/replay/Entry";
 import { Commentary } from "../components/replay/Commentary";
+import { useSteadyHeights } from "../replay/useSteadyHeights";
 import { SCENARIOS, loadReplay, type ScenarioChoice } from "../replay/load";
 import type { Replay } from "../replay/model";
 import { stateAt, stageOf } from "../replay/state";
@@ -147,6 +148,9 @@ function Runner({
     sessionStorage.setItem("salvage.commentary", commentary ? "on" : "off");
   }, [commentary]);
   const state = useMemo(() => stateAt(replay, transport.ord), [replay, transport.ord]);
+  // Sections keep the tallest they have been for this run, so the page stops moving under the
+  // reader as rows land. Reset when the recording changes.
+  useSteadyHeights(".rp", choice.id);
   const stage = stageOf(state);
   const meta = replay.recording.meta;
 

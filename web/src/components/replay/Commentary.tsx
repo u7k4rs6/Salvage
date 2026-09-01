@@ -26,6 +26,8 @@ const GAP = 16;
 const MARGIN = 12;
 /** Where the vertical leader meets the mark, measured from the mark's left edge. */
 const LEADER_INSET = 22;
+/** How long a smooth scroll is given to land before a mark is allowed to appear. */
+const SCROLL_SETTLE_MS = 420;
 
 interface Leader {
   top: number;
@@ -81,6 +83,8 @@ export function Commentary({
   const leader = useRef<HTMLSpanElement | null>(null);
   /** Whether the frame loop last found a position clear of the region. */
   const clearRef = useRef(false);
+  /** While a programmatic scroll is in flight, nothing is shown. */
+  const settlingUntil = useRef(0);
 
   // Collect the beats the head has just crossed. Reading the span between the last cursor and this
   // one catches a jump as well as a step, so scrubbing does not silently skip the commentary for
@@ -198,7 +202,15 @@ export function Commentary({
     // Already sitting with a clear band above it, and its top on screen: leave the page alone.
     if (box.top >= band && box.top < window.innerHeight) return;
 
+    /*
+     * Exactly one scroll per mark, and the mark waits for it.
+     *
+     * Showing the mark while the page is still moving is what made it look unsettled: it tracks
+     * its region, so a mark that appears mid scroll travels across the screen before stopping.
+     * `settlingUntil` holds it back until the scroll has landed, so it fades in already still.
+     */
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    settlingUntil.current = performance.now() + (reduced ? 0 : SCROLL_SETTLE_MS);
     window.scrollBy({ top: box.top - band, behavior: reduced ? "auto" : "smooth" });
   }, [current]);
 
@@ -262,13 +274,16 @@ export function Commentary({
           at = { top: y, left: x,
             line: { top: y + own.height, left: x + LEADER_INSET, width: 1, height: GAP } };
         } else {
-          // Taller than the window. Push it down until a band exists rather than sit on it.
-          const wanted = own.height + GAP + MARGIN;
-          if (box.top < wanted) {
-            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            window.scrollBy({ top: box.top - wanted, behavior: reduced ? "auto" : "smooth" });
-          }
-          at = { top: MARGIN, left: clampX(box.left), line: null };
+          /*
+           * No band either side, which happens while the one scroll this mark gets is still in
+           * flight or when the window is too short for the region.
+           *
+           * It does not scroll from here. This runs on every animation frame, and issuing a smooth
+           * scroll sixty times a second stacked sixty animations on top of each other and drove
+           * the page up and down: the glitch was this branch, not the board. It parks the mark
+           * off screen instead and lets the clearance test below keep it hidden.
+           */
+          at = { top: -9999, left: -9999, line: null };
         }
       }
 
@@ -285,10 +300,11 @@ export function Commentary({
       node.style.top = `${at.top}px`;
       node.style.left = `${at.left}px`;
       const clear =
-        at.left >= box.right - 1 ||
+        performance.now() >= settlingUntil.current &&
+        (at.left >= box.right - 1 ||
         at.left + own.width <= box.left + 1 ||
         at.top >= box.bottom - 1 ||
-        at.top + own.height <= box.top + 1;
+        at.top + own.height <= box.top + 1);
       node.classList.toggle("is-clear", clear);
       clearRef.current = clear;
 
