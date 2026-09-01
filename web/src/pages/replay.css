@@ -498,3 +498,72 @@
   line-height: var(--lh-relaxed);
   color: var(--text-primary);
 }
+
+
+/* -- the commentary layer --------------------------------------------------
+ *
+ * A coach mark, not a tour. It appears over the region it is about, says one sentence and goes.
+ * Nothing here is clickable, so the layer does not take pointer events at all: the run underneath
+ * stays scrubable while a mark is up.
+ *
+ * Same tokens as everything else. One accent hairline to the region, a mono microlabel, and the
+ * sentence in the UI face. No shadow, no glow, no pulse: it is annotation on a console, and it
+ * should read as part of the page rather than as something that flew in over it.
+ */
+
+.rp-coach-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.rp-coach {
+  position: fixed;
+  width: 19rem;
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-left: 2px solid var(--accent);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.rp-coach.is-on {
+  opacity: 1;
+}
+
+.rp-coach-label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--ls-caps);
+  text-transform: uppercase;
+  line-height: var(--lh-tight);
+  color: var(--accent);
+}
+.rp-coach-text {
+  margin-top: var(--space-2);
+  font-size: 14px;
+  line-height: var(--lh-normal);
+  color: var(--text-primary);
+}
+
+/* The leader: one hairline from the mark to the edge of the region it is about. */
+.rp-coach-leader {
+  position: fixed;
+  height: 1px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.rp-coach-leader.is-on {
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rp-coach,
+  .rp-coach-leader {
+    transition: none;
+  }
+}

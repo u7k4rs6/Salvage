@@ -36,6 +36,8 @@ export function Transport({
   onChoose,
   presenting,
   onTogglePresenting,
+  commentary,
+  onToggleCommentary,
 }: {
   replay: Replay;
   transport: TransportApi;
@@ -43,6 +45,8 @@ export function Transport({
   onChoose: (choice: ScenarioChoice) => void;
   presenting: boolean;
   onTogglePresenting: () => void;
+  commentary: boolean;
+  onToggleCommentary: () => void;
 }) {
   const meta = replay.recording.meta;
   const frame = replay.frames[Math.min(transport.ord, replay.frames.length - 1)];
@@ -135,6 +139,16 @@ export function Transport({
           </button>
           <button type="button" className="btn focus-ring" onClick={transport.restart}>
             Restart
+          </button>
+          {/* The whole of the commentary layer's interface. No steps, no next, no skip. */}
+          <button
+            type="button"
+            className="btn focus-ring"
+            aria-pressed={commentary}
+            onClick={onToggleCommentary}
+            title="Coach marks over the run"
+          >
+            {commentary ? "Commentary on" : "Commentary off"}
           </button>
           <button
             type="button"

@@ -11,6 +11,7 @@ import { Gates } from "../components/replay/Gates";
 import { Cases } from "../components/replay/Cases";
 import { Tail } from "../components/replay/Tail";
 import { Entry } from "../components/replay/Entry";
+import { Commentary } from "../components/replay/Commentary";
 import { SCENARIOS, loadReplay, type ScenarioChoice } from "../replay/load";
 import type { Replay } from "../replay/model";
 import { stateAt, stageOf } from "../replay/state";
@@ -134,6 +135,17 @@ function Runner({
   // True only for the length of the dissolve, so the scrim and the copy can fade together while
   // the board underneath is already at frame zero.
   const [leaving, setLeaving] = useState(false);
+  /*
+   * Commentary on or off. On by default and remembered for the session, so somebody who turned it
+   * off does not have it come back when they change recording, and somebody who reloads gets it
+   * again because a reload is a new visitor as far as this page is concerned.
+   */
+  const [commentary, setCommentary] = useState(
+    () => sessionStorage.getItem("salvage.commentary") !== "off",
+  );
+  useEffect(() => {
+    sessionStorage.setItem("salvage.commentary", commentary ? "on" : "off");
+  }, [commentary]);
   const state = useMemo(() => stateAt(replay, transport.ord), [replay, transport.ord]);
   const stage = stageOf(state);
   const meta = replay.recording.meta;
@@ -238,9 +250,13 @@ function Runner({
         />
       )}
 
+      <Commentary replay={replay} ord={transport.ord} enabled={started && commentary} />
+
       <Transport
         replay={replay}
         transport={transport}
+        commentary={commentary}
+        onToggleCommentary={() => setCommentary((on) => !on)}
         choice={choice}
         onChoose={onChoose}
         presenting={presenting}
@@ -287,6 +303,7 @@ function Runner({
       </Section>
 
       <Section
+        anchor="incident"
         title="Incident"
         right={
           <span className="flex flex-wrap items-center gap-3">
@@ -349,6 +366,7 @@ function Runner({
       </Section>
 
       <Section
+        anchor="health"
         title="Payment health"
         right={<span className="note">success rate against each segment&rsquo;s own baseline</span>}
       >
@@ -356,6 +374,7 @@ function Runner({
       </Section>
 
       <Section
+        anchor="diagnosis"
         title="Diagnosis"
         right={
           state.diagnosis && (
@@ -370,6 +389,7 @@ function Runner({
       </Section>
 
       <Section
+        anchor="gates"
         title="Plan and gates"
         right={
           <span className="note">
@@ -381,7 +401,7 @@ function Runner({
         <Gates state={state} meta={meta} />
       </Section>
 
-      <Section title="Cases and outcomes">
+      <Section anchor="cases" title="Cases and outcomes">
         <Cases state={state} />
       </Section>
 

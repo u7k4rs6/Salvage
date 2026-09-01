@@ -13,15 +13,21 @@ export function Section({
   title,
   right,
   tight,
+  anchor,
   children,
 }: {
   title: string;
   right?: ReactNode;
   tight?: boolean;
+  /**
+   * A name the commentary layer can point at. Nothing else reads it, and a section without one is
+   * simply never annotated, which is how a region with no data behind it stays unannotated.
+   */
+  anchor?: string;
   children: ReactNode;
 }) {
   return (
-    <section className={`section${tight ? " section-tight" : ""}`}>
+    <section className={`section${tight ? " section-tight" : ""}`} data-anchor={anchor}>
       <div className="section-head">
         <h2 className="section-title">{title}</h2>
         {right}
